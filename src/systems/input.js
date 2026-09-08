@@ -3,6 +3,7 @@
 //
 // Left-click / tap is the action verb (hold to fire) — that is why the camera
 // orbits on right-drag and there is no OrbitControls.
+import { AFK_INTERACT_KEY } from '../data/afk.js'
 export const inputState = {
   move: { x: 0, z: 0 }, // x = strafe (+ right), z = forward (+ forward); pre-normalised
   look: { dx: 0, dy: 0 }, // pixels dragged this frame; consumed by cameraOrbit
@@ -17,6 +18,7 @@ export const inputState = {
   firePressAt: 0, // performance.now() at the most recent pointerdown
   fireReleaseAt: 0, // performance.now() at the most recent pointerup/forced-release
   firePressSeq: 0, // increments once per pointerdown; never missed even if already resolved by the time it's polled
+  interact: false, // edge-triggered on AFK_INTERACT_KEY keydown; consumed by systems/afk.js
 }
 
 const held = new Set()
@@ -75,6 +77,7 @@ function onKeyDown(e) {
   }
   held.add(e.code)
   if (e.code === 'Space') inputState.jump = true
+  if (e.code === AFK_INTERACT_KEY) inputState.interact = true
   recomputeMove()
 }
 
@@ -131,7 +134,15 @@ function onBlur() {
   orbiting = false
   if (inputState.firing) inputState.fireReleaseAt = performance.now()
   inputState.firing = false
+  inputState.interact = false
   recomputeMove()
+}
+
+// Live key-held check, for systems (e.g. systems/afk.js) that need to poll a
+// specific key each frame rather than react to inputState's edge-triggered
+// flags (jump/interact), which are consumed and cleared the frame they fire.
+export function isHeld(code) {
+  return held.has(code)
 }
 
 export function install() {

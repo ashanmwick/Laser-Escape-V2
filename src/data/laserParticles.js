@@ -25,8 +25,8 @@ export const SPARK_LATERAL_SPREAD = 1.5
 // Simple gravity pulling sparks down as they fly, m/s^2.
 export const SPARK_GRAVITY = 4
 
-export const SPARK_SIZE_MIN = 0.02
-export const SPARK_SIZE_MAX = 0.05
+export const SPARK_SIZE_MIN = 0.04
+export const SPARK_SIZE_MAX = 0.2
 
 export const SPARK_COLOR = '#fff2b0'
 

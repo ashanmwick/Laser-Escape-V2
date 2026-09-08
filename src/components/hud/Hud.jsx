@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { player } from '../../systems/playerState.js'
+import { afkState } from '../../systems/afk.js'
+import { hexPowerPadState } from '../../systems/hexPowerPad.js'
 import { settings } from '../../systems/settingsState.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth } from '../../data/progression.js'
+import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import Stats from '../Stats.jsx'
 import AuthPanel from './AuthPanel.jsx'
 import ChatLine from './ChatLine.jsx'
@@ -38,6 +41,8 @@ export default function Hud() {
   const levelRef = useRef(null)
   const rebirthRef = useRef(null)
   const winsRef = useRef(null)
+  const afkPromptRef = useRef(null)
+  const hexPadPromptRef = useRef(null)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -45,6 +50,61 @@ export default function Hud() {
       if (!el) return
       const p = player.position
       el.textContent = `x ${p.x.toFixed(1)}   y ${p.y.toFixed(1)}   z ${p.z.toFixed(1)}`
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
+
+  // afkState (systems/afk.js) changes at human speed — near a target, locked
+  // on, or neither — so a throttled textContent poll (same pattern as the
+  // position readout above) keeps this out of React's render loop too.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = afkPromptRef.current
+      if (!el) return
+      if (afkState.active) {
+        el.textContent = 'AFK firing — move or press Space to stop (E to stop)'
+        el.style.display = ''
+      } else if (afkState.nearTargetId) {
+        el.textContent = afkState.nearAllowed
+          ? 'Press E to AFK Here'
+          : `Rebirth ${afkState.nearRebirthRequired} required to AFK here`
+        el.style.display = ''
+      } else {
+        el.style.display = 'none'
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
+
+  // Same throttled-poll pattern as the afk prompt above. Hidden whenever the
+  // afk prompt would show (target zones and pad zones can't both be relevant
+  // at once — see systems/hexPowerPad.js and systems/afk.js's shared
+  // interact-flag handling), so the two never overlap on screen.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = hexPadPromptRef.current
+      if (!el) return
+      const index = hexPowerPadState.nearIndex
+      if (index === null || afkState.active || afkState.nearTargetId) {
+        el.style.display = 'none'
+        return
+      }
+      const { ownedHexPads, equippedHexPad, wins } = useGameStore.getState()
+      const tier = HEX_POWER_PAD_TIERS[index]
+      if (ownedHexPads.has(index)) {
+        if (equippedHexPad === index) {
+          el.style.display = 'none'
+        } else {
+          el.textContent = 'Press E to Equip Laser'
+          el.style.display = ''
+        }
+      } else if (wins >= tier.winsRequired) {
+        el.textContent = 'Press E to Buy Laser'
+        el.style.display = ''
+      } else {
+        el.textContent = `Need ${tier.winsRequired} Wins to Buy`
+        el.style.display = ''
+      }
     }, 100)
     return () => clearInterval(id)
   }, [])
@@ -85,6 +145,8 @@ export default function Hud() {
         <div>wheel &mdash; zoom</div>
         <div>space &mdash; jump</div>
         <div>hold left-click &mdash; fire laser</div>
+        <div>e &mdash; AFK-fire at a nearby target</div>
+        <div>e &mdash; buy/equip laser at a nearby power pad</div>
         <div>esc &mdash; menu</div>
         <div ref={posRef} className="mt-2 text-slate-400">x 0.0   y 0.0   z 0.0</div>
         <div className="mt-2 text-slate-100">
@@ -101,6 +163,18 @@ export default function Hud() {
         )}
         {settings.enable_chat && <ChatLine />}
       </div>
+
+      <div
+        ref={afkPromptRef}
+        className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
+        style={{ display: 'none' }}
+      />
+
+      <div
+        ref={hexPadPromptRef}
+        className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
+        style={{ display: 'none' }}
+      />
 
       <AuthPanel panelStyle={panelStyle} />
     </div>

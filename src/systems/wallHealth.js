@@ -15,6 +15,32 @@ import { WALL_STRENGTH, HEALTH_MAX, DAMAGE_CONSTANT } from '../data/wallHealth.j
 const health = {}
 for (const id in WALL_STRENGTH) health[id] = HEALTH_MAX
 
+// Read-only view state for the in-world health bars (components/WallHealthBars.jsx).
+// Same "systems own the continuous number, components just draw it" split as the
+// rest of this module: `activeId` is the live wall the beam is currently on (null
+// when it's on nothing breakable), `lastHitAt` is the last time each wall took a
+// tick of damage, in performance.now() ms — the bar uses it to linger after fire
+// stops and to flash on impact.
+export const wallHealthView = { activeId: null, lastHitAt: {} }
+
+// health[id] as a 0..1 fraction; 0 for an unknown or already-destroyed id.
+export function healthFraction(id) {
+  const remaining = health[id]
+  if (remaining === undefined) return 0
+  return remaining / HEALTH_MAX
+}
+
+// Restore every wall to full health and drop the transient bar state. Called
+// from systems/glowFloorPanel.js on a win-panel respawn, alongside the store's
+// resetWalls() (which clears destroyedWalls so the meshes remount) and
+// collision.js's resetAabbs() (which brings the colliders back). WallProp's
+// damage-look useFrame re-reads healthFraction() and snaps back on its own.
+export function resetWalls() {
+  for (const id in WALL_STRENGTH) health[id] = HEALTH_MAX
+  wallHealthView.activeId = null
+  wallHealthView.lastHitAt = {}
+}
+
 // Mirrors laser.js's isIgnored(): walks up from the raycast-hit mesh to find
 // the WallProp mount group that tagged itself with userData.wallId.
 function resolveWallId(object) {
@@ -27,13 +53,27 @@ function resolveWallId(object) {
 }
 
 export function step(dt) {
-  if (!laser.hit || !laser.hitObject) return
+  if (!laser.hit || !laser.hitObject) {
+    wallHealthView.activeId = null
+    return
+  }
 
   const id = resolveWallId(laser.hitObject)
-  if (id === null) return
+  if (id === null) {
+    wallHealthView.activeId = null
+    return
+  }
 
   const remaining = health[id]
-  if (remaining === undefined || remaining <= 0) return
+  if (remaining === undefined || remaining <= 0) {
+    wallHealthView.activeId = null
+    return
+  }
+
+  // Beam is on a live wall — its bar is the active one, whether or not this
+  // frame's Power is enough to visibly move the number.
+  wallHealthView.activeId = id
+  wallHealthView.lastHitAt[id] = performance.now()
 
   const power = useGameStore.getState().power
   const damage = (power / WALL_STRENGTH[id]) * DAMAGE_CONSTANT * dt

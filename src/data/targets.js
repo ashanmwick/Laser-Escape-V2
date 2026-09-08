@@ -40,3 +40,34 @@ export const TARGET_PROPS = TARGETS.map((t) => ({
   url: `/models/${t.id}.glb`,
   position: toThree(t.location),
 }))
+
+// Local-space (X, Z centred on the pivot — measured true for all nine glTFs)
+// offset from each target's placement position up to its "top area" — the
+// point systems/afk.js's auto-fire aims at. Measured from each glTF's own
+// POSITION accessor bounds (already carrying the baked ~3.038 scale, so
+// these are world-scale metres): full mesh height ranges 3.42–4.62m; each
+// entry below is ~85% of that, landing on the upper body rather than the
+// very tip. Tune per id here — purely visual, no gameplay effect beyond
+// where the beam is aimed.
+export const TARGET_AIM_OFFSET = {
+  grand_gold_multi_target: [0, 2.9, 0],
+  target_blue: [0, 3.9, 0],
+  target_grey: [0, 3.9, 0],
+  target_red: [0, 3.9, 0],
+  target_tan: [0, 3.9, 0],
+  target_yellow: [0, 3.9, 0],
+  triple_target_gold: [0, 3.7, 0],
+  triple_target_grey: [0, 3.7, 0],
+  vortex_target: [0, 2.9, 0],
+}
+
+// World-space point systems/afk.js's auto-fire aims at, per target id.
+export const TARGET_AIM_POINT = Object.fromEntries(
+  TARGET_PROPS.map((t) => {
+    const offset = TARGET_AIM_OFFSET[t.id]
+    return [t.id, [t.position[0] + offset[0], t.position[1] + offset[1], t.position[2] + offset[2]]]
+  }),
+)
+
+// id -> TARGET_PROPS entry, for systems/afk.js's proximity scan.
+export const TARGET_BY_ID = new Map(TARGET_PROPS.map((t) => [t.id, t]))

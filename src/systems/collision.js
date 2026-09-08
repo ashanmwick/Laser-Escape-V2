@@ -14,3 +14,10 @@ export function getAabbs() {
 export function removeAabb(id) {
   liveAabbs = liveAabbs.filter((a) => a.id !== id)
 }
+
+// Bring every collider back — used by the win-panel respawn
+// (systems/glowFloorPanel.js) to undo the removeAabb() calls destroyed walls
+// made. Cheap: one slice, same as boot.
+export function resetAabbs() {
+  liveAabbs = HUB_AABBS.slice()
+}

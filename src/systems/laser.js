@@ -5,7 +5,9 @@
 import * as THREE from 'three'
 import { inputState } from './input.js'
 import { player } from './playerState.js'
+import { afkState } from './afk.js'
 import { LASER_EYE_HEIGHT_RATIO, LASER_FORWARD_RATIO, LASER_MAX_RANGE } from '../data/laser.js'
+import { TARGET_AIM_POINT } from '../data/targets.js'
 
 export const laser = {
   active: false, // true while the beam should be drawn (mouse held)
@@ -23,6 +25,8 @@ const ndc = new THREE.Vector2()
 const farPoint = new THREE.Vector3()
 const worldNormal = new THREE.Vector3()
 const normalMatrix = new THREE.Matrix3()
+const aimOrigin = new THREE.Vector3()
+const aimDir = new THREE.Vector3()
 
 // Player.jsx and Laser.jsx both tag their root group userData.laserIgnore so
 // the aim ray never terminates on the shooter's own body or the beam mesh
@@ -37,7 +41,11 @@ function isIgnored(object) {
 }
 
 export function step(camera, scene) {
-  if (!inputState.firing) {
+  // AFK lock (systems/afk.js) fires the beam exactly like a held mouse
+  // button, just aimed at the locked target's top area instead of the
+  // cursor — so it reads as "firing" too, not only a real mouse hold.
+  const aimPoint = afkState.active ? TARGET_AIM_POINT[afkState.targetId] : null
+  if (!inputState.firing && !aimPoint) {
     laser.active = false
     laser.hit = false
     laser.hitObject = null
@@ -52,8 +60,16 @@ export function step(camera, scene) {
   laser.start.y = p.y + player.dims.height * LASER_EYE_HEIGHT_RATIO
   laser.start.z = p.z + Math.cos(facing) * forward
 
-  ndc.set(inputState.pointerNDC.x, inputState.pointerNDC.y)
-  raycaster.setFromCamera(ndc, camera)
+  if (aimPoint) {
+    aimOrigin.set(laser.start.x, laser.start.y, laser.start.z)
+    aimDir
+      .set(aimPoint[0] - laser.start.x, aimPoint[1] - laser.start.y, aimPoint[2] - laser.start.z)
+      .normalize()
+    raycaster.set(aimOrigin, aimDir)
+  } else {
+    ndc.set(inputState.pointerNDC.x, inputState.pointerNDC.y)
+    raycaster.setFromCamera(ndc, camera)
+  }
 
   const hits = raycaster.intersectObjects(scene.children, true)
   let target = null

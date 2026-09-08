@@ -6,6 +6,7 @@
 // hold that crosses the interval always fires before release can be
 // observed, which suppresses the click grant on the release frame.
 import { inputState } from './input.js'
+import { afkState } from './afk.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { ACTION_HOLD_INTERVAL } from '../data/progression.js'
 
@@ -35,13 +36,18 @@ export function step(dt) {
     }
   }
 
-  const firing = inputState.firing
+  // AFK lock (systems/afk.js) counts as a continuous hold, same as a real
+  // mouse press — it drives systems/laser.js the same way (see laser.js).
+  const firing = inputState.firing || afkState.active
 
   if (firing) {
     pressElapsed += dt
     sinceLastAction += dt
+    // While AFK-locked, each Action's Power is scaled by the target's "xN"
+    // tier (systems/afk.js); a real held mouse press is always 1x.
+    const mult = afkState.active ? afkState.multiplier : 1
     while (sinceLastAction >= ACTION_HOLD_INTERVAL) {
-      useGameStore.getState().gainPower()
+      useGameStore.getState().gainPower(mult)
       sinceLastAction -= ACTION_HOLD_INTERVAL
       holdFiredDuringPress = true
     }

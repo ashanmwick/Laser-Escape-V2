@@ -3,11 +3,15 @@ import { tick } from '../systems/timeScale.js'
 import { step } from '../systems/playerMovement.js'
 import { update as updateCamera } from '../systems/cameraOrbit.js'
 import { step as stepAction } from '../systems/actionTracker.js'
+import { step as stepAfk } from '../systems/afk.js'
+import { step as stepHexPowerPad } from '../systems/hexPowerPad.js'
+import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
 import { getAabbs } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
+import { inputState } from '../systems/input.js'
 
 // The single simulation tick. Rendered before the view components so its
 // useFrame subscribes first and runs first each frame. Reads systems directly;
@@ -20,6 +24,14 @@ export default function GameLoop() {
     const dt = tick()
     step(dt, getAabbs())
     updateCamera(camera, dt)
+    stepAfk()
+    stepHexPowerPad()
+    stepGlowFloorPanel()
+    // Neither system above claimed a press outside its own zone (each only
+    // clears inputState.interact when the player is actually in range of
+    // what it handles) — reset it here so a press near nothing never lingers
+    // into a later frame and fires something the player didn't aim at.
+    inputState.interact = false
     stepAction(dt)
     stepLaser(camera, scene)
     stepWallHealth(dt)

@@ -43,3 +43,18 @@ function toThree([bx, by, bz]) {
 }
 
 export const GLOW_FLOOR_PANEL_POSITIONS = BLENDER_LOCATIONS.map(toThree)
+
+// Flat Wins granted the moment the player steps onto each panel, in
+// glow_floor_panel[.NNN] order (index 0 = the base object, index 7 =
+// glow_floor_panel.007). Wins are a threshold currency, never spent — see
+// store/useGameStore.js buyHexPad — so this just adds to the running total
+// (store awardWins, driven once-per-entry by systems/glowFloorPanel.js).
+export const GLOW_FLOOR_PANEL_WINS = [1, 10, 50, 100, 150, 200, 250, 300]
+
+// Horizontal (X/Z) distance from a panel's placement position within which
+// the player counts as standing on it — the trigger radius for the Wins
+// award and for showing its floating label as "reached". Panels sit ~60
+// Blender units apart along the lane, so there is no risk of two zones
+// overlapping; sized to roughly the scaled panel footprint plus a little
+// slack. Tune here if the panel mesh size changes.
+export const GLOW_FLOOR_PANEL_RANGE = 3.5

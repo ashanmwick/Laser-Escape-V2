@@ -22,3 +22,46 @@ export const HEALTH_MAX = 100
 // (1) clears the weakest wall in a few seconds and barely scratches the
 // strongest — tune here, not in systems/wallHealth.js.
 export const DAMAGE_CONSTANT = 20
+
+// In-world health bar above each wall (components/WallHealthBars.jsx). All
+// distances are world metres, all times are seconds — Tech.md §4: every tunable
+// number lives here, the component only owns structural constants (plane args,
+// instance capacity).
+export const WALL_HEALTH_BAR = {
+  WIDTH: 6, // bar width at full health
+  HEIGHT: 0.7, // bar height
+  SEGMENTS: 12, // notch count baked into the mask texture
+  // Placement: centred on the wall's width, HEIGHT_FRAC of the way up its face
+  // (0 = base, 1 = top) plus Y_OFFSET metres, and FACE_OFFSET metres out from
+  // the approach (-X) face so the bar floats just in front of the wall rather
+  // than buried inside its box.
+  HEIGHT_FRAC: 0.6,
+  Y_OFFSET: 0,
+  FACE_OFFSET: 0.6,
+  // Health -> fill colour, high to low. Lerped between the bracketing stops.
+  // Green / amber / red, same family as HexPowerPadLabel.jsx.
+  COLOR_STOPS: [
+    { at: 1.0, color: '#38e07b' },
+    { at: 0.5, color: '#ffd21e' },
+    { at: 0.2, color: '#ff5a3c' },
+  ],
+  BG_COLOR: '#0b0f14', // bar backing
+  CHIP_COLOR: '#ffffff', // trailing "damage chip" that eases toward the true value
+  LINGER_SECONDS: 2.5, // how long a bar stays up after the last hit
+  SHOW_RANGE: 25, // also show the bar for any live wall this near the player
+  CHIP_EASE: 0.6, // health-fraction per second the chip closes the gap
+  FLASH_SECONDS: 0.15, // impact pulse duration
+  FLASH_SCALE: 0.18, // extra vertical scale at the peak of the pulse
+}
+
+// Progressive damage look for each wall (components/WallProp.jsx): as
+// healthFraction(id) falls 1 -> 0, the wall's own MeshLambertMaterial (a JPEG
+// albedo, data/wallProps.js) is multiplied darker and a procedural crack
+// overlay fades in over it. Tech.md §4: the feel lives here; WallProp keeps
+// only the crack bitmap resolution.
+export const WALL_DAMAGE = {
+  MIN_BRIGHTNESS: 0.4, // base-colour multiplier at 0 health (1.0 = as-authored)
+  CRACK_ONSET: 0.8, // health fraction where cracks first appear
+  CRACK_MAX_OPACITY: 0.85, // crack overlay opacity at 0 health
+  CRACK_TINT: '#0a0a0a', // crack colour — near-black so fractures read as depth
+}

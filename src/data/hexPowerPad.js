@@ -38,3 +38,37 @@ function toThree([bx, by, bz]) {
 }
 
 export const HEX_POWER_PAD_POSITIONS = BLENDER_LOCATIONS.map(toThree)
+
+// Metres from a pad's placement position within which the buy/equip prompt
+// appears and E is allowed to act on it — same idea as data/afk.js's
+// AFK_RANGE, sized smaller since pads sit ~3.5m apart in a grid and each
+// prompt should only ever address the one pad the player is standing at.
+export const HEX_POWER_PAD_RANGE = 2.5
+
+// Laser tier unlocked by each pad, in hex_power_pad.001-015 order (index 0 =
+// .001). `power` becomes the player's powerPerAction on equip
+// (store/useGameStore.js equipHexPad); `winsRequired` gates buyHexPad — the
+// player's cumulative wins must have reached it, nothing is spent.
+export const HEX_POWER_PAD_TIERS = [
+  { power: 1, winsRequired: 0 },
+  { power: 2, winsRequired: 1 },
+  { power: 5, winsRequired: 5 },
+  { power: 10, winsRequired: 25 },
+  { power: 25, winsRequired: 100 },
+  { power: 50, winsRequired: 250 },
+  { power: 100, winsRequired: 750 },
+  { power: 150, winsRequired: 2500 },
+  { power: 250, winsRequired: 7500 },
+  { power: 400, winsRequired: 25000 },
+  { power: 700, winsRequired: 50000 },
+  { power: 1000, winsRequired: 100000 },
+  { power: 1500, winsRequired: 250000 },
+  { power: 2500, winsRequired: 750000 },
+  { power: 3500, winsRequired: 2500000 },
+]
+
+// Recolor targets for HexPowerPadProp.jsx's per-instance material clones.
+// Not-owned stays whatever red the material was authored with in Blender —
+// no override needed for that state.
+export const HEX_POWER_PAD_OWNED_COLOR = '#ffffff'
+export const HEX_POWER_PAD_EQUIPPED_COLOR = '#22c55e'
