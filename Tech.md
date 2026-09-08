@@ -170,7 +170,8 @@ the game fully playable on the capsule fallback.
 | Concern | Where it lands |
 | --- | --- |
 | Portal settings (8 keys) | `settingsState.js` singleton; frame-loop systems read it without subscribing. Registering a listener is also what puts the control in the portal menu, so every registered key drives something real. |
-| Avatar | `avatarState.js` (equipped ids + clamped proportions) → `avatarModel.js` (loads and rigs) → `PlayerAvatar.jsx` (mounts). |
+| Avatar | `avatarState.js` (equipped ids + clamped proportions) → `avatarModel.js` (loads and rigs) → `PlayerAvatar.jsx` (mounts). Signed-out players wear `DEFAULT_EQUIPPED` (the bare base rig), not the capsule. |
+| Avatar run cycle | `avatarAnim.js`. Prefers an embedded `player.glb` clip matching `GAIT.runClip`; else a generated four-bone swing on `ArmL1/ArmR1/LegL1/LegR1` (rotation-only, so it never fights `applyProportions`). `PlayerAvatar.jsx` ticks it from `hypot(velocity.xz) / SPEED`. |
 | Collider | Proportions rescale `player.dims`, which `playerMovement.js` and `cameraOrbit.js` read every frame. `PLAYER_RADIUS`/`PLAYER_HEIGHT` remain the defaults that seed it — they are const bindings and could never have been reassigned by a caller, which is exactly how a remote height would have silently desynced the drawn body from the AABB sweep. |
 | Pause | The SDK supplies the writers `timeScale.paused` never had: Escape → the portal menu, and `pointer_lock_changed`. `resetClock()` on resume. |
 | Input | All listeners are on `window`, so keystrokes typed into an SDK modal would otherwise also drive WASD. `input.js` exposes `suspend(reason)`/`resume(reason)` for the auth popup, customizer and portal menu. |

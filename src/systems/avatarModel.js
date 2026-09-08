@@ -216,6 +216,22 @@ export async function buildAvatar(equipped) {
     baseMeshes,
     slotObjects: [],
     skinned: firstSkinnedMesh(root),
+    // Kept for avatarAnim.js: play an embedded "run" clip when the rig ships
+    // one, rather than the generated fallback.
+    clips: gltf.animations || [],
+  }
+
+  if (import.meta.env.DEV) {
+    // Probe: what does Bloxity's player.glb actually bundle, and what is the
+    // limb bind pose? Tune GAIT.swingAxis / signs in data/bloxity.js against
+    // this line if the generated run swings on the wrong axis.
+    const bone = nodes.ArmL1
+    console.info(
+      '[bloxity] player.glb clips:',
+      built.clips.map((c) => c.name).join(', ') || '(none)',
+      '| ArmL1 bind quat:',
+      bone ? bone.quaternion.toArray().map((n) => n.toFixed(3)).join(', ') : '(no ArmL1)',
+    )
   }
 
   const slots = equipped || {}

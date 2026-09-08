@@ -5,7 +5,7 @@ import { getYaw } from './cameraOrbit.js'
 // Kinematic capsule, stepped once per frame (Tech.md §5.2):
 //   apply input -> gravity -> integrate -> resolve vs static AABBs, axis by axis.
 // No broadphase: the AABB count is tens, so a linear scan wins.
-const SPEED = 6 // m/s target ground speed
+export const SPEED = 6 // m/s target ground speed (the avatar gait reads this)
 const ACCEL = 45 // m/s^2 approach toward target velocity
 const GRAVITY = -22 // m/s^2
 const JUMP_SPEED = 7.5 // m/s

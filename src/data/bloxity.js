@@ -83,6 +83,28 @@ export const BASE_MODEL_URL = `${AVATAR_CDN}/player.glb`
 // in later is a one-line change and can never break the guest.
 export const DEFAULT_EQUIPPED = {}
 
+// --- Locomotion: the run cycle -----------------------------------------
+// The base rig is R6-style: single-segment limbs (ArmL1/ArmR1/LegL1/LegR1) and
+// a two-node spine, with no forearm/shin/foot bone to key. A run that "rigs to
+// it perfectly" therefore has to be a four-bone contralateral swing plus a body
+// bob — the same shape as a Roblox R6 "Run" clip, which is exactly why it fits
+// this skeleton with no retargeting.
+//
+// If player.glb ships its own clip whose name matches `runClip`, avatarAnim.js
+// plays that through an AnimationMixer instead and ignores every number below;
+// these only drive the generated fallback.
+export const GAIT = {
+  runClip: /run|sprint|jog/i, // embedded clip name to prefer, when present
+  idleClip: /idle|stand/i, // cross-faded under the run when present
+  strideHz: 2.6, // full leg cycles per second at full speed
+  legSwing: 0.9, // rad, peak LegL1/LegR1 rotation
+  armSwing: 0.55, // rad, peak ArmL1/ArmR1 rotation (opposed to the same-side leg)
+  lean: 0.12, // rad, forward pitch of Spine1 at full speed
+  bob: 0.06, // m, vertical body bob (two beats per stride)
+  swingAxis: 'x', // bone-local axis the limbs swing about; see avatarAnim.js probe
+  blendHz: 8, // how fast the cycle eases in/out as speed changes
+}
+
 // --- Settings -------------------------------------------------------------
 // All SDK setting values are strings. Registering a listener is what makes the
 // control appear in the portal menu, so every key here has something behind it.
