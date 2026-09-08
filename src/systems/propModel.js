@@ -9,13 +9,23 @@
 // map if it has one. This rule is enforced here, not assumed, exactly as
 // avatarModel.js enforces it for remote avatar glTFs.
 //
-// The prop's transform is never touched: the exporter bakes the Blender
-// object's exact position/rotation/scale into the glTF node, so the loaded
-// scene lands in the same spot the .blend file placed it.
+// The exporter bakes whichever Blender object was exported (position and
+// rotation — power_podium's own, here) into the glTF node, but that's only
+// one instance's placement. Every mounted instance needs its own position
+// *and* rotation (target_podium turns independently to face power_podium),
+// so the node's baked position/rotation are reset to identity on load —
+// scale is left alone, it's shared — and callers supply position/rotation
+// themselves (data/podium.js) — see loadProp below.
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const gltfLoader = new GLTFLoader()
+
+// Keyed by url: the same source glTF reused by more than one placed instance
+// (e.g. target_podium duplicating power_podium) is fetched and converted once
+// — refCount frees the shared geometry/materials only once every instance
+// mounted from that url has been disposed.
+const cache = new Map()
 
 function convertMaterial(source) {
   const isEmissive = source.emissive && source.emissive.getHex() !== 0x000000
@@ -33,13 +43,19 @@ function convertMaterial(source) {
   })
 }
 
-// Loads `url` and returns { root, materials }. `root` is ready to add to the
-// scene as-is; `materials` is the owned list dispose() needs to walk.
-export async function loadProp(url) {
+async function loadBase(url) {
   const gltf = await gltfLoader.loadAsync(url)
   const root = gltf.scene
   const materials = []
   const converted = new Map()
+
+  // Strip the exported node's own baked position/rotation (see the note
+  // above) — every mounted instance supplies its own instead. Scale stays:
+  // it's the same ~1.104 for every instance of this prop.
+  for (const child of root.children) {
+    child.position.set(0, 0, 0)
+    child.quaternion.identity()
+  }
 
   root.traverse((o) => {
     if (!o.isMesh) return
@@ -61,9 +77,36 @@ export async function loadProp(url) {
   return { root, materials }
 }
 
-// three.js does not GC GPU memory (Tech.md §7).
+// Loads `url` and returns { root, materials, url }. `root` is ready to add to
+// the scene as-is (position it yourself — see the transform note above);
+// `materials` is the owned list dispose() needs to walk. A second (or third)
+// caller for the same url gets a `root.clone()` instead of a re-fetch/re-parse
+// — clones share the original's geometry and material references, so two
+// placed copies of one prop cost one draw-call set's worth of GPU memory, not
+// two.
+export async function loadProp(url) {
+  let entry = cache.get(url)
+  if (!entry) {
+    entry = { promise: loadBase(url), refCount: 0 }
+    cache.set(url, entry)
+  }
+  const base = await entry.promise
+  entry.refCount += 1
+  const root = entry.refCount === 1 ? base.root : base.root.clone()
+  return { root, materials: base.materials, url }
+}
+
+// three.js does not GC GPU memory (Tech.md §7). Only the last instance
+// mounted from a given url actually frees its geometry/materials.
 export function disposeProp(built) {
   if (!built) return
+  if (built.root.parent) built.root.parent.remove(built.root)
+
+  const entry = cache.get(built.url)
+  if (!entry) return
+  entry.refCount -= 1
+  if (entry.refCount > 0) return
+
   built.root.traverse((o) => {
     if (o.geometry) o.geometry.dispose()
   })
@@ -71,5 +114,5 @@ export function disposeProp(built) {
     if (m.map) m.map.dispose()
     m.dispose()
   }
-  if (built.root.parent) built.root.parent.remove(built.root)
+  cache.delete(built.url)
 }

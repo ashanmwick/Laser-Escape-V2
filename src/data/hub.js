@@ -1,4 +1,5 @@
 import { BLOCK_AABBS } from './blocks.js'
+import { POWER_PODIUM_AABBS, TARGET_PODIUM_AABBS } from './podium.js'
 
 // Hub geometry (Tech.md §4). Level layout is data, not a Blender file — Blender
 // authors props only. This file owns the spawn point and the static AABB list
@@ -14,7 +15,12 @@ export const HUB_BOXES = [
 ]
 
 // Everything the kinematic collider scans (Tech.md §5.2). The building blocks
-// draw themselves, so their boxes join the scan here but never HUB_BOXES —
-// only props whose collider *is* their drawn shape belong in that list. Their
-// boxes are merged per column in blocks.js, so the linear scan stays short.
-export const HUB_AABBS = [...HUB_BOXES, ...BLOCK_AABBS]
+// and both podiums draw themselves, so their boxes join the scan here but
+// never HUB_BOXES — only props whose collider *is* their drawn shape belong
+// in that list. Each set is pre-merged/derived to keep the linear scan short.
+export const HUB_AABBS = [
+  ...HUB_BOXES,
+  ...BLOCK_AABBS,
+  ...POWER_PODIUM_AABBS,
+  ...TARGET_PODIUM_AABBS,
+]
