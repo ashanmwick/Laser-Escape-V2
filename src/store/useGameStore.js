@@ -30,6 +30,7 @@ export const useGameStore = create((set, get) => ({
   rebirth: REBIRTH_INITIAL,
   wins: WINS_INITIAL,
   powerPerAction: POWER_PER_ACTION_INITIAL,
+  destroyedWalls: new Set(),
 
   // One Action's worth of Power. Called only from systems/actionTracker.js,
   // never directly from a component.
@@ -53,5 +54,11 @@ export const useGameStore = create((set, get) => ({
         power: POWER_INITIAL,
       }),
     )
+  },
+
+  // Called once from systems/wallHealth.js the frame a wall's health first
+  // reaches 0. Idempotent: adding an id already in the set is a no-op change.
+  destroyWall(id) {
+    set((s) => ({ destroyedWalls: new Set(s.destroyedWalls).add(id) }))
   },
 }))

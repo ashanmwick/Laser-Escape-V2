@@ -12,12 +12,17 @@ export const laser = {
   hit: false, // true when the aim ray struck real geometry, not the range fallback
   start: { x: 0, y: 0, z: 0 }, // world-space beam origin, at the player's eyes
   end: { x: 0, y: 0, z: 0 }, // world-space beam tip
+  normal: { x: 0, y: 1, z: 0 }, // world-space surface normal at end, valid only when hit
+  hitObject: null, // THREE.Object3D struck this frame, valid only when hit
+  hitInstanceId: -1, // instance index when hitObject is an InstancedMesh, else -1
 }
 
 // Scratch, hoisted to module scope — zero allocation per frame (Tech.md §7).
 const raycaster = new THREE.Raycaster()
 const ndc = new THREE.Vector2()
 const farPoint = new THREE.Vector3()
+const worldNormal = new THREE.Vector3()
+const normalMatrix = new THREE.Matrix3()
 
 // Player.jsx and Laser.jsx both tag their root group userData.laserIgnore so
 // the aim ray never terminates on the shooter's own body or the beam mesh
@@ -34,6 +39,9 @@ function isIgnored(object) {
 export function step(camera, scene) {
   if (!inputState.firing) {
     laser.active = false
+    laser.hit = false
+    laser.hitObject = null
+    laser.hitInstanceId = -1
     return
   }
 
@@ -61,12 +69,24 @@ export function step(camera, scene) {
     laser.end.y = target.point.y
     laser.end.z = target.point.z
     laser.hit = true
+    laser.hitObject = target.object
+    laser.hitInstanceId = target.instanceId ?? -1
+
+    if (target.face) {
+      normalMatrix.getNormalMatrix(target.object.matrixWorld)
+      worldNormal.copy(target.face.normal).applyMatrix3(normalMatrix).normalize()
+      laser.normal.x = worldNormal.x
+      laser.normal.y = worldNormal.y
+      laser.normal.z = worldNormal.z
+    }
   } else {
     raycaster.ray.at(LASER_MAX_RANGE, farPoint)
     laser.end.x = farPoint.x
     laser.end.y = farPoint.y
     laser.end.z = farPoint.z
     laser.hit = false
+    laser.hitObject = null
+    laser.hitInstanceId = -1
   }
 
   laser.active = true

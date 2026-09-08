@@ -104,4 +104,4 @@ function worldAabb(locationX) {
   }
 }
 
-export const WALL_AABBS = WALLS.map((w) => worldAabb(w.x))
+export const WALL_AABBS = WALLS.map((w) => ({ id: w.id, ...worldAabb(w.x) }))

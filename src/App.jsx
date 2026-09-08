@@ -12,6 +12,7 @@ import GlowFloorPanels from './components/GlowFloorPanels.jsx'
 import WallProps from './components/WallProps.jsx'
 import Player from './components/Player.jsx'
 import Laser from './components/Laser.jsx'
+import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
 import { settings } from './systems/settingsState.js'
@@ -53,6 +54,7 @@ export default function App() {
         <WallProps />
         <Player />
         <Laser />
+        <LaserParticles />
       </Canvas>
       <Hud />
     </>

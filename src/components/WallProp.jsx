@@ -8,7 +8,7 @@ import { loadProp, disposeProp } from '../systems/propModel.js'
 // like PodiumProp.jsx, rotation is applied to the mount group because
 // propModel.js's loader strips the glTF's baked position/rotation on load
 // (every one of these ten shares the same authored yaw).
-export default function WallProp({ url, position, rotationY = 0 }) {
+export default function WallProp({ id, url, position, rotationY = 0 }) {
   const groupRef = useRef(null)
 
   useEffect(() => {
@@ -45,6 +45,7 @@ export default function WallProp({ url, position, rotationY = 0 }) {
       position={position}
       rotation={[0, rotationY, 0]}
       matrixAutoUpdate={false}
+      userData={{ wallId: id }}
     />
   )
 }
