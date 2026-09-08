@@ -84,7 +84,7 @@ export default function Hud() {
         <div>right-drag &mdash; orbit camera</div>
         <div>wheel &mdash; zoom</div>
         <div>space &mdash; jump</div>
-        <div>hold left-click &mdash; fire (reserved)</div>
+        <div>hold left-click &mdash; fire laser</div>
         <div>esc &mdash; menu</div>
         <div ref={posRef} className="mt-2 text-slate-400">x 0.0   y 0.0   z 0.0</div>
         <div className="mt-2 text-slate-100">

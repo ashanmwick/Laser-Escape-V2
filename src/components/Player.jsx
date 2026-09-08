@@ -26,7 +26,7 @@ export default function Player() {
   const cylinder = height - radius * 2
 
   return (
-    <group ref={ref}>
+    <group ref={ref} userData={{ laserIgnore: true }}>
       <group visible={!hasAvatar}>
         <mesh position-y={height / 2}>
           <capsuleGeometry args={[radius, cylinder, 4, 12]} />

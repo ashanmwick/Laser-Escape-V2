@@ -7,6 +7,7 @@ export const inputState = {
   move: { x: 0, z: 0 }, // x = strafe (+ right), z = forward (+ forward); pre-normalised
   look: { dx: 0, dy: 0 }, // pixels dragged this frame; consumed by cameraOrbit
   zoom: 0, // wheel delta this frame; consumed by cameraOrbit
+  pointerNDC: { x: 0, y: 0 }, // mouse position in [-1, 1] clip space; consumed by systems/laser.js
   jump: false, // set on keydown, consumed by playerMovement
   firing: false, // held while left mouse / primary touch is down
   // A frame-loop poll of `firing` alone can miss a press that both starts and
@@ -107,6 +108,11 @@ function onPointerUp(e) {
 }
 
 function onPointerMove(e) {
+  // Tracked unconditionally (not just while orbiting) — this is what the
+  // laser aims at, updated regardless of whether a button is held.
+  inputState.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1
+  inputState.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1
+
   if (!orbiting) return
   inputState.look.dx += e.movementX || 0
   inputState.look.dy += e.movementY || 0
