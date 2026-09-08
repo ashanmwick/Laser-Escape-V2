@@ -1,11 +1,13 @@
-import { HUB_AABBS } from '../data/hub.js'
+import { HUB_BOXES } from '../data/hub.js'
 
-// Visual boxes for the collider's static AABBs. Presentation only — the data
-// lives in src/data/hub.js.
+// Visual boxes for the hub's placeholder walls. Presentation only — the data
+// lives in src/data/hub.js. This draws HUB_BOXES, not the full collider list:
+// props that draw themselves contribute AABBs without wanting a grey box on
+// top of them.
 export default function Obstacles() {
   return (
     <group>
-      {HUB_AABBS.map((b, i) => {
+      {HUB_BOXES.map((b, i) => {
         const sx = b.max.x - b.min.x
         const sy = b.max.y - b.min.y
         const sz = b.max.z - b.min.z

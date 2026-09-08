@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import GameLoop from './components/GameLoop.jsx'
+import BuildingBlocks from './components/BuildingBlocks.jsx'
 import Ground from './components/Ground.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import Player from './components/Player.jsx'
@@ -33,6 +34,7 @@ export default function App() {
 
         <GameLoop />
         <Ground />
+        <BuildingBlocks />
         <Obstacles />
         <Player />
       </Canvas>

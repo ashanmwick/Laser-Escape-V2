@@ -58,8 +58,13 @@ function resolveY(aabbs) {
   for (let i = 0; i < aabbs.length; i++) {
     const b = aabbs[i]
     if (!overlaps(p, b)) continue
-    const c = (b.min.y + b.max.y) * 0.5
-    if (p.y < c) {
+    // Push out along whichever face is shallower. Comparing the feet against
+    // the box's centre instead would only be right for boxes shorter than the
+    // capsule: land on a 1m block and the feet sit *above* its centre, so the
+    // player would be shoved down through the floor rather than stood on top.
+    const upOut = b.max.y - p.y // depth the feet are under the lid
+    const downOut = p.y + player.dims.height - b.min.y // depth the head is past the floor
+    if (upOut <= downOut) {
       // landed on top of the box
       p.y = b.max.y
       if (player.velocity.y < 0) player.velocity.y = 0
