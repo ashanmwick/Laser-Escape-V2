@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import GameLoop from './components/GameLoop.jsx'
 import BuildingBlocks from './components/BuildingBlocks.jsx'
+import GrassBlocks from './components/GrassBlocks.jsx'
 import Ground from './components/Ground.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PowerPodium from './components/PowerPodium.jsx'
@@ -41,6 +42,7 @@ export default function App() {
         <GameLoop />
         <Ground />
         <BuildingBlocks />
+        <GrassBlocks />
         <Obstacles />
         <PowerPodium />
         <TargetPodium />

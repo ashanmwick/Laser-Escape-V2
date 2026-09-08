@@ -113,6 +113,35 @@ export async function loadProp(url) {
   return { root, materials: base.materials, url }
 }
 
+// Loads `url` and returns its converted mesh parts directly — `{ geometry,
+// material }` per primitive — rather than a mountable scene root. Meant for
+// callers building their own InstancedMesh (e.g. GrassBlocks.jsx) where
+// every instance shares one geometry/material pair and there is no per-call
+// clone/refCount bookkeeping to do: the caller loads once, owns the parts
+// for its own lifetime, and disposes them itself. Not routed through the
+// `cache`/loadBase pair above — that cache exists to let loadProp() hand out
+// `root.clone()`s to multiple scene-mounted instances, which an
+// InstancedMesh consumer has no use for.
+export async function loadPropParts(url) {
+  const gltf = await gltfLoader.loadAsync(url)
+  const converted = new Map()
+  const parts = []
+  const materials = []
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return
+    const previous = o.material
+    let next = converted.get(previous.uuid)
+    if (!next) {
+      next = convertMaterial(previous)
+      converted.set(previous.uuid, next)
+      materials.push(next)
+    }
+    previous.dispose()
+    parts.push({ geometry: o.geometry, material: next })
+  })
+  return { parts, materials }
+}
+
 // three.js does not GC GPU memory (Tech.md §7). Only the last instance
 // mounted from a given url actually frees its geometry/materials.
 export function disposeProp(built) {

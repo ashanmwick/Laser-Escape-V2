@@ -1,4 +1,5 @@
 import { BLOCK_AABBS } from './blocks.js'
+import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { POWER_PODIUM_AABBS, TARGET_PODIUM_AABBS } from './podium.js'
 import { WALL_AABBS } from './wallProps.js'
 
@@ -18,6 +19,7 @@ export const HUB_BOXES = []
 export const HUB_AABBS = [
   ...HUB_BOXES,
   ...BLOCK_AABBS,
+  ...GRASS_BLOCK_AABBS,
   ...POWER_PODIUM_AABBS,
   ...TARGET_PODIUM_AABBS,
   ...WALL_AABBS,
