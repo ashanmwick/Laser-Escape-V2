@@ -28,6 +28,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const gltfLoader = new GLTFLoader()
 
+// preloadProp() / preloadPropParts() (systems/preload.js, behind the loading
+// screen) warm this before the scene mounts; three's file cache is what keeps
+// the later real load from going back to the network for the same glTF.
+THREE.Cache.enabled = true
+
 // Keyed by url: the same source glTF reused by more than one placed instance
 // (e.g. target_podium duplicating power_podium) is fetched and converted once
 // — refCount frees the shared geometry/materials only once every instance
@@ -113,6 +118,21 @@ export async function loadProp(url) {
   return { root, materials: base.materials, url }
 }
 
+// Warms the cache for `url` without taking a reference: no refCount bump and
+// no clone. The first real loadProp(url) caller still sees entry.refCount === 1
+// and gets the original root; every caller after that gets a clone — exactly
+// the behaviour as if the preload had never run. systems/preload.js calls this
+// for every hub prop so the loading screen shows real progress and the frame
+// behind it is already populated. Rejects the same way loadProp would on a 404.
+export function preloadProp(url) {
+  let entry = cache.get(url)
+  if (!entry) {
+    entry = { promise: loadBase(url), refCount: 0 }
+    cache.set(url, entry)
+  }
+  return entry.promise
+}
+
 // Loads `url` and returns its converted mesh parts directly — `{ geometry,
 // material }` per primitive — rather than a mountable scene root. Meant for
 // callers building their own InstancedMesh (e.g. GrassBlocks.jsx) where
@@ -140,6 +160,16 @@ export async function loadPropParts(url) {
     parts.push({ geometry: o.geometry, material: next })
   })
   return { parts, materials }
+}
+
+// The loadPropParts() counterpart of preloadProp(): loadPropParts consumers
+// own and dispose their own parts, so there is no module cache to fill here —
+// this just runs the fetch + parse through three's file cache. GrassBlocks'
+// own loadPropParts() call then resolves from that cache instead of the
+// network; the scene parsed here is never rendered, so it holds no GPU memory
+// and is left for GC.
+export function preloadPropParts(url) {
+  return gltfLoader.loadAsync(url)
 }
 
 // three.js does not GC GPU memory (Tech.md §7). Only the last instance

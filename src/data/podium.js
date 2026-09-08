@@ -138,3 +138,32 @@ export function buildPodiumAabbs(t) {
 
 export const POWER_PODIUM_AABBS = buildPodiumAabbs(POWER_PODIUM_TRANSFORM)
 export const TARGET_PODIUM_AABBS = buildPodiumAabbs(TARGET_PODIUM_TRANSFORM)
+
+// In-world text for the blank sign panel baked into the model — primitive 3,
+// material `power_podium_signface_mat`: a flat vertical quad framed by the
+// `power_podium_neon_mat` border, high at the back of the tiers. Its local
+// (pre-scale) centre is (0, 9.05, -5.555), size 9.36 x 2.56, with its visible
+// face normal along local +Z (the side a stair-climber sees). components/
+// PodiumSign.jsx renders a drei <Text> here (Tech.md §1: SDF <Text> is *the*
+// in-world signage primitive) — not billboarded, this is a fixed sign on the
+// prop. The model's baked SIGN_SCALE is NOT inherited by PodiumSign's own
+// group (it mirrors PodiumProp's unscaled mount group), so the offsets below
+// are pre-multiplied by it here.
+const SIGN_SCALE = 1.1043590307235718
+export const PODIUM_SIGN = {
+  // Local offset from a podium mount-group origin to the text anchor:
+  // sign-face centre * SIGN_SCALE, nudged +0.05 off the panel along its
+  // normal so the glyphs don't z-fight the neon frame.
+  localPos: [0, 9.05 * SIGN_SCALE, -5.555 * SIGN_SCALE + 0.05],
+  // Text yaw relative to its podium. 0 => faces local +Z. If it renders
+  // facing INTO the podium (or mirrored), set Math.PI and negate the +0.05
+  // in localPos above.
+  faceYaw: 0,
+  fontSize: 1.7, // ~2.8m face height; one line for POWER / TARGETS
+  maxWidth: 9, // ~10.3m face width, less a margin
+  color: '#ffef9f',
+  outlineWidth: 0.06,
+  outlineColor: '#3a1d05',
+}
+export const POWER_PODIUM_SIGN_TEXT = 'POWER'
+export const TARGET_PODIUM_SIGN_TEXT = 'TARGETS'

@@ -15,6 +15,7 @@ import Player from './components/Player.jsx'
 import Laser from './components/Laser.jsx'
 import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
+import LoadingScreen from './components/LoadingScreen.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
@@ -59,6 +60,7 @@ export default function App() {
         <LaserParticles />
       </Canvas>
       <Hud />
+      <LoadingScreen />
     </>
   )
 }
