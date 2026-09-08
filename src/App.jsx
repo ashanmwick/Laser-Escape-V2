@@ -24,10 +24,12 @@ export default function App() {
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         camera={{ fov: 55, near: 0.1, far: 500, position: [0, 6, 12] }}
       >
-        <color attach="background" args={['#0b0d12']} />
-        {/* One hemisphere + one directional light, shadows off (Tech.md §7). */}
-        <hemisphereLight args={['#cfd6e6', '#20242e', 0.9]} />
-        <directionalLight position={[8, 14, 6]} intensity={1.1} />
+        <color attach="background" args={['#afd3ff']} />
+        {/* One hemisphere + one directional light, shadows off (Tech.md §7).
+           Tuned for bright midday: strong sky fill + warm ground bounce so
+           nothing reads as shadowed. */}
+        <hemisphereLight args={['#eaf3ff', '#b7a98f', 2.2]} />
+        <directionalLight position={[8, 14, 6]} intensity={2.4} />
 
         <GameLoop />
         <Ground />
