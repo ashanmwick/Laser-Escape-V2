@@ -3,6 +3,7 @@ import GameLoop from './components/GameLoop.jsx'
 import BuildingBlocks from './components/BuildingBlocks.jsx'
 import Ground from './components/Ground.jsx'
 import Obstacles from './components/Obstacles.jsx'
+import PowerPodium from './components/PowerPodium.jsx'
 import Player from './components/Player.jsx'
 import Hud from './components/hud/Hud.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
@@ -36,6 +37,7 @@ export default function App() {
         <Ground />
         <BuildingBlocks />
         <Obstacles />
+        <PowerPodium />
         <Player />
       </Canvas>
       <Hud />
