@@ -1,5 +1,5 @@
 import { inputState } from './input.js'
-import { player, PLAYER_RADIUS, PLAYER_HEIGHT } from './playerState.js'
+import { player } from './playerState.js'
 import { getYaw } from './cameraOrbit.js'
 
 // Kinematic capsule, stepped once per frame (Tech.md §5.2):
@@ -12,15 +12,15 @@ const JUMP_SPEED = 7.5 // m/s
 const GROUND_Y = 0 // flat ground plane height
 
 // The capsule is treated as an AABB for the static scan: a box of half-width
-// PLAYER_RADIUS on X/Z, spanning [y, y + PLAYER_HEIGHT].
+// the live player.dims radius on X/Z, spanning [y, y + height].
 function overlaps(p, b) {
   return (
-    p.x + PLAYER_RADIUS > b.min.x &&
-    p.x - PLAYER_RADIUS < b.max.x &&
-    p.y + PLAYER_HEIGHT > b.min.y &&
+    p.x + player.dims.radius > b.min.x &&
+    p.x - player.dims.radius < b.max.x &&
+    p.y + player.dims.height > b.min.y &&
     p.y < b.max.y &&
-    p.z + PLAYER_RADIUS > b.min.z &&
-    p.z - PLAYER_RADIUS < b.max.z
+    p.z + player.dims.radius > b.min.z &&
+    p.z - player.dims.radius < b.max.z
   )
 }
 
@@ -37,7 +37,7 @@ function resolveX(aabbs) {
     const b = aabbs[i]
     if (!overlaps(p, b)) continue
     const c = (b.min.x + b.max.x) * 0.5
-    p.x = p.x < c ? b.min.x - PLAYER_RADIUS : b.max.x + PLAYER_RADIUS
+    p.x = p.x < c ? b.min.x - player.dims.radius : b.max.x + player.dims.radius
     player.velocity.x = 0
   }
 }
@@ -48,7 +48,7 @@ function resolveZ(aabbs) {
     const b = aabbs[i]
     if (!overlaps(p, b)) continue
     const c = (b.min.z + b.max.z) * 0.5
-    p.z = p.z < c ? b.min.z - PLAYER_RADIUS : b.max.z + PLAYER_RADIUS
+    p.z = p.z < c ? b.min.z - player.dims.radius : b.max.z + player.dims.radius
     player.velocity.z = 0
   }
 }
@@ -66,7 +66,7 @@ function resolveY(aabbs) {
       player.grounded = true
     } else {
       // clipped the underside with the head
-      p.y = b.min.y - PLAYER_HEIGHT
+      p.y = b.min.y - player.dims.height
       if (player.velocity.y > 0) player.velocity.y = 0
     }
   }

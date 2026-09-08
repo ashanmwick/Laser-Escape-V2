@@ -1,5 +1,5 @@
 import { inputState } from './input.js'
-import { player, PLAYER_HEIGHT } from './playerState.js'
+import { player } from './playerState.js'
 
 // Third-person follow with right-drag orbit + wheel zoom (Tech.md §5.2).
 // No OrbitControls — left-click is the game's action verb.
@@ -20,27 +20,35 @@ const FOLLOW_LERP = 12 // higher = snappier follow
 // Scratch, hoisted to module scope — zero allocation per frame (Tech.md §7).
 const target = { x: 0, y: 0, z: 0 }
 
+// Multiplier over the base sensitivities, driven by the portal's
+// camera_sensitivity setting (0.1–5.0). 1 leaves the tuned feel untouched.
+let sensitivity = 1
+
+export function setSensitivity(mult) {
+  sensitivity = Number.isFinite(mult) && mult > 0 ? mult : 1
+}
+
 export function getYaw() {
   return state.yaw
 }
 
 export function update(camera, dt) {
   // Consume drag + wheel accumulated by input.js.
-  state.yaw -= inputState.look.dx * ORBIT_SENS
-  state.pitch += inputState.look.dy * ORBIT_SENS
+  state.yaw -= inputState.look.dx * ORBIT_SENS * sensitivity
+  state.pitch += inputState.look.dy * ORBIT_SENS * sensitivity
   inputState.look.dx = 0
   inputState.look.dy = 0
   if (state.pitch < MIN_PITCH) state.pitch = MIN_PITCH
   if (state.pitch > MAX_PITCH) state.pitch = MAX_PITCH
 
-  state.distance += inputState.zoom * ZOOM_SENS
+  state.distance += inputState.zoom * ZOOM_SENS * sensitivity
   inputState.zoom = 0
   if (state.distance < MIN_DIST) state.distance = MIN_DIST
   if (state.distance > MAX_DIST) state.distance = MAX_DIST
 
   // Aim at the player's upper body.
   target.x = player.position.x
-  target.y = player.position.y + PLAYER_HEIGHT * 0.6
+  target.y = player.position.y + player.dims.height * 0.6
   target.z = player.position.z
 
   const cp = Math.cos(state.pitch)

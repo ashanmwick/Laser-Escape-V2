@@ -49,8 +49,11 @@ src/
     input.js  playerState.js  playerMovement.js  cameraOrbit.js
     events.js  timeScale.js  persistence.js
     audio.js  sfx.js  mergeBoxes.js
+    bloxity.js  avatarState.js  avatarModel.js   # the SDK facade (§5.6)
+    settingsState.js  session.js  chat.js
   components/                 # presentation only. Call store actions; never own balance.
     HitParticles.jsx  FloatingTexts.jsx  Stats.jsx
+    PlayerAvatar.jsx          # mounts the Bloxity rig under Player
     hud/                      # DOM overlay, not in the canvas
     hub/  lane/               # one folder per scene
 ```
@@ -155,6 +158,25 @@ frame loop reads systems directly and never calls `setState`.
 refuse otherwise). `sfx.js` pools buffer sources and rate-limits repeat sounds — hold-to-fire
 generates hits far faster than an ear can resolve them.
 
+### 5.6 Bloxity SDK
+
+`systems/bloxity.js` is the **only** module that touches `window.Legion.SDK`. It holds the
+single `onUserChanged` subscription — the source of truth for auth UI and for (re)loading
+friends, avatar and balance — and every method no-ops when the SDK is absent. That guard is
+load-bearing, not defensive polish: §1 rejected drei `<Environment>` because a CDN stall
+breaks the scene, and the same standard applies here. A blocked `sdk.bloxity.io` must leave
+the game fully playable on the capsule fallback.
+
+| Concern | Where it lands |
+| --- | --- |
+| Portal settings (8 keys) | `settingsState.js` singleton; frame-loop systems read it without subscribing. Registering a listener is also what puts the control in the portal menu, so every registered key drives something real. |
+| Avatar | `avatarState.js` (equipped ids + clamped proportions) → `avatarModel.js` (loads and rigs) → `PlayerAvatar.jsx` (mounts). |
+| Collider | Proportions rescale `player.dims`, which `playerMovement.js` and `cameraOrbit.js` read every frame. `PLAYER_RADIUS`/`PLAYER_HEIGHT` remain the defaults that seed it — they are const bindings and could never have been reassigned by a caller, which is exactly how a remote height would have silently desynced the drawn body from the AABB sweep. |
+| Pause | The SDK supplies the writers `timeScale.paused` never had: Escape → the portal menu, and `pointer_lock_changed`. `resetClock()` on resume. |
+| Input | All listeners are on `window`, so keystrokes typed into an SDK modal would otherwise also drive WASD. `input.js` exposes `suspend(reason)`/`resume(reason)` for the auth popup, customizer and portal menu. |
+| Rooms | `session.js` reads an incoming `?roomId`/`?partyId` and mints one for outgoing invites. `playerJoined`/`playerInRoom` are the seams real netcode will drive; today an invite link resolves and launches the game, but there is no co-presence. |
+| Bux | Deliberately **not** wired. Fulfillment arrives by a server-to-server webhook and there is no backend, so a non-2xx auto-refunds and every grant would be free. `getBalance()` is a plain read and is wired. Prices never reach the client — skus only; the catalog is server-authoritative. |
+
 ---
 
 ## 6. Art pipeline
@@ -175,6 +197,15 @@ Export → `bpy.ops.export_scene.gltf` with Draco → `gltf-transform prune dedu
 one `public/models/props.glb`. Loaded once with `GLTFLoader` + `DRACOLoader` + `KTX2Loader`;
 the geometries are then reused across `InstancedMesh`es.
 
+**The player character is the one exception**, and it is scoped. When a signed-in player has
+a Bloxity avatar, the body comes from `static.bloxity.io` instead of this pipeline: a skinned
+rig (6 meshes, 104 tris, **one** shared material — `avatarModel.js` maps every source
+material to a single converted one, so meshes that shared a material still do) plus up to
+eight optional cosmetic slots, each adding one mesh and one material. Hats and backs are
+`.obj` with plain `.png`: no Draco, no KTX2, and sizes we do not control. Props stay atlased
+and instanced — only the player is multi-mesh — and remote players, if they ever ship, must
+be capped or merged rather than each paying this cost.
+
 ---
 
 ## 7. Performance rules
@@ -192,7 +223,9 @@ Hard numbers, each checkable from `renderer.info` behind the stats toggle:
   `mergeBoxes.js` into one geometry per material, with `matrixAutoUpdate = false`.
 - **Materials are `MeshLambertMaterial` or `MeshBasicMaterial` only.** No
   `MeshStandardMaterial` — PBR costs fragment time a phone does not have, and against baked
-  occlusion it buys nothing.
+  occlusion it buys nothing. Remote avatar glTFs arrive as `MeshStandardMaterial`, so
+  `avatarModel.js` rebuilds every loaded material as Lambert on the way in; this rule is
+  enforced at the boundary, not assumed.
 - One 512² KTX2/Basis atlas: power-of-two, mipmapped, `SRGBColorSpace`, anisotropy 1.
 - Lighting is one hemisphere + one directional light. **Shadows off.**
 - **No postprocessing.** The laser glow is an additive cylinder plus a sprite core, not
@@ -200,6 +233,11 @@ Hard numbers, each checkable from `renderer.info` behind the stats toggle:
 - Zero allocation inside `useFrame`: scratch `Vector3`/`Quaternion` hoisted to module scope;
   particles and floating texts drawn from fixed-size pools.
 - Dispose geometries, materials and textures on teardown. three.js does not GC GPU memory.
+
+`graphics_quality` (Low/Medium/High/Ultra) caps `dpr` through `<Canvas dpr>` and is **not** a
+violation of the stance in the preamble. It is a *user-elected* tier applied on change; what
+this engine rejects is runtime-*adaptive* scaling — a `dpr` setter driven by a frame-time
+average, which still does not exist. The cap stays inside the `[1, 1.5]` clamp above.
 
 **Deliberately left out**, and where they would go if the budget ever changed: LOD (per-prop,
 in the loader), dynamic resolution scaling (a `dpr` setter driven by a frame-time average in

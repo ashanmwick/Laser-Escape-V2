@@ -7,6 +7,10 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>Laser Escape</title>
+    <!-- Bloxity (Legion) SDK. A classic script, so window.Legion exists before
+         /src/main.jsx runs. If this fails to load the game still boots: every
+         call goes through src/systems/bloxity.js, which no-ops without it. -->
+    <script src="https://sdk.bloxity.io/legion-sdk.min.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -15,6 +15,33 @@ const held = new Set()
 let orbiting = false
 let installed = false
 
+// Escape opens the portal's pause menu. Registered by the Bloxity facade so
+// this module keeps knowing nothing about the SDK.
+let escapeHandler = null
+
+export function setEscapeHandler(fn) {
+  escapeHandler = fn
+}
+
+// Reasons the game currently must not receive input: an SDK auth modal, the
+// avatar customizer, the portal menu. Listeners are on window, so without this
+// every keystroke typed into an SDK overlay would also drive WASD.
+const suspensions = new Set()
+
+export function suspend(reason) {
+  suspensions.add(reason)
+  if (installed) uninstall()
+}
+
+export function resume(reason) {
+  suspensions.delete(reason)
+  if (suspensions.size === 0 && !installed) install()
+}
+
+export function isSuspended() {
+  return suspensions.size > 0
+}
+
 function recomputeMove() {
   let x = 0
   let z = 0
@@ -33,6 +60,11 @@ function recomputeMove() {
 
 function onKeyDown(e) {
   if (e.repeat) return
+  if (e.code === 'Escape') {
+    // Never treated as a held key — it leaves the game and opens the menu.
+    if (escapeHandler) escapeHandler()
+    return
+  }
   held.add(e.code)
   if (e.code === 'Space') inputState.jump = true
   recomputeMove()
@@ -76,7 +108,7 @@ function onBlur() {
 }
 
 export function install() {
-  if (installed) return
+  if (installed || suspensions.size > 0) return
   installed = true
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
@@ -91,6 +123,9 @@ export function install() {
 export function uninstall() {
   if (!installed) return
   installed = false
+  // Drop anything held so a key down at suspend time is not stuck down on
+  // resume — the same clearing onBlur already does.
+  onBlur()
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('pointerdown', onPointerDown)
