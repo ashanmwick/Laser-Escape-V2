@@ -17,7 +17,7 @@ export default function HexPowerPads() {
         <HexPowerPadLabel
           key={i}
           position={position}
-          power={HEX_POWER_PAD_TIERS[i].power}
+          powerPerAction={HEX_POWER_PAD_TIERS[i].powerPerAction}
           winsRequired={HEX_POWER_PAD_TIERS[i].winsRequired}
         />
       ))}

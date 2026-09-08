@@ -46,25 +46,25 @@ export const HEX_POWER_PAD_POSITIONS = BLENDER_LOCATIONS.map(toThree)
 export const HEX_POWER_PAD_RANGE = 2.5
 
 // Laser tier unlocked by each pad, in hex_power_pad.001-015 order (index 0 =
-// .001). `power` becomes the player's powerPerAction on equip
+// .001). `powerPerAction` becomes the player's powerPerAction on equip
 // (store/useGameStore.js equipHexPad); `winsRequired` gates buyHexPad — the
 // player's cumulative wins must have reached it, nothing is spent.
 export const HEX_POWER_PAD_TIERS = [
-  { power: 1, winsRequired: 0 },
-  { power: 2, winsRequired: 1 },
-  { power: 5, winsRequired: 5 },
-  { power: 10, winsRequired: 25 },
-  { power: 25, winsRequired: 100 },
-  { power: 50, winsRequired: 250 },
-  { power: 100, winsRequired: 750 },
-  { power: 150, winsRequired: 2500 },
-  { power: 250, winsRequired: 7500 },
-  { power: 400, winsRequired: 25000 },
-  { power: 700, winsRequired: 50000 },
-  { power: 1000, winsRequired: 100000 },
-  { power: 1500, winsRequired: 250000 },
-  { power: 2500, winsRequired: 750000 },
-  { power: 3500, winsRequired: 2500000 },
+  { powerPerAction: 1, winsRequired: 0 },
+  { powerPerAction: 2, winsRequired: 1 },
+  { powerPerAction: 5, winsRequired: 5 },
+  { powerPerAction: 10, winsRequired: 25 },
+  { powerPerAction: 25, winsRequired: 100 },
+  { powerPerAction: 50, winsRequired: 250 },
+  { powerPerAction: 100, winsRequired: 750 },
+  { powerPerAction: 150, winsRequired: 2500 },
+  { powerPerAction: 250, winsRequired: 7500 },
+  { powerPerAction: 400, winsRequired: 25000 },
+  { powerPerAction: 700, winsRequired: 50000 },
+  { powerPerAction: 1000, winsRequired: 100000 },
+  { powerPerAction: 1500, winsRequired: 250000 },
+  { powerPerAction: 2500, winsRequired: 750000 },
+  { powerPerAction: 3500, winsRequired: 2500000 },
 ]
 
 // Recolor targets for HexPowerPadProp.jsx's per-instance material clones.

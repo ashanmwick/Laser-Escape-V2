@@ -3,6 +3,7 @@ import { tick } from '../systems/timeScale.js'
 import { step } from '../systems/playerMovement.js'
 import { update as updateCamera } from '../systems/cameraOrbit.js'
 import { step as stepAction } from '../systems/actionTracker.js'
+import { step as stepActionPopups } from '../systems/actionPopups.js'
 import { step as stepAfk } from '../systems/afk.js'
 import { step as stepHexPowerPad } from '../systems/hexPowerPad.js'
 import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
@@ -24,6 +25,9 @@ export default function GameLoop() {
     const dt = tick()
     step(dt, getAabbs())
     updateCamera(camera, dt)
+    // Project the player to the screen and age live popups before stepAction
+    // below can spawn new ones this frame (systems/actionPopups.js).
+    stepActionPopups(dt, camera)
     stepAfk()
     stepHexPowerPad()
     stepGlowFloorPanel()

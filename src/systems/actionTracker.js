@@ -7,6 +7,7 @@
 // observed, which suppresses the click grant on the release frame.
 import { inputState } from './input.js'
 import { afkState } from './afk.js'
+import { spawnActionPopup } from './actionPopups.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { ACTION_HOLD_INTERVAL } from '../data/progression.js'
 
@@ -30,7 +31,7 @@ export function step(dt) {
     if (!inputState.firing && inputState.fireReleaseAt >= inputState.firePressAt) {
       // The whole press already resolved before we ever observed `firing`
       // live — grant exactly the one action it's worth, same as a click.
-      useGameStore.getState().gainPower()
+      spawnActionPopup(useGameStore.getState().gainPower())
       firingPrev = false
       return
     }
@@ -47,13 +48,13 @@ export function step(dt) {
     // tier (systems/afk.js); a real held mouse press is always 1x.
     const mult = afkState.active ? afkState.multiplier : 1
     while (sinceLastAction >= ACTION_HOLD_INTERVAL) {
-      useGameStore.getState().gainPower(mult)
+      spawnActionPopup(useGameStore.getState().gainPower(mult))
       sinceLastAction -= ACTION_HOLD_INTERVAL
       holdFiredDuringPress = true
     }
   } else if (firingPrev) {
     if (!holdFiredDuringPress && pressElapsed < ACTION_HOLD_INTERVAL) {
-      useGameStore.getState().gainPower()
+      spawnActionPopup(useGameStore.getState().gainPower())
     }
     pressElapsed = 0
     sinceLastAction = 0

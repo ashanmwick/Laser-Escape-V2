@@ -6,10 +6,11 @@ const LABEL_HEIGHT = 1.35 // metres above the pad's placement position
 
 // In-world signage (Tech.md §1: drei is used for exactly this — SDF <Text>
 // and <Billboard>) showing one pad's laser tier at a glance: a red bar
-// carrying its Power gain in white outlined text, and the cumulative Wins
-// needed to buy it in yellow outlined text above the bar. Always faces the
-// camera (Billboard) so it reads the same from any approach angle.
-export default function HexPowerPadLabel({ position, power, winsRequired }) {
+// carrying its Power-per-Action gain in white outlined text, and the
+// cumulative Wins needed to buy it in yellow outlined text above the bar.
+// Always faces the camera (Billboard) so it reads the same from any approach
+// angle.
+export default function HexPowerPadLabel({ position, powerPerAction, winsRequired }) {
   return (
     <Billboard position={[position[0], position[1] + LABEL_HEIGHT, position[2]]}>
       <mesh position={[0, 0, -0.01]}>
@@ -24,7 +25,7 @@ export default function HexPowerPadLabel({ position, power, winsRequired }) {
         anchorX="center"
         anchorY="middle"
       >
-        {`+${power} Power`}
+        {`+${powerPerAction} Power`}
       </Text>
       <Text
         position={[0, BAR_HEIGHT / 2 + 0.2, 0]}

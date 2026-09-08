@@ -7,6 +7,7 @@ import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import Stats from '../Stats.jsx'
+import ActionPopups from './ActionPopups.jsx'
 import AuthPanel from './AuthPanel.jsx'
 import ChatLine from './ChatLine.jsx'
 import { useSettings } from './hooks.js'
@@ -177,6 +178,10 @@ export default function Hud() {
       />
 
       <AuthPanel panelStyle={panelStyle} />
+
+      {/* Per-Action "+N" power badges around the player. Owns its own rAF loop
+         and never re-renders (Tech.md §5.4). */}
+      <ActionPopups />
     </div>
   )
 }

@@ -38,14 +38,19 @@ export const useGameStore = create((set, get) => ({
   // One Action's worth of Power. Called only from systems/actionTracker.js,
   // never directly from a component. `multiplier` is the AFK target's "xN"
   // tier (systems/afk.js afkState.multiplier) while AFK-locked, else 1 — the
-  // spec's override: powerPerAction * (rebirth + 1) * multiplier.
+  // spec's override: powerPerAction * (rebirth + 1) * multiplier. Returns the
+  // Power actually added after the POWER_MAX clamp (0 once maxed), which
+  // systems/actionTracker.js turns into a "+N" popup.
   gainPower(multiplier = 1) {
+    let applied = 0
     set((state) => {
       const mult = multiplier > 0 ? multiplier : 1
       const gain = state.powerPerAction * (state.rebirth + 1) * mult
       const power = clamp(state.power + gain, POWER_MIN, POWER_MAX)
+      applied = power - state.power
       return derive({ ...state, power })
     })
+    return applied
   },
 
   // Manual, gated by canAcceptRebirth. Re-checks eligibility itself so a
@@ -104,6 +109,6 @@ export const useGameStore = create((set, get) => ({
     if (!state.ownedHexPads.has(index)) return
     const tier = HEX_POWER_PAD_TIERS[index]
     if (!tier) return
-    set({ equippedHexPad: index, powerPerAction: tier.power })
+    set({ equippedHexPad: index, powerPerAction: tier.powerPerAction })
   },
 }))
