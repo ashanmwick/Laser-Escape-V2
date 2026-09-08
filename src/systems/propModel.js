@@ -3,11 +3,18 @@
 //
 // glTF materials arrive as MeshStandardMaterial; Tech.md §7 permits only
 // MeshLambertMaterial / MeshBasicMaterial — PBR costs fragment time a phone
-// does not have. An emissive source material (a neon sign, a glow strip)
-// becomes unlit MeshBasicMaterial, the same "glow without bloom" trick the
-// laser beam uses; everything else becomes Lambert, keeping its baseColor
-// map if it has one. This rule is enforced here, not assumed, exactly as
-// avatarModel.js enforces it for remote avatar glTFs.
+// does not have. Three cases, by what the source actually carries:
+//  - emissive with no base map (a neon sign, a glow strip) becomes unlit
+//    MeshBasicMaterial, the same "glow without bloom" trick the laser beam
+//    uses.
+//  - emissive *with* a base map (hex_power_pad's albedo pattern plus a
+//    separate glow texture) becomes Lambert carrying both channels —
+//    collapsing this to Basic-on-emissive-only, as the case above does,
+//    would flatten the pad's surface pattern to a solid glow.
+//  - everything else becomes Lambert, keeping its baseColor map if it has
+//    one.
+// This rule is enforced here, not assumed, exactly as avatarModel.js
+// enforces it for remote avatar glTFs.
 //
 // The exporter bakes whichever Blender object was exported (position and
 // rotation — power_podium's own, here) into the glTF node, but that's only
@@ -29,6 +36,16 @@ const cache = new Map()
 
 function convertMaterial(source) {
   const isEmissive = source.emissive && source.emissive.getHex() !== 0x000000
+  if (isEmissive && source.map) {
+    return new THREE.MeshLambertMaterial({
+      map: source.map,
+      color: source.color ? source.color.clone() : new THREE.Color(0xffffff),
+      emissive: source.emissive.clone(),
+      emissiveMap: source.emissiveMap || null,
+      emissiveIntensity: source.emissiveIntensity ?? 1,
+      side: source.side,
+    })
+  }
   if (isEmissive) {
     return new THREE.MeshBasicMaterial({
       color: source.emissive.clone(),
@@ -112,6 +129,7 @@ export function disposeProp(built) {
   })
   for (const m of built.materials) {
     if (m.map) m.map.dispose()
+    if (m.emissiveMap) m.emissiveMap.dispose()
     m.dispose()
   }
   cache.delete(built.url)

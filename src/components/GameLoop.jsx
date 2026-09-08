@@ -2,6 +2,7 @@ import { useThree, useFrame } from '@react-three/fiber'
 import { tick } from '../systems/timeScale.js'
 import { step } from '../systems/playerMovement.js'
 import { update as updateCamera } from '../systems/cameraOrbit.js'
+import { step as stepAction } from '../systems/actionTracker.js'
 import { HUB_AABBS } from '../data/hub.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
 
@@ -15,6 +16,7 @@ export default function GameLoop() {
     const dt = tick()
     step(dt, HUB_AABBS)
     updateCamera(camera, dt)
+    stepAction(dt)
     // The game is interactive as soon as a frame is on screen, with or without
     // a signed-in avatar; dismiss the portal loading screen here. No-ops after
     // the first call.

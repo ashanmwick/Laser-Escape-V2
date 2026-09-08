@@ -45,31 +45,8 @@ export const SPECKLE = {
   tilesPerMetre: 2,
 }
 
-// Where the blocks stand. `y` is the base height, so a stack is just entries at
-// y = 0, 1, 2 ... `scale` is uniform and optional.
-function column(x, z, count, scale = 1) {
-  const out = []
-  for (let i = 0; i < count; i++) out.push({ x, y: i * BLOCK_HEIGHT * scale, z, scale })
-  return out
-}
-
-export const BLOCK_PLACEMENTS = [
-  // A three-step stair, two blocks wide, ahead of spawn (the camera sits on +Z
-  // looking toward -Z, so this is what the player faces on the first frame).
-  // Steps are 1m and the jump apex is ~1.28m (playerMovement.js), so the stack
-  // is both walkable and jumpable.
-  ...column(1, -2, 1),
-  ...column(2, -2, 1),
-  ...column(1, -3, 2),
-  ...column(2, -3, 2),
-  ...column(1, -4, 3),
-  ...column(2, -4, 3),
-  // Scattered landmarks off to the west.
-  { x: -3, y: 0, z: -2, scale: 1 },
-  { x: -4.6, y: 0, z: -4.5, scale: 1.5 },
-  { x: -2, y: 0, z: -5.5, scale: 1 },
-  ...column(-3.5, -1.2, 2),
-]
+// Where the blocks stand. Empty for now — no blocks are placed.
+export const BLOCK_PLACEMENTS = []
 
 // World-space { min, max } boxes for the kinematic collider (Tech.md §5.2).
 // Vertically contiguous blocks in the same column merge into one box: the scan

@@ -1,5 +1,6 @@
 import { BLOCK_AABBS } from './blocks.js'
 import { POWER_PODIUM_AABBS, TARGET_PODIUM_AABBS } from './podium.js'
+import { WALL_AABBS } from './wallProps.js'
 
 // Hub geometry (Tech.md §4). Level layout is data, not a Blender file — Blender
 // authors props only. This file owns the spawn point and the static AABB list
@@ -8,11 +9,7 @@ export const SPAWN = { x: 0, y: 0, z: 3 }
 
 // Placeholder walls, drawn as plain boxes by Obstacles.jsx. Each entry is a
 // world-space { min, max } box that is both the drawn shape and the collider's.
-export const HUB_BOXES = [
-  { min: { x: 4, y: 0, z: -6 }, max: { x: 6, y: 3, z: 6 } },
-  { min: { x: -8, y: 0, z: -3 }, max: { x: -6, y: 2, z: 3 } },
-  { min: { x: -3, y: 0, z: -10 }, max: { x: 3, y: 1.2, z: -8 } },
-]
+export const HUB_BOXES = []
 
 // Everything the kinematic collider scans (Tech.md §5.2). The building blocks
 // and both podiums draw themselves, so their boxes join the scan here but
@@ -23,4 +20,5 @@ export const HUB_AABBS = [
   ...BLOCK_AABBS,
   ...POWER_PODIUM_AABBS,
   ...TARGET_PODIUM_AABBS,
+  ...WALL_AABBS,
 ]

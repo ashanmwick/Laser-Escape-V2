@@ -5,6 +5,10 @@ import Ground from './components/Ground.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PowerPodium from './components/PowerPodium.jsx'
 import TargetPodium from './components/TargetPodium.jsx'
+import HexPowerPads from './components/HexPowerPads.jsx'
+import Targets from './components/Targets.jsx'
+import GlowFloorPanels from './components/GlowFloorPanels.jsx'
+import WallProps from './components/WallProps.jsx'
 import Player from './components/Player.jsx'
 import Hud from './components/hud/Hud.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
@@ -40,6 +44,10 @@ export default function App() {
         <Obstacles />
         <PowerPodium />
         <TargetPodium />
+        <HexPowerPads />
+        <Targets />
+        <GlowFloorPanels />
+        <WallProps />
         <Player />
       </Canvas>
       <Hud />

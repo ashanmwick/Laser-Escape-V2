@@ -9,6 +9,13 @@ export const inputState = {
   zoom: 0, // wheel delta this frame; consumed by cameraOrbit
   jump: false, // set on keydown, consumed by playerMovement
   firing: false, // held while left mouse / primary touch is down
+  // A frame-loop poll of `firing` alone can miss a press that both starts and
+  // ends between two frames (a fast click). These let a poller (see
+  // systems/actionTracker.js) reconstruct exactly what happened from real
+  // event timestamps instead of relying on catching the level mid-transition.
+  firePressAt: 0, // performance.now() at the most recent pointerdown
+  fireReleaseAt: 0, // performance.now() at the most recent pointerup/forced-release
+  firePressSeq: 0, // increments once per pointerdown; never missed even if already resolved by the time it's polled
 }
 
 const held = new Set()
@@ -76,13 +83,26 @@ function onKeyUp(e) {
 }
 
 function onPointerDown(e) {
-  if (e.button === 0) inputState.firing = true
+  // Scoped to the canvas so clicking a HUD element (the Rebirth button, auth
+  // panel, chat box) never also fires the laser — those are separate DOM
+  // elements the pointer lands on, never the canvas itself.
+  if (e.button === 0 && e.target.tagName === 'CANVAS') {
+    inputState.firing = true
+    inputState.firePressAt = performance.now()
+    inputState.firePressSeq++
+  }
   // right or middle button starts a camera orbit drag
   if (e.button === 1 || e.button === 2) orbiting = true
 }
 
 function onPointerUp(e) {
-  if (e.button === 0) inputState.firing = false
+  // Not target-scoped: this only closes a press that onPointerDown actually
+  // opened (inputState.firing already true), so a drag that started on the
+  // canvas and released over the HUD still ends correctly.
+  if (e.button === 0 && inputState.firing) {
+    inputState.firing = false
+    inputState.fireReleaseAt = performance.now()
+  }
   if (e.button === 1 || e.button === 2) orbiting = false
 }
 
@@ -103,6 +123,7 @@ function onContextMenu(e) {
 function onBlur() {
   held.clear()
   orbiting = false
+  if (inputState.firing) inputState.fireReleaseAt = performance.now()
   inputState.firing = false
   recomputeMove()
 }
