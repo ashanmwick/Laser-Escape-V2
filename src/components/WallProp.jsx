@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { loadProp, disposeProp } from '../systems/propModel.js'
-import { healthFraction } from '../systems/wallHealth.js'
-import { WALL_DAMAGE } from '../data/wallHealth.js'
+import { healthFraction, wallHealthView } from '../systems/wallHealth.js'
+import { WALL_DAMAGE, WALL_SHAKE } from '../data/wallHealth.js'
 
 // Structural constant only — the feel (brightness floor, crack onset/opacity,
 // tint) lives in data/wallHealth.js (Tech.md §4).
@@ -107,6 +107,9 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
   const cloneEntriesRef = useRef(null)
   const crackMatsRef = useRef(null)
   const lastFractionRef = useRef(-1)
+  // True while an impact wobble is mid-replay, so the mount group is settled
+  // back to its authored transform exactly once when the buzz ends.
+  const shakingRef = useRef(false)
 
   useEffect(() => {
     let built = null
@@ -188,6 +191,39 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
   // level reset that re-seeds wallHealth.js's health snaps this back on its own,
   // and a wall that respawns remounts fresh with a new clone/overlay.
   useFrame(() => {
+    const group = groupRef.current
+    if (!group) return
+
+    // Impact wobble — cosmetic "the beam is chewing on this wall" feedback.
+    // strikeWall() stamps wallHealthView.lastHitAt[id] on every discrete Action
+    // that lands here (a click, then one per ACTION_HOLD_INTERVAL while fire is
+    // held); replay a damped oscillation on the mount group for
+    // WALL_SHAKE.DURATION after that stamp. matrixAutoUpdate is off (see the
+    // group below), so each shaken frame needs its own updateMatrix +
+    // updateMatrixWorld, and one settle frame restores the authored transform.
+    const hitAt = wallHealthView.lastHitAt[id]
+    const since = hitAt === undefined ? Infinity : (performance.now() - hitAt) / 1000
+    if (since < WALL_SHAKE.DURATION) {
+      const decay = 1 - since / WALL_SHAKE.DURATION
+      const phase = since * WALL_SHAKE.FREQUENCY * Math.PI * 2
+      const t = WALL_SHAKE.TRANSLATE * decay
+      group.position.set(
+        position[0] + Math.sin(phase) * t,
+        position[1] + Math.sin(phase * 1.7 + 1) * t * 0.5,
+        position[2],
+      )
+      group.rotation.z = Math.sin(phase * 1.3) * WALL_SHAKE.ROTATE * decay
+      group.updateMatrix()
+      group.updateMatrixWorld(true)
+      shakingRef.current = true
+    } else if (shakingRef.current) {
+      shakingRef.current = false
+      group.position.set(position[0], position[1], position[2])
+      group.rotation.z = 0
+      group.updateMatrix()
+      group.updateMatrixWorld(true)
+    }
+
     const entries = cloneEntriesRef.current
     if (!entries) return
     const f = healthFraction(id)

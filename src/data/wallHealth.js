@@ -100,3 +100,15 @@ export const WALL_DAMAGE = {
   CRACK_MAX_OPACITY: 0.85, // crack overlay opacity at 0 health
   CRACK_TINT: '#0a0a0a', // crack colour — near-black so fractures read as depth
 }
+
+// Impact wobble (components/WallProp.jsx): every discrete Action that lands on
+// a wall stamps systems/wallHealth.js's wallHealthView.lastHitAt[id]; WallProp
+// replays a decaying oscillation on the mount group for DURATION seconds after
+// that stamp, then settles it back to the authored transform. Purely cosmetic
+// "the laser is hitting this" feedback — the collider and health are untouched.
+export const WALL_SHAKE = {
+  DURATION: 0.26, // seconds the buzz runs after each strike
+  FREQUENCY: 32, // oscillations per second
+  TRANSLATE: 0.09, // peak positional jitter at impact, world metres (decays to 0)
+  ROTATE: 0.014, // peak tilt about the approach axis at impact, radians (decays to 0)
+}
