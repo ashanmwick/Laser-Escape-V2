@@ -9,7 +9,6 @@ import {
   LEVEL_BAR_MAX_VW,
   LEVEL_BAR_BORDER,
   LEVEL_BAR_TEXT_STROKE,
-  LEVEL_BAR_CAPTION_STROKE,
   LEVEL_BAR_CAPTION_FONT_PX,
   LEVEL_BAR_LABEL_FONT_PX,
   LEVEL_BAR_ICON_SIZE,
@@ -17,7 +16,9 @@ import {
   LEVEL_BAR_BOTTOM,
   LEVEL_BAR_TRANSITION_MS,
   LEVEL_BAR_FILL_GRADIENT,
-  LEVEL_BAR_CAPTION_TEXT_GRADIENT,
+  LEVEL_BAR_CAPTION_BAND,
+  LEVEL_BAR_CAPTION_BAND_PAD_X,
+  LEVEL_BAR_CAPTION_BAND_PAD_Y,
   LEVEL_BAR_ICON_URL,
 } from '../../data/levelBar.js'
 
@@ -31,22 +32,6 @@ const TEXT_OUTLINE =
   `0 4px 8px rgba(0,0,0,0.45)`
 
 const LABEL_FONT = `800 ${LEVEL_BAR_LABEL_FONT_PX}px/1 ui-rounded, 'Nunito', system-ui, -apple-system, sans-serif`
-const CAPTION_FONT = `800 ${LEVEL_BAR_CAPTION_FONT_PX}px/1.15 ui-rounded, 'Nunito', system-ui, sans-serif`
-
-// The caption is two stacked copies of the same text: a black silhouette
-// (LEVEL_BAR_CAPTION_STROKE wide, so ~half that shows as a rim) with the drop
-// shadow, and a gradient-filled copy exactly on top. Clipping a gradient to text
-// and *also* outlining that same element fights itself — the outline bleeds
-// through the transparent lower half — so the outline gets its own layer.
-const CAPTION_LAYER = {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  textAlign: 'center',
-  font: CAPTION_FONT,
-  letterSpacing: 0.5,
-  whiteSpace: 'nowrap',
-}
 
 // Bottom-centre level bar. A DOM sibling of the canvas (Tech.md §5.4), never
 // drei <Html>. It must not re-render per frame: the structure below is built
@@ -56,7 +41,6 @@ const CAPTION_LAYER = {
 // would re-render this node on each one.
 export default function LevelBar() {
   const captionRef = useRef(null)
-  const captionOutlineRef = useRef(null)
   const levelRef = useRef(null)
   const countRef = useRef(null)
   const fillRef = useRef(null)
@@ -69,10 +53,8 @@ export default function LevelBar() {
       last = performance.now()
       const { power } = useGameStore.getState()
       const { level, into, span, frac } = levelProgress(power)
-      const caption = `${formatShort(power)} Power`
-      if (captionRef.current) captionRef.current.textContent = caption
-      if (captionOutlineRef.current)
-        captionOutlineRef.current.textContent = caption
+      if (captionRef.current)
+        captionRef.current.textContent = `${formatShort(power)} Power`
       if (levelRef.current) levelRef.current.textContent = `Level ${level}`
       if (countRef.current)
         countRef.current.textContent = `${formatShort(into)} / ${formatShort(span)}`
@@ -116,40 +98,22 @@ export default function LevelBar() {
         maxWidth: `${LEVEL_BAR_MAX_VW}vw`,
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-          height: Math.round(LEVEL_BAR_CAPTION_FONT_PX * 1.3),
-          marginBottom: 10,
-        }}
-      >
-        <div
-          ref={captionOutlineRef}
-          aria-hidden="true"
-          style={{
-            ...CAPTION_LAYER,
-            color: '#000',
-            WebkitTextStroke: `${LEVEL_BAR_CAPTION_STROKE}px #000`,
-            filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.5))',
-          }}
-        >
-          1 Power
-        </div>
-        <div
+      <div style={{ textAlign: 'center', marginBottom: 10 }}>
+        <span
           ref={captionRef}
           style={{
-            ...CAPTION_LAYER,
-            // White-at-top -> translucent-at-bottom gradient, clipped to the
-            // glyphs and sitting directly over the black silhouette layer.
-            backgroundImage: LEVEL_BAR_CAPTION_TEXT_GRADIENT,
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            color: 'transparent',
-            WebkitTextFillColor: 'transparent',
+            display: 'inline-block',
+            padding: `${LEVEL_BAR_CAPTION_BAND_PAD_Y}px ${LEVEL_BAR_CAPTION_BAND_PAD_X}px`,
+            font: `800 ${LEVEL_BAR_CAPTION_FONT_PX}px/1 ui-rounded, 'Nunito', system-ui, sans-serif`,
+            letterSpacing: 0.5,
+            color: '#fff',
+            textShadow: TEXT_OUTLINE,
+            // Semi-transparent black band that fades to nothing on both sides.
+            background: LEVEL_BAR_CAPTION_BAND,
           }}
         >
           1 Power
-        </div>
+        </span>
       </div>
 
       <div style={{ position: 'relative' }}>

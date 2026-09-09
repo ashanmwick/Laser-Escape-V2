@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { healthFraction, wallHealthView } from '../systems/wallHealth.js'
@@ -41,7 +41,16 @@ const Z_BIAS = { border: -0.01, bg: 0, chip: 0.01, fill: 0.02, notch: 0.03, text
 // edge. Unlike the bar and the HP readout it has no visibility gate — it shows
 // for every standing wall whether or not it is being damaged (hidden only once
 // the wall is destroyed and gone). Text is static, so it is never re-synced.
-const STAGE_SIGN_GAP = 2.5
+const STAGE_SIGN_GAP = 1.5
+
+// Fixed orientation for every bar and its text: NOT a billboard. The quads sit
+// in a plane parallel to the wall face, normal pointing back down the -X
+// approach toward the player. A 15m-wide quad that pivoted to the camera would
+// swing its far half into the wall, and with depthTest on (see materials) that
+// half then disappears behind it. Walls are only ever read head-on, so a fixed
+// facing costs nothing and can never intersect the wall. -90deg about Y turns
+// the plane's default +Z normal to world -X.
+const FACING = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2)
 
 // Scratch, hoisted — zero allocation per frame (Tech.md §7).
 const _mat = new THREE.Matrix4()
@@ -104,15 +113,14 @@ function makeNotchMask() {
 }
 
 export default function WallHealthBars() {
-  const camera = useThree((s) => s.camera)
-
   const borderRef = useRef(null)
   const bgRef = useRef(null)
   const chipRef = useRef(null)
   const fillRef = useRef(null)
   const notchRef = useRef(null)
   // One SDF <Text> per wall (see render). Driven imperatively from useFrame like
-  // every other layer — no <Billboard>, we already have the camera quaternion.
+  // every other layer — no <Billboard>: they take the same fixed FACING as the
+  // bar so nothing turns into the wall.
   const textRefs = useRef([]) // the "current / max" HP readout
   const stageRefs = useRef([]) // the always-on "Stage N / <Material>" sign
 
@@ -127,10 +135,12 @@ export default function WallHealthBars() {
   const notchMask = useMemo(makeNotchMask, [])
 
   const materials = useMemo(() => {
-    // depthTest off: the bar is a gameplay readout and must stay visible even
-    // when the wall face (or a prop) is between it and the camera. renderOrder
-    // on each mesh keeps the four layers stacked correctly.
-    const base = { transparent: true, depthWrite: false, depthTest: false, toneMapped: false }
+    // depthTest ON so anything solid between the camera and the bar — the player
+    // avatar especially — occludes it instead of the bar drawing over the top of
+    // the player. The bar still sits FACE_OFFSET in front of its wall, so the
+    // wall never hides it. depthWrite stays OFF: the five stacked transparent
+    // quads order themselves by renderOrder, not the depth buffer.
+    const base = { transparent: true, depthWrite: false, depthTest: true, toneMapped: false }
     return {
       border: new THREE.MeshBasicMaterial({
         ...base,
@@ -187,9 +197,10 @@ export default function WallHealthBars() {
     const pz = player.position.z
     const rangeSq = BAR.SHOW_RANGE * BAR.SHOW_RANGE
 
-    // One camera-facing orientation for every bar this frame (they only diverge
-    // meaningfully in the periphery, which the range/linger gate hides anyway).
-    _quat.copy(camera.quaternion)
+    // Fixed wall-facing orientation for every bar and its text (see FACING) —
+    // deliberately not camera-facing, so a turned quad never swings into the
+    // wall.
+    _quat.copy(FACING)
 
     for (let i = 0; i < CAP; i++) {
       const a = ANCHORS[i]
@@ -344,7 +355,7 @@ export default function WallHealthBars() {
           anchorX="center"
           anchorY="middle"
           renderOrder={5}
-          material-depthTest={false}
+          material-depthWrite={false}
           material-toneMapped={false}
         >
           {`${HEALTH_MAX} / ${HEALTH_MAX}`}

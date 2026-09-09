@@ -40,7 +40,7 @@ export const WALL_HEALTH_BAR = {
   // than buried inside its box.
   HEIGHT_FRAC: 0.3, // sit low on the wall face
   Y_OFFSET: 0,
-  FACE_OFFSET: 1,
+  FACE_OFFSET: 0.5,
   // Health -> fill colour, high to low, lerped between the bracketing stops.
   // Single stop = the fill stays this green at every health level (per design:
   // the bar never turns amber/red as it drains). Add stops back to restore the
