@@ -11,6 +11,7 @@ import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
 import WallProps from './components/WallProps.jsx'
+import WallDebris from './components/WallDebris.jsx'
 import WallHealthBars from './components/WallHealthBars.jsx'
 import Player from './components/Player.jsx'
 import Laser from './components/Laser.jsx'
@@ -56,6 +57,7 @@ export default function App() {
         <Targets />
         <GlowFloorPanels />
         <WallProps />
+        <WallDebris />
         <WallHealthBars />
         <Player />
         <Laser />

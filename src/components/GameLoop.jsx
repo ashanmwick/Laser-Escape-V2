@@ -11,6 +11,7 @@ import { step as stepPodiumHint } from '../systems/podiumHint.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
+import { step as stepWallDebris } from '../systems/wallDebris.js'
 import { getAabbs } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
 import { inputState } from '../systems/input.js'
@@ -43,6 +44,9 @@ export default function GameLoop() {
     stepLaser(camera, scene)
     stepAction(dt)
     stepWallHealth(dt)
+    // After stepAction/stepWallHealth so a wall broken this frame has already
+    // queued its burst (systems/wallHealth.js strikeWall -> wallDebris.spawnBurst).
+    stepWallDebris(dt)
     stepLaserParticles(dt)
     // The game is interactive as soon as a frame is on screen, with or without
     // a signed-in avatar; dismiss the portal loading screen here. No-ops after

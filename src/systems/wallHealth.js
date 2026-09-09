@@ -14,6 +14,7 @@
 import { laser } from './laser.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { removeAabb } from './collision.js'
+import { spawnBurst as spawnDebris, reset as resetDebris } from './wallDebris.js'
 import { WALL_STRENGTH, DAMAGE_CONSTANT } from '../data/wallHealth.js'
 
 const health = {}
@@ -50,6 +51,7 @@ export function resetWalls() {
   for (const id in WALL_STRENGTH) health[id] = WALL_STRENGTH[id]
   wallHealthView.activeId = null
   wallHealthView.lastHitAt = {}
+  resetDebris()
 }
 
 // Mirrors laser.js's isIgnored(): walks up from the raycast-hit mesh to find
@@ -96,6 +98,7 @@ export function strikeWall() {
 
   if (next === 0) {
     removeAabb(id)
+    spawnDebris(id)
     useGameStore.getState().destroyWall(id)
   }
 }
