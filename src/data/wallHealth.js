@@ -5,15 +5,15 @@
 // wall/laser-tier match.
 export const WALL_STRENGTH = {
   paper_wall: 1,
-  cardboard_wall: 10,
-  carpet_wall: 20,
-  leather_wall: 30,
-  rubber_wall: 40,
-  grass_wall: 50,
-  wood_wall: 60,
-  glass_wall: 70,
-  concrete_wall: 80,
-  brick_wall: 90,
+  cardboard_wall: 50,
+  carpet_wall: 100,
+  leather_wall: 150,
+  rubber_wall: 200,
+  grass_wall: 250,
+  wood_wall: 300,
+  glass_wall: 350,
+  concrete_wall: 400,
+  brick_wall: 450,
 }
 
 export const HEALTH_MAX = 100
