@@ -30,7 +30,9 @@ const aimDir = new THREE.Vector3()
 
 // Player.jsx and Laser.jsx both tag their root group userData.laserIgnore so
 // the aim ray never terminates on the shooter's own body or the beam mesh
-// left over from the previous frame.
+// left over from the previous frame. WallHealthBars.jsx does the same: its
+// bars and Stage signs float in front of the walls and must be shot through,
+// not stopped on.
 function isIgnored(object) {
   let o = object
   while (o) {

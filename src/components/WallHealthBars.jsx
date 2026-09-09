@@ -307,7 +307,10 @@ export default function WallHealthBars() {
   })
 
   return (
-    <group>
+    // laserIgnore: the bars and the Stage sign sit FACE_OFFSET in front of each
+    // wall — the aim ray (systems/laser.js isIgnored()) must pass straight
+    // through them and land on the wall itself, never terminate on the HUD.
+    <group userData={{ laserIgnore: true }}>
       <instancedMesh
         ref={borderRef}
         args={[geometry, materials.border, CAP]}
