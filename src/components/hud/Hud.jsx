@@ -8,6 +8,7 @@ import { canAcceptRebirth } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import ActionPopups from './ActionPopups.jsx'
 import LevelBar from './LevelBar.jsx'
+import LevelUpPopup from './LevelUpPopup.jsx'
 import AuthPanel from './AuthPanel.jsx'
 import { useSettings } from './hooks.js'
 
@@ -188,6 +189,11 @@ export default function Hud() {
          from a throttled store subscription — never re-renders per frame
          (Tech.md §5.4). */}
       <LevelBar />
+
+      {/* Top-centre "LEVEL UP!" banner. DOM sibling of the canvas, driven by a
+         transient store subscription that runs one Web-Animations pass per
+         level rise — never re-renders per frame (Tech.md §5.4). */}
+      <LevelUpPopup />
 
       {/* Per-Action "+N" power badges around the player. Owns its own rAF loop
          and never re-renders (Tech.md §5.4). */}
