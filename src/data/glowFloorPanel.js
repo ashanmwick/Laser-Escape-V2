@@ -75,8 +75,7 @@ export const GLOW_FLOOR_PANEL_POSITIONS = BLENDER_LOCATIONS.map(toThree)
 // Flat Wins granted the moment the player steps onto each panel, in
 // glow_floor_panel[.NNN] order (index 0 = the base object, index 24 =
 // glow_floor_panel.024 behind the last wall). Same curve the original 8 used
-// — 1, 10, then +50 per panel — extended through the 17 new pads, which
-// tracks data/wallHealth.js's own linear +50-per-stage wall strength. Wins
+// — 1, 10, then +50 per panel — extended through the 17 new pads. Wins
 // are a threshold currency, never spent — see store/useGameStore.js
 // buyHexPad — so this just adds to the running total (store awardWins,
 // driven once-per-entry by systems/glowFloorPanel.js).

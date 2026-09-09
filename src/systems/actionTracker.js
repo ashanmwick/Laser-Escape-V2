@@ -5,9 +5,15 @@
 // ACTION_HOLD_INTERVAL seconds. The two are mutually exclusive per press: a
 // hold that crosses the interval always fires before release can be
 // observed, which suppresses the click grant on the release frame.
+//
+// Every Action also lands one discrete wall strike (systems/wallHealth.js
+// strikeWall()): the click hit on the press edge, then one more per hold
+// interval — so a wall on the beam loses the player's current Power per
+// Action, the same cadence gainPower() adds Power on.
 import { inputState } from './input.js'
 import { afkState } from './afk.js'
 import { spawnActionPopup } from './actionPopups.js'
+import { strikeWall } from './wallHealth.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { ACTION_HOLD_INTERVAL } from '../data/progression.js'
 
@@ -30,7 +36,9 @@ export function step(dt) {
 
     if (!inputState.firing && inputState.fireReleaseAt >= inputState.firePressAt) {
       // The whole press already resolved before we ever observed `firing`
-      // live — grant exactly the one action it's worth, same as a click.
+      // live — grant exactly the one action it's worth, same as a click. No
+      // wall strike: the beam never rendered this press, so there is no aim to
+      // resolve a wall from.
       spawnActionPopup(useGameStore.getState().gainPower())
       firingPrev = false
       return
@@ -42,12 +50,19 @@ export function step(dt) {
   const firing = inputState.firing || afkState.active
 
   if (firing) {
+    // The "click" wall hit, landed the frame the button goes down while the
+    // beam is still guaranteed on the wall (the Power grant for a click comes
+    // later, on the release frame, by when systems/laser.js has cleared the
+    // aim). A press that turns into a hold keeps taking one strike per
+    // ACTION_HOLD_INTERVAL below, so a held wall drains at t=0, 2, 4, ...
+    if (!firingPrev) strikeWall()
     pressElapsed += dt
     sinceLastAction += dt
     // While AFK-locked, each Action's Power is scaled by the target's "xN"
     // tier (systems/afk.js); a real held mouse press is always 1x.
     const mult = afkState.active ? afkState.multiplier : 1
     while (sinceLastAction >= ACTION_HOLD_INTERVAL) {
+      strikeWall()
       spawnActionPopup(useGameStore.getState().gainPower(mult))
       sinceLastAction -= ACTION_HOLD_INTERVAL
       holdFiredDuringPress = true

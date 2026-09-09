@@ -1,19 +1,23 @@
-// Wall damage, stepped once per frame from GameLoop (Tech.md §5.1 style:
-// framework-free, mutable module state, same pattern as actionTracker.js).
-// Reads this frame's laser hit (systems/laser.js) and, while it lands on a
-// live wall, drains that wall's health scaled by the player's Power
-// (store/useGameStore.js) and the wall's own strength (data/wallHealth.js).
-// Health itself stays here — a continuous per-frame number, like laser aim
-// or player position — and only the discrete destroy transition reaches into
-// the zustand store, the same way actionTracker.js only calls gainPower() on
-// discrete Action events rather than every frame.
+// Wall damage (Tech.md §5.1 style: framework-free, mutable module state, same
+// pattern as actionTracker.js). Two entry points, both fed this frame's laser
+// hit (systems/laser.js):
+//   - step(dt), once per frame from GameLoop, only tracks which live wall the
+//     beam is on right now for the in-world health bars (wallHealthView).
+//   - strikeWall(), from systems/actionTracker.js on every discrete Action
+//     event (a click, then one per ACTION_HOLD_INTERVAL while fire is held),
+//     subtracts the player's current Power (store/useGameStore.js) from that
+//     wall's health pool in one hit — so a wall on the beam loses `Power` per
+//     Action, the same cadence gainPower() adds Power on.
+// The health pool starts at the wall's own strength (data/wallHealth.js) and
+// lives here as plain module state; only the discrete destroy transition
+// reaches into the zustand store.
 import { laser } from './laser.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { removeAabb } from './collision.js'
-import { WALL_STRENGTH, HEALTH_MAX, DAMAGE_CONSTANT } from '../data/wallHealth.js'
+import { WALL_STRENGTH, DAMAGE_CONSTANT } from '../data/wallHealth.js'
 
 const health = {}
-for (const id in WALL_STRENGTH) health[id] = HEALTH_MAX
+for (const id in WALL_STRENGTH) health[id] = WALL_STRENGTH[id]
 
 // Read-only view state for the in-world health bars (components/WallHealthBars.jsx).
 // Same "systems own the continuous number, components just draw it" split as the
@@ -23,11 +27,18 @@ for (const id in WALL_STRENGTH) health[id] = HEALTH_MAX
 // stops and to flash on impact.
 export const wallHealthView = { activeId: null, lastHitAt: {} }
 
-// health[id] as a 0..1 fraction; 0 for an unknown or already-destroyed id.
+// health[id] as a 0..1 fraction of the wall's strength pool; 0 for an unknown
+// or already-destroyed id.
 export function healthFraction(id) {
   const remaining = health[id]
   if (remaining === undefined) return 0
-  return remaining / HEALTH_MAX
+  return remaining / WALL_STRENGTH[id]
+}
+
+// Raw remaining health for the in-world "remaining / strength" readout
+// (components/WallHealthBars.jsx). 0 for an unknown or destroyed id.
+export function wallHealthRemaining(id) {
+  return health[id] > 0 ? health[id] : 0
 }
 
 // Restore every wall to full health and drop the transient bar state. Called
@@ -36,7 +47,7 @@ export function healthFraction(id) {
 // collision.js's resetAabbs() (which brings the colliders back). WallProp's
 // damage-look useFrame re-reads healthFraction() and snaps back on its own.
 export function resetWalls() {
-  for (const id in WALL_STRENGTH) health[id] = HEALTH_MAX
+  for (const id in WALL_STRENGTH) health[id] = WALL_STRENGTH[id]
   wallHealthView.activeId = null
   wallHealthView.lastHitAt = {}
 }
@@ -52,32 +63,35 @@ function resolveWallId(object) {
   return null
 }
 
-export function step(dt) {
-  if (!laser.hit || !laser.hitObject) {
-    wallHealthView.activeId = null
-    return
-  }
-
+// The live wall the beam is on this frame, or null. Only view bookkeeping for
+// the health bars — the actual damage is dealt by strikeWall() on Action events.
+function liveWallUnderBeam() {
+  if (!laser.hit || !laser.hitObject) return null
   const id = resolveWallId(laser.hitObject)
-  if (id === null) {
-    wallHealthView.activeId = null
-    return
-  }
-
+  if (id === null) return null
   const remaining = health[id]
-  if (remaining === undefined || remaining <= 0) {
-    wallHealthView.activeId = null
-    return
-  }
+  if (remaining === undefined || remaining <= 0) return null
+  return id
+}
 
-  // Beam is on a live wall — its bar is the active one, whether or not this
-  // frame's Power is enough to visibly move the number.
+export function step() {
+  wallHealthView.activeId = liveWallUnderBeam()
+}
+
+// One discrete Action's worth of wall damage: if the beam is on a live wall,
+// subtract the player's current Power (times DAMAGE_CONSTANT) from its health
+// pool in a single hit. Called from systems/actionTracker.js alongside
+// gainPower(), so a held beam breaks a wall in Power-sized steps every
+// ACTION_HOLD_INTERVAL, and a lone click lands exactly one step.
+export function strikeWall() {
+  const id = liveWallUnderBeam()
+  if (id === null) return
+
   wallHealthView.activeId = id
   wallHealthView.lastHitAt[id] = performance.now()
 
   const power = useGameStore.getState().power
-  const damage = (power / WALL_STRENGTH[id]) * DAMAGE_CONSTANT * dt
-  const next = Math.max(0, remaining - damage)
+  const next = Math.max(0, health[id] - power * DAMAGE_CONSTANT)
   health[id] = next
 
   if (next === 0) {

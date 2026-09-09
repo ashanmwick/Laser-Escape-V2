@@ -2,11 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
-import { healthFraction, wallHealthView } from '../systems/wallHealth.js'
+import { healthFraction, wallHealthRemaining, wallHealthView } from '../systems/wallHealth.js'
 import { player } from '../systems/playerState.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { WALL_AABBS, WALL_STAGES } from '../data/wallProps.js'
-import { WALL_HEALTH_BAR as BAR, HEALTH_MAX } from '../data/wallHealth.js'
+import { WALL_HEALTH_BAR as BAR, WALL_STRENGTH } from '../data/wallHealth.js'
+import { formatShort } from '../data/format.js'
 
 // In-world health bar above each wall (Tech.md §5.4: presentation only, never
 // re-renders per frame — this component renders once and drives everything
@@ -288,11 +289,11 @@ export default function WallHealthBars() {
         _off.set(0, 0, Z_BIAS.text).applyQuaternion(_quat)
         t.position.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
         t.quaternion.copy(_quat)
-        const cur = Math.ceil(frac * HEALTH_MAX)
+        const cur = Math.ceil(wallHealthRemaining(a.id))
         if (cur !== lastText.current[a.id] && now - (lastTextWrite.current[a.id] ?? 0) > 100) {
           lastText.current[a.id] = cur
           lastTextWrite.current[a.id] = now
-          t.text = `${cur} / ${HEALTH_MAX}`
+          t.text = `${formatShort(cur)} / ${formatShort(WALL_STRENGTH[a.id])}`
           t.sync()
         }
       }
@@ -361,7 +362,7 @@ export default function WallHealthBars() {
           material-depthWrite={false}
           material-toneMapped={false}
         >
-          {`${HEALTH_MAX} / ${HEALTH_MAX}`}
+          {`${formatShort(WALL_STRENGTH[a.id])} / ${formatShort(WALL_STRENGTH[a.id])}`}
         </Text>
       ))}
       {ANCHORS.map((a, i) => (

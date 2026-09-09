@@ -1,45 +1,58 @@
 // Wall health/damage balance constants (Tech.md §4: src/data/ owns every
-// tunable number). Strength increases in the order the 25 walls are defined
-// in data/wallProps.js's WALLS array — each tougher material gates progress
-// behind more player Power (store/useGameStore.js), rather than being a hard
-// wall/laser-tier match. The curve is the same linear +50 per stage the
-// original ten used (stage N -> (N-1)*50 for N >= 2), extended through the
-// fifteen new materials to obsidian at 1200 — comfortably clearable at the
-// POWER_MAX of 10000 (data/progression.js).
-export const WALL_STRENGTH = {
-  paper_wall: 1,
-  cardboard_wall: 50,
-  carpet_wall: 100,
-  leather_wall: 150,
-  rubber_wall: 200,
-  grass_wall: 250,
-  wood_wall: 300,
-  glass_wall: 350,
-  concrete_wall: 400,
-  brick_wall: 450,
-  limestone_wall: 500,
-  stone_wall: 550,
-  marble_wall: 600,
-  iron_wall: 650,
-  copper_wall: 700,
-  granite_wall: 750,
-  titanium_wall: 800,
-  steel_wall: 850,
-  metal_wall: 900,
-  diamond_wall: 950,
-  carbon_fiber_wall: 1000,
-  tungsten_wall: 1050,
-  void_wall: 1100,
-  magma_wall: 1150,
-  obsidian_wall: 1200,
+// tunable number). Each wall's Strength IS its full health pool: every Action
+// that lands on the wall (a click, then one per ACTION_HOLD_INTERVAL while
+// fire is held — systems/actionTracker.js) subtracts the player's current
+// Power (store/useGameStore.js) from that pool in one discrete hit, so after
+// N strikes the remaining health is strength - Power*N (Power itself grows as
+// the run goes), and the in-world bar reads `remaining / strength`
+// (components/WallHealthBars.jsx) rather than a fixed X / 100.
+//
+// STAGE_STRENGTH is keyed by stage number — 1 is the first wall in
+// data/wallProps.js's roster order (paper), 25 is the last (obsidian).
+// WALL_STRENGTH resolves it to a wallId -> strength map through WALL_STAGES so
+// the two orderings can never drift. The curve ramps 10 -> 1,000,000,000
+// across the 25 stages.
+import { WALL_STAGES } from './wallProps.js'
+
+export const STAGE_STRENGTH = {
+  1: 10,
+  2: 50,
+  3: 250,
+  4: 1_000,
+  5: 5_000,
+  6: 15_000,
+  7: 50_000,
+  8: 150_000,
+  9: 500_000,
+  10: 1_500_000,
+  11: 4_500_000,
+  12: 10_000_000,
+  13: 25_000_000,
+  14: 50_000_000,
+  15: 100_000_000,
+  16: 200_000_000,
+  17: 300_000_000,
+  18: 400_000_000,
+  19: 500_000_000,
+  20: 600_000_000,
+  21: 700_000_000,
+  22: 800_000_000,
+  23: 850_000_000,
+  24: 900_000_000,
+  25: 1_000_000_000,
 }
 
-export const HEALTH_MAX = 100
+// wallId -> strength (full health pool), resolved through the stage roster.
+export const WALL_STRENGTH = Object.fromEntries(
+  WALL_STAGES.map(({ id, stage }) => [id, STAGE_STRENGTH[stage]]),
+)
 
-// damage/sec = (power / strength) * DAMAGE_CONSTANT. Sized so starting Power
-// (1) clears the weakest wall in a few seconds and barely scratches the
-// strongest — tune here, not in systems/wallHealth.js.
-export const DAMAGE_CONSTANT = 20
+// Health removed per wall strike, as a multiple of the player's current Power:
+// damage = power * DAMAGE_CONSTANT (systems/wallHealth.js strikeWall(), fired
+// once per Action by systems/actionTracker.js). At the default 1, one strike
+// removes exactly `Power` health. Raise it to speed every wall up uniformly —
+// tune here, not in systems/wallHealth.js.
+export const DAMAGE_CONSTANT = 1
 
 // In-world health bar above each wall (components/WallHealthBars.jsx). All
 // distances are world metres, all times are seconds — Tech.md §4: every tunable

@@ -38,8 +38,10 @@ export default function GameLoop() {
     // what it handles) — reset it here so a press near nothing never lingers
     // into a later frame and fires something the player didn't aim at.
     inputState.interact = false
-    stepAction(dt)
+    // Laser aim first: stepAction below reads this frame's beam hit to apply a
+    // discrete wall strike on each Action event (systems/wallHealth.js).
     stepLaser(camera, scene)
+    stepAction(dt)
     stepWallHealth(dt)
     stepLaserParticles(dt)
     // The game is interactive as soon as a frame is on screen, with or without
