@@ -34,6 +34,30 @@ const WALLS = [
   { id: 'brick_wall', x: 628.4105224609375 },
 ]
 
+// Stage number (1-based, in roster order — paper_wall is Stage 1, brick_wall is
+// Stage 10) and human-readable material name for the always-on
+// "Stage N / <Material>" sign above every wall health bar
+// (components/WallHealthBars.jsx). Tech.md §4: the label text and its ordering
+// live in data, not the component.
+const WALL_DISPLAY_NAMES = {
+  paper_wall: 'Paper',
+  cardboard_wall: 'Cardboard',
+  carpet_wall: 'Carpet',
+  leather_wall: 'Leather',
+  rubber_wall: 'Rubber',
+  grass_wall: 'Grass',
+  wood_wall: 'Wood',
+  glass_wall: 'Glass',
+  concrete_wall: 'Concrete',
+  brick_wall: 'Brick',
+}
+
+export const WALL_STAGES = WALLS.map((w, i) => ({
+  id: w.id,
+  stage: i + 1,
+  name: WALL_DISPLAY_NAMES[w.id],
+}))
+
 // location.y / location.z, identical across all ten.
 const LOCATION_Y = -4.012638568878174
 const LOCATION_Z = -0.7776517271995544

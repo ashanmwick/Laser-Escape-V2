@@ -40,6 +40,23 @@ export function rebirthRequirement(rebirth) {
   return (rebirth + 1) * REBIRTH_LEVEL_STEP
 }
 
+// Where the given Power sits inside its current level, for the HUD level bar:
+// `into` Power earned toward `span` (POWER_PER_LEVEL) needed for the next level,
+// and `frac` (0..1) for the fill width. At LEVEL_MAX the bar reads full.
+export function levelProgress(power) {
+  const level = levelForPower(power)
+  if (level >= LEVEL_MAX) {
+    return { level, into: POWER_PER_LEVEL, span: POWER_PER_LEVEL, frac: 1 }
+  }
+  const into = Math.floor(power - (level - LEVEL_MIN) * POWER_PER_LEVEL)
+  return {
+    level,
+    into,
+    span: POWER_PER_LEVEL,
+    frac: clamp(into / POWER_PER_LEVEL, 0, 1),
+  }
+}
+
 // The single source of truth for rebirth eligibility — the store's guard and
 // the HUD button's visibility check both call this, so they can never disagree.
 export function canAcceptRebirth(level, rebirth) {

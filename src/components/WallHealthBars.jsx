@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Billboard, Text } from '@react-three/drei'
+import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { healthFraction, wallHealthView } from '../systems/wallHealth.js'
 import { player } from '../systems/playerState.js'
 import { useGameStore } from '../store/useGameStore.js'
-import { WALL_AABBS } from '../data/wallProps.js'
-import { WALL_HEALTH_BAR as BAR } from '../data/wallHealth.js'
+import { WALL_AABBS, WALL_STAGES } from '../data/wallProps.js'
+import { WALL_HEALTH_BAR as BAR, HEALTH_MAX } from '../data/wallHealth.js'
 
 // In-world health bar above each wall (Tech.md §5.4: presentation only, never
 // re-renders per frame — this component renders once and drives everything
@@ -32,10 +32,16 @@ const CAP = ANCHORS.length
 
 const STOP_COLORS = BAR.COLOR_STOPS.map((s) => new THREE.Color(s.color))
 
-// Layer draw order, back to front: backing, trailing damage chip, live fill,
-// segment notches. Tiny camera-space z nudges on top of renderOrder keep the
-// four transparent, depth-write-off quads from z-fighting.
-const Z_BIAS = { bg: 0, chip: 0.01, fill: 0.02, notch: 0.03 }
+// Layer draw order, back to front: lavender border, backing, trailing damage
+// chip, live fill, segment notches. Tiny camera-space z nudges on top of
+// renderOrder keep the transparent, depth-write-off quads from z-fighting.
+const Z_BIAS = { border: -0.01, bg: 0, chip: 0.01, fill: 0.02, notch: 0.03, text: 0.05 }
+
+// Always-on "Stage N / <Material>" sign, sitting this far above the bar's top
+// edge. Unlike the bar and the HP readout it has no visibility gate — it shows
+// for every standing wall whether or not it is being damaged (hidden only once
+// the wall is destroyed and gone). Text is static, so it is never re-synced.
+const STAGE_SIGN_GAP = 2.5
 
 // Scratch, hoisted — zero allocation per frame (Tech.md §7).
 const _mat = new THREE.Matrix4()
@@ -64,13 +70,13 @@ function colorForFrac(f, out) {
 // and fill. Green channel is what three samples for alphaMap.
 function makeRoundedMask() {
   const c = document.createElement('canvas')
-  c.width = 128
-  c.height = 24
+  c.width = 512
+  c.height = 60
   const x = c.getContext('2d')
-  x.clearRect(0, 0, 128, 24)
+  x.clearRect(0, 0, 512, 60)
   x.fillStyle = '#ffffff'
   x.beginPath()
-  x.roundRect(1, 1, 126, 22, 10)
+  x.roundRect(2, 2, 508, 56, 28) // near-full pill: crisp semicircular ends
   x.fill()
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.NoColorSpace
@@ -82,14 +88,14 @@ function makeRoundedMask() {
 // bar reads as discrete cells.
 function makeNotchMask() {
   const c = document.createElement('canvas')
-  c.width = 128
-  c.height = 24
+  c.width = 512
+  c.height = 60
   const x = c.getContext('2d')
-  x.clearRect(0, 0, 128, 24)
+  x.clearRect(0, 0, 512, 60)
   x.fillStyle = '#ffffff'
   for (let i = 1; i < BAR.SEGMENTS; i++) {
-    const px = Math.round((128 / BAR.SEGMENTS) * i) - 1
-    x.fillRect(px, 1, 2, 22)
+    const px = Math.round((512 / BAR.SEGMENTS) * i) - 3
+    x.fillRect(px, 2, 6, 56)
   }
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.NoColorSpace
@@ -100,17 +106,21 @@ function makeNotchMask() {
 export default function WallHealthBars() {
   const camera = useThree((s) => s.camera)
 
+  const borderRef = useRef(null)
   const bgRef = useRef(null)
   const chipRef = useRef(null)
   const fillRef = useRef(null)
   const notchRef = useRef(null)
-  const billboardRef = useRef(null)
-  const textRef = useRef(null)
+  // One SDF <Text> per wall (see render). Driven imperatively from useFrame like
+  // every other layer — no <Billboard>, we already have the camera quaternion.
+  const textRefs = useRef([]) // the "current / max" HP readout
+  const stageRefs = useRef([]) // the always-on "Stage N / <Material>" sign
 
   // Trailing "damage chip" value per wall id, eased toward the true fraction.
   const chip = useRef({})
-  const lastTextWrite = useRef(0)
-  const lastTextValue = useRef(-1)
+  // Per-wall last-shown integer HP and last write time, to throttle re-layout.
+  const lastText = useRef({})
+  const lastTextWrite = useRef({})
 
   const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1), [])
   const roundedMask = useMemo(makeRoundedMask, [])
@@ -122,6 +132,12 @@ export default function WallHealthBars() {
     // on each mesh keeps the four layers stacked correctly.
     const base = { transparent: true, depthWrite: false, depthTest: false, toneMapped: false }
     return {
+      border: new THREE.MeshBasicMaterial({
+        ...base,
+        color: BAR.BORDER_COLOR,
+        alphaMap: roundedMask,
+        opacity: 1,
+      }),
       bg: new THREE.MeshBasicMaterial({
         ...base,
         color: BAR.BG_COLOR,
@@ -136,7 +152,7 @@ export default function WallHealthBars() {
   }, [roundedMask, notchMask])
 
   useLayoutEffect(() => {
-    for (const ref of [bgRef, chipRef, fillRef, notchRef]) {
+    for (const ref of [borderRef, bgRef, chipRef, fillRef, notchRef]) {
       const m = ref.current
       if (!m) continue
       for (let i = 0; i < CAP; i++) m.setMatrixAt(i, ZERO)
@@ -155,11 +171,12 @@ export default function WallHealthBars() {
   )
 
   useFrame((_, delta) => {
+    const border = borderRef.current
     const bg = bgRef.current
     const chipMesh = chipRef.current
     const fill = fillRef.current
     const notch = notchRef.current
-    if (!bg || !chipMesh || !fill || !notch) return
+    if (!border || !bg || !chipMesh || !fill || !notch) return
 
     const dt = Math.min(delta, 0.1)
     const now = performance.now()
@@ -176,13 +193,25 @@ export default function WallHealthBars() {
 
     for (let i = 0; i < CAP; i++) {
       const a = ANCHORS[i]
+      const t = textRefs.current[i]
+      const stage = stageRefs.current[i]
 
       if (destroyed.has(a.id)) {
+        border.setMatrixAt(i, ZERO)
         bg.setMatrixAt(i, ZERO)
         chipMesh.setMatrixAt(i, ZERO)
         fill.setMatrixAt(i, ZERO)
         notch.setMatrixAt(i, ZERO)
+        if (t) t.visible = false
+        if (stage) stage.visible = false
         continue
+      }
+
+      // Stage sign: no visibility gate — every standing wall shows it. Static
+      // position (set in JSX); only the billboard turn is per-frame.
+      if (stage) {
+        stage.visible = true
+        stage.quaternion.copy(_quat)
       }
 
       const frac = healthFraction(a.id)
@@ -194,10 +223,12 @@ export default function WallHealthBars() {
       const visible = activeId === a.id || sinceHit < BAR.LINGER_SECONDS * 1000 || near
 
       if (!visible) {
+        border.setMatrixAt(i, ZERO)
         bg.setMatrixAt(i, ZERO)
         chipMesh.setMatrixAt(i, ZERO)
         fill.setMatrixAt(i, ZERO)
         notch.setMatrixAt(i, ZERO)
+        if (t) t.visible = false
         continue
       }
 
@@ -211,55 +242,68 @@ export default function WallHealthBars() {
         sinceHit < BAR.FLASH_SECONDS * 1000 ? 1 - sinceHit / (BAR.FLASH_SECONDS * 1000) : 0
       const h = BAR.HEIGHT * (1 + flash * BAR.FLASH_SCALE)
 
+      // Lavender border: the backing plus a uniform BORDER margin on every side,
+      // so a frame of it shows around the bar.
+      _off.set(0, 0, Z_BIAS.border).applyQuaternion(_quat)
+      _pos.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
+      _mat.compose(_pos, _quat, _scl.set(BAR.WIDTH + BAR.BORDER * 2, h + BAR.BORDER * 2, 1))
+      border.setMatrixAt(i, _mat)
+
       // Backing + notches: full width, centred on the anchor.
       _off.set(0, 0, Z_BIAS.bg).applyQuaternion(_quat)
       _pos.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
       _mat.compose(_pos, _quat, _scl.set(BAR.WIDTH, h, 1))
       bg.setMatrixAt(i, _mat)
 
-      _off.set(0, 0, Z_BIAS.notch).applyQuaternion(_quat)
-      _pos.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
-      _mat.compose(_pos, _quat, _scl.set(BAR.WIDTH, h, 1))
-      notch.setMatrixAt(i, _mat)
+      if (BAR.SHOW_SEGMENTS) {
+        _off.set(0, 0, Z_BIAS.notch).applyQuaternion(_quat)
+        _pos.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
+        _mat.compose(_pos, _quat, _scl.set(BAR.WIDTH, h, 1))
+        notch.setMatrixAt(i, _mat)
+      } else {
+        notch.setMatrixAt(i, ZERO)
+      }
 
       // Chip + fill: width scaled by fraction, left edge pinned to the bar's
       // left edge (local x = -WIDTH/2).
       composeBar(chipMesh, i, a, nextChip, h, Z_BIAS.chip)
       composeBar(fill, i, a, frac, h, Z_BIAS.fill)
       fill.setColorAt(i, colorForFrac(frac, _col))
+
+      // "current / max" readout: one per bar, shown for as long as the bar is.
+      // Text re-layout is costly, so only on a whole-HP change and at most ~10Hz.
+      if (t) {
+        t.visible = true
+        _off.set(0, 0, Z_BIAS.text).applyQuaternion(_quat)
+        t.position.set(a.x + _off.x, a.y + _off.y, a.z + _off.z)
+        t.quaternion.copy(_quat)
+        const cur = Math.ceil(frac * HEALTH_MAX)
+        if (cur !== lastText.current[a.id] && now - (lastTextWrite.current[a.id] ?? 0) > 100) {
+          lastText.current[a.id] = cur
+          lastTextWrite.current[a.id] = now
+          t.text = `${cur} / ${HEALTH_MAX}`
+          t.sync()
+        }
+      }
     }
 
+    border.instanceMatrix.needsUpdate = true
     bg.instanceMatrix.needsUpdate = true
     chipMesh.instanceMatrix.needsUpdate = true
     fill.instanceMatrix.needsUpdate = true
     notch.instanceMatrix.needsUpdate = true
     if (fill.instanceColor) fill.instanceColor.needsUpdate = true
-
-    // Percentage readout: follows the active wall, hidden when none. Text is
-    // costly to re-lay-out, so only when the whole-number percent changes and
-    // at most ~10Hz.
-    const bill = billboardRef.current
-    const text = textRef.current
-    if (bill && text) {
-      if (activeId == null) {
-        bill.visible = false
-      } else {
-        const a = ANCHORS[wallIndex(activeId)]
-        bill.visible = true
-        bill.position.set(a.x, a.y + BAR.HEIGHT / 2 + 0.7, a.z)
-        const pct = Math.round(healthFraction(activeId) * 100)
-        if (pct !== lastTextValue.current && now - lastTextWrite.current > 100) {
-          lastTextValue.current = pct
-          lastTextWrite.current = now
-          text.text = `${pct}%`
-          text.sync()
-        }
-      }
-    }
   })
 
   return (
     <group>
+      <instancedMesh
+        ref={borderRef}
+        args={[geometry, materials.border, CAP]}
+        renderOrder={0}
+        frustumCulled={false}
+        matrixAutoUpdate={false}
+      />
       <instancedMesh
         ref={bgRef}
         args={[geometry, materials.bg, CAP]}
@@ -288,22 +332,45 @@ export default function WallHealthBars() {
         frustumCulled={false}
         matrixAutoUpdate={false}
       />
-      <Billboard ref={billboardRef}>
+      {ANCHORS.map((a, i) => (
         <Text
-          ref={textRef}
-          fontSize={0.85}
+          key={a.id}
+          ref={(el) => (textRefs.current[i] = el)}
+          visible={false}
+          fontSize={1.5}
           color="#ffffff"
-          outlineWidth={0.06}
-          outlineColor="#000000"
+          outlineWidth={0.175}
+          outlineColor="#0a2a12"
           anchorX="center"
           anchorY="middle"
           renderOrder={5}
           material-depthTest={false}
           material-toneMapped={false}
         >
-          100%
+          {`${HEALTH_MAX} / ${HEALTH_MAX}`}
         </Text>
-      </Billboard>
+      ))}
+      {ANCHORS.map((a, i) => (
+        <Text
+          key={`stage-${a.id}`}
+          ref={(el) => (stageRefs.current[i] = el)}
+          visible={false}
+          position={[a.x, a.y + BAR.HEIGHT / 2 + BAR.BORDER + STAGE_SIGN_GAP, a.z]}
+          fontSize={2.2}
+          color="#ffffff"
+          outlineWidth={0.2}
+          outlineColor="#0a2a12"
+          anchorX="center"
+          anchorY="bottom"
+          textAlign="center"
+          lineHeight={1.15}
+          renderOrder={5}
+          material-depthTest={false}
+          material-toneMapped={false}
+        >
+          {`Stage ${WALL_STAGES[i].stage}\n${WALL_STAGES[i].name}`}
+        </Text>
+      ))}
     </group>
   )
 }
@@ -316,9 +383,4 @@ function composeBar(mesh, i, anchor, frac, height, zBias) {
   _pos.set(anchor.x + _off.x, anchor.y + _off.y, anchor.z + _off.z)
   _mat.compose(_pos, _quat, _scl.set(w, height, 1))
   mesh.setMatrixAt(i, _mat)
-}
-
-function wallIndex(id) {
-  for (let i = 0; i < CAP; i++) if (ANCHORS[i].id === id) return i
-  return 0
 }

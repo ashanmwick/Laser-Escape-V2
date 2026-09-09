@@ -8,6 +8,7 @@ import { canAcceptRebirth } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import Stats from '../Stats.jsx'
 import ActionPopups from './ActionPopups.jsx'
+import LevelBar from './LevelBar.jsx'
 import AuthPanel from './AuthPanel.jsx'
 import ChatLine from './ChatLine.jsx'
 import { useSettings } from './hooks.js'
@@ -178,6 +179,11 @@ export default function Hud() {
       />
 
       <AuthPanel panelStyle={panelStyle} />
+
+      {/* Bottom-centre level progress bar. DOM sibling of the canvas, written
+         from a throttled store subscription — never re-renders per frame
+         (Tech.md §5.4). */}
+      <LevelBar />
 
       {/* Per-Action "+N" power badges around the player. Owns its own rAF loop
          and never re-renders (Tech.md §5.4). */}

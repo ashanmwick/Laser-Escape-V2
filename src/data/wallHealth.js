@@ -28,24 +28,27 @@ export const DAMAGE_CONSTANT = 20
 // number lives here, the component only owns structural constants (plane args,
 // instance capacity).
 export const WALL_HEALTH_BAR = {
-  WIDTH: 6, // bar width at full health
-  HEIGHT: 0.7, // bar height
+  WIDTH: 15, // bar width at full health
+  HEIGHT: 1.75, // bar height
+  BORDER: 0.1, // lavender frame thickness, world metres — uniform on every side
+  BORDER_COLOR: '#000000', // rounded outer border, same pill look as the HUD
   SEGMENTS: 12, // notch count baked into the mask texture
+  SHOW_SEGMENTS: false, // image is a smooth pill — leave the notch overlay off
   // Placement: centred on the wall's width, HEIGHT_FRAC of the way up its face
   // (0 = base, 1 = top) plus Y_OFFSET metres, and FACE_OFFSET metres out from
   // the approach (-X) face so the bar floats just in front of the wall rather
   // than buried inside its box.
-  HEIGHT_FRAC: 0.6,
+  HEIGHT_FRAC: 0.3, // sit low on the wall face
   Y_OFFSET: 0,
-  FACE_OFFSET: 0.6,
-  // Health -> fill colour, high to low. Lerped between the bracketing stops.
-  // Green / amber / red, same family as HexPowerPadLabel.jsx.
+  FACE_OFFSET: 1,
+  // Health -> fill colour, high to low, lerped between the bracketing stops.
+  // Single stop = the fill stays this green at every health level (per design:
+  // the bar never turns amber/red as it drains). Add stops back to restore the
+  // graded look.
   COLOR_STOPS: [
-    { at: 1.0, color: '#38e07b' },
-    { at: 0.5, color: '#ffd21e' },
-    { at: 0.2, color: '#ff5a3c' },
+    { at: 1.0, color: '#8fe34a' }, // bright lime, matching the image
   ],
-  BG_COLOR: '#0b0f14', // bar backing
+  BG_COLOR: '#cf2b2b', // bar backing / damage track shown behind the green fill
   CHIP_COLOR: '#ffffff', // trailing "damage chip" that eases toward the true value
   LINGER_SECONDS: 2.5, // how long a bar stays up after the last hit
   SHOW_RANGE: 25, // also show the bar for any live wall this near the player
