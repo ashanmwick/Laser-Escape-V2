@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { player } from '../../systems/playerState.js'
 import { afkState } from '../../systems/afk.js'
 import { hexPowerPadState } from '../../systems/hexPowerPad.js'
+import { podiumHintState } from '../../systems/podiumHint.js'
 import { settings } from '../../systems/settingsState.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth } from '../../data/progression.js'
@@ -103,6 +104,7 @@ export default function Hud() {
   const winsRef = useRef(null)
   const afkPromptRef = useRef(null)
   const hexPadPromptRef = useRef(null)
+  const podiumHintRef = useRef(null)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -164,6 +166,25 @@ export default function Hud() {
       } else {
         el.textContent = `Need ${tier.winsRequired} Wins to Buy`
         el.style.display = ''
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
+
+  // Same throttled-poll pattern. Coaching hint shown while the player is near
+  // a podium and still on the ground (systems/podiumHint.js picks the message
+  // per prop). Sits higher than the afk / hex-pad prompts so it never
+  // overlaps one if both are relevant at once.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = podiumHintRef.current
+      if (!el) return
+      const text = podiumHintState.text
+      if (text) {
+        if (el.textContent !== text) el.textContent = text
+        el.style.display = ''
+      } else {
+        el.style.display = 'none'
       }
     }, 100)
     return () => clearInterval(id)
@@ -233,6 +254,12 @@ export default function Hud() {
       <div
         ref={hexPadPromptRef}
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
+        style={{ display: 'none' }}
+      />
+
+      <div
+        ref={podiumHintRef}
+        className="pointer-events-none absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
         style={{ display: 'none' }}
       />
 

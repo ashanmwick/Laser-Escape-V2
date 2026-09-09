@@ -7,6 +7,7 @@ import { step as stepActionPopups } from '../systems/actionPopups.js'
 import { step as stepAfk } from '../systems/afk.js'
 import { step as stepHexPowerPad } from '../systems/hexPowerPad.js'
 import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
+import { step as stepPodiumHint } from '../systems/podiumHint.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
@@ -31,6 +32,7 @@ export default function GameLoop() {
     stepAfk()
     stepHexPowerPad()
     stepGlowFloorPanel()
+    stepPodiumHint()
     // Neither system above claimed a press outside its own zone (each only
     // clears inputState.interact when the player is actually in range of
     // what it handles) — reset it here so a press near nothing never lingers

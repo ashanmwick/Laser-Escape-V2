@@ -68,6 +68,27 @@ function toThree(t, lx, ly, lz) {
 export const POWER_PODIUM_POSITION = toThree(POWER_PODIUM_TRANSFORM, 0, 0, 0)
 export const TARGET_PODIUM_POSITION = toThree(TARGET_PODIUM_TRANSFORM, 0, 0, 0)
 
+// Proximity coaching hint for either podium: when the player comes within
+// PODIUM_HINT_RANGE metres (measured in the ground plane from the mount
+// origin) of a prop, the HUD shows that prop's *_HINT_TEXT — the centre
+// tiers are sheer risers, so a first-time visitor needs telling that the
+// side staircases (climbed with Space) are the only way up.
+// systems/podiumHint.js scans both instances; components/hud/Hud.jsx polls
+// and draws it, same shape as the afk / hex-pad prompts. Range is sized to
+// trigger a little outside the ~11m x ~7m footprint half-extents, not right
+// on the steps.
+export const PODIUM_HINT_RANGE = 15
+export const POWER_PODIUM_HINT_TEXT = 'Climb the side stairs using the Spacebar'
+export const TARGET_PODIUM_HINT_TEXT =
+  'Climb the side stairs using the Spacebar, then use the targets'
+
+// The hint is coaching for someone still on the ground working out how to get
+// up. Once the player has actually climbed onto a prop — feet inside its XZ
+// footprint and at least this far above the ground plane (the first step
+// tops out at ~0.36m, see STEP_PROFILE) — the advice has done its job, so
+// systems/podiumHint.js drops the flag and the HUD hides it.
+export const PODIUM_ON_MIN_Y = 0.2
+
 // Object-space (local, pre-transform) step footprints: each side's 12 steps
 // + 2 mid-flight landings, solid from the ground up to that tread's height.
 // x is mirrored for the left side by negating it (local origin is the
