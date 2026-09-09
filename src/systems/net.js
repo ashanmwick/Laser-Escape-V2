@@ -14,6 +14,11 @@ import { laser } from './laser.js'
 import { SPEED } from './playerMovement.js'
 import { authState, subscribeAuth } from './bloxity.js'
 import { avatarState, subscribe as subscribeAvatar } from './avatarState.js'
+import {
+  subscribeWallNet,
+  applyRemoteWallHealth,
+  resetWallsFromNetwork,
+} from './wallHealth.js'
 import { PROPORTIONS, clamp } from '../data/bloxity.js'
 import {
   SERVER_URL,
@@ -100,6 +105,18 @@ let connecting = false
 let attempt = 0
 let retryTimer = 0
 let sdkReconnecting = false // mirrors room.reconnection.isReconnecting
+// Last room.state.resetNonce we have seen. null until the first state read on a
+// fresh attach — that first read is ADOPTED (a joiner takes the room's current
+// wall state as-is), and only later changes trigger a local wall reset.
+let lastResetNonce = null
+// Set when WE reached a win panel and sent `winPanelHit`: our walls are already
+// reset locally, so suppress wall-health adoption until the server echoes the
+// resetNonce bump (otherwise the still-stale `walls` patch would re-damage them
+// for a frame). Cleared on that echo, or after RESET_ACK_TIMEOUT_MS as a
+// safety if the send was lost.
+let pendingLocalReset = false
+let pendingLocalResetSince = 0
+const RESET_ACK_TIMEOUT_MS = 4000
 
 async function loadSdk() {
   if (!sdkModule) sdkModule = await import('@colyseus/sdk')
@@ -188,6 +205,27 @@ function scheduleAvatarResend() {
     avatarResendTimer = 0
     sendAvatarNow()
   }, AVATAR_RESEND_DEBOUNCE_MS)
+}
+
+// --- Wall health sync -------------------------------------------------
+// Local wall events from systems/wallHealth.js -> the room. Strikes land every
+// ACTION_HOLD_INTERVAL (2 s) at most, so a send per event is not chatty; the
+// server just clamps + stores and fans the value out to everyone else.
+function onLocalWallEvent(ev) {
+  if (!room) return
+  try {
+    if (ev.type === 'damage') {
+      room.send('wallDamage', { wallId: ev.id, hp: ev.hp })
+    } else if (ev.type === 'destroyed') {
+      room.send('wallDestroyed', { wallId: ev.id })
+    } else if (ev.type === 'reset') {
+      pendingLocalReset = true
+      pendingLocalResetSince = performance.now()
+      room.send('winPanelHit', {})
+    }
+  } catch {
+    // Socket mid-close — handleLeave() will pick it up; local state already moved.
+  }
 }
 
 // Resolve once auth has settled, so a signed-in player joins under their real
@@ -284,6 +322,10 @@ function attachRoom(joined) {
   attempt = 0
   selfId = joined.sessionId
   sdkReconnecting = false
+  // Re-adopt the room's wall state on this (re)attach rather than treating the
+  // current resetNonce as a change to react to (step() seeds it on first read).
+  lastResetNonce = null
+  pendingLocalReset = false
   netState.everConnected = true
   netState.error = null
 
@@ -309,6 +351,8 @@ function handleLeave() {
   selfId = ''
   connecting = false
   sdkReconnecting = false
+  lastResetNonce = null
+  pendingLocalReset = false
   netState.playerCount = 0
   // Fade every remote out; step() culls them as alpha hits 0.
   for (const e of remotePlayers.values()) e.present = false
@@ -328,6 +372,7 @@ function recount() {
 
 // --- Public lifecycle -------------------------------------------------
 let offAvatar = null
+let offWallNet = null
 
 export function init() {
   if (started) return
@@ -337,6 +382,9 @@ export function init() {
   // (login, customizer) — push it to the room, debounced. A no-op while
   // offline; the next attach re-seeds from avatarPayload().
   if (!offAvatar) offAvatar = subscribeAvatar(() => scheduleAvatarResend())
+  // Local wall damage / destroy / round-reset -> the room. onLocalWallEvent
+  // no-ops while offline, so single-player wall breaking is unaffected.
+  if (!offWallNet) offWallNet = subscribeWallNet(onLocalWallEvent)
   waitForAuth(USERNAME_WAIT_MS).then(() => {
     if (!stopped) connect()
   })
@@ -352,6 +400,10 @@ export function teardown() {
   if (offAvatar) {
     offAvatar()
     offAvatar = null
+  }
+  if (offWallNet) {
+    offWallNet()
+    offWallNet = null
   }
   if (room) {
     try {
@@ -514,6 +566,34 @@ export function step(dt) {
       if (!live.get(id)) e.present = false
     }
     recount()
+  }
+
+  // Shared wall health: a room-wide round reset first (someone reached a win
+  // panel), then adopt every wall's current pool. applyRemoteWallHealth() is a
+  // no-op for a value that matches or exceeds ours, so this costs ~25 early
+  // returns a frame when nothing changed, and never fights a local strike.
+  if (room && room.state) {
+    if (pendingLocalReset && now - pendingLocalResetSince > RESET_ACK_TIMEOUT_MS) {
+      pendingLocalReset = false
+    }
+    const nonce = room.state.resetNonce
+    if (typeof nonce === 'number') {
+      if (lastResetNonce === null) {
+        lastResetNonce = nonce
+      } else if (nonce !== lastResetNonce) {
+        lastResetNonce = nonce
+        if (pendingLocalReset) {
+          pendingLocalReset = false // our own win-panel reset echoed back
+        } else {
+          resetWallsFromNetwork()
+        }
+      }
+    }
+    if (room.state.walls && !pendingLocalReset) {
+      room.state.walls.forEach((w, id) => {
+        applyRemoteWallHealth(id, w.hp, w.destroyed)
+      })
+    }
   }
 
   const lerp = 1 - Math.exp(-REMOTE_LERP_RATE * Math.min(dt, 0.1))
