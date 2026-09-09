@@ -9,8 +9,8 @@ export const LASER_FORWARD_RATIO = 0.9
 // Metres the beam reaches when the aim ray hits nothing (aiming at open sky).
 export const LASER_MAX_RANGE = 200
 
-export const LASER_CORE_RADIUS = 0.014
-export const LASER_GLOW_RADIUS = 0.035
+export const LASER_CORE_RADIUS = 0.028
+export const LASER_GLOW_RADIUS = 0.07
 export const LASER_CORE_COLOR = '#ffffff'
 export const LASER_GLOW_COLOR = '#5ef2ff'
 export const LASER_GLOW_OPACITY = 0.45

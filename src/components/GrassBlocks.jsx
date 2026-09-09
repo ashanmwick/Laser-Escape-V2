@@ -3,14 +3,14 @@ import * as THREE from 'three'
 import { loadPropParts } from '../systems/propModel.js'
 import { GRASS_BLOCK_MODEL_URL, GRASS_BLOCK_INSTANCES } from '../data/grassBlocks.js'
 
-// The 77 `grass_block_dirt.NNN` objects (collection `grass_block_new`,
+// The 160 `grass_block_dirt.NNN` objects (collection `grass_block_new`,
 // data/grassBlocks.js) — a lane border, so this is the largest repeat count
 // of any prop in the game. Tech.md §7 caps busiest-view draw calls at 60;
-// mounting 77 scene-graph clones the way PodiumProp/WallProp/HexPowerPadProp
-// do (2 materials each) would spend 154 of that budget alone. Instead this
+// mounting 160 scene-graph clones the way PodiumProp/WallProp/HexPowerPadProp
+// do (2 materials each) would spend 320 of that budget alone. Instead this
 // loads the shared glTF once (propModel.js's loadPropParts, not loadProp —
 // there is no per-instance scene node here to clone) and draws it as one
-// InstancedMesh per material — 2 draw calls for all 77, matching
+// InstancedMesh per material — 2 draw calls for all 160, matching
 // BuildingBlocks.jsx's InstancedMesh pattern for the same "everything
 // repeated" rule.
 const scratchMatrix = new THREE.Matrix4()

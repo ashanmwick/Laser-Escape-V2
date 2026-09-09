@@ -32,6 +32,64 @@ function RebirthButton() {
   )
 }
 
+// 1000 -> "1K", 1500 -> "1.5K", 2_000_000 -> "2M". Trims a trailing ".0".
+function formatCompact(n) {
+  const abs = Math.abs(n)
+  if (abs < 1000) return String(n)
+  const units = [
+    { value: 1e9, suffix: 'B' },
+    { value: 1e6, suffix: 'M' },
+    { value: 1e3, suffix: 'K' },
+  ]
+  const { value, suffix } = units.find((u) => abs >= u.value)
+  const scaled = n / value
+  const text = scaled.toFixed(1).replace(/\.0$/, '')
+  return `${text}${suffix}`
+}
+
+// Left-edge, vertically centred stack: win count above, rebirth action below.
+// Both are selector-driven and re-render only when their value changes, never
+// per frame (Tech.md §5.4). Wins change at human speed; rebirth eligibility is
+// a boolean flip. The rebirth button stays mounted but disabled until eligible.
+function LeftCenterControls() {
+  const wins = useGameStore((s) => s.wins)
+  const canRebirth = useGameStore((s) => canAcceptRebirth(s.level, s.rebirth))
+  const acceptRebirth = useGameStore((s) => s.acceptRebirth)
+  return (
+    <div className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2">
+      <div className="flex items-center gap-2 rounded-lg border border-slate-400/30 bg-black/50 px-3 py-2 text-slate-100 shadow-lg">
+        <img src="/ui/xp_cup.png" alt="" className="h-8 w-8" draggable={false} />
+        <span
+          className="font-bold tabular-nums"
+          style={{
+            // Matches GlowFloorPanelLabel's Wins <Text>: #ffd21e fill, bold,
+            // letterSpacing -0.02, black outline at ~10% of font size, drawn
+            // behind the fill (SDF outlineWidth 0.09 / fontSize 0.9).
+            fontSize: '1.125rem',
+            lineHeight: 1,
+            color: '#ffd21e',
+            letterSpacing: '-0.02em',
+            WebkitTextStroke: '2px #000000',
+            paintOrder: 'stroke fill',
+          }}
+        >
+          {formatCompact(wins)}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={acceptRebirth}
+        disabled={!canRebirth}
+        title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+        className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+      >
+        <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+        <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+      </button>
+    </div>
+  )
+}
+
 // DOM siblings of the canvas, never drei <Html> (Tech.md §5.4). Must not
 // re-render per frame: the position readout is written to textContent on a
 // ~10Hz interval that reads the singleton directly. React state here is only
@@ -177,6 +235,8 @@ export default function Hud() {
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
         style={{ display: 'none' }}
       />
+
+      <LeftCenterControls />
 
       <AuthPanel panelStyle={panelStyle} />
 

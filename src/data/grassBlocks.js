@@ -1,46 +1,46 @@
-// Data for the 77 `grass_block_dirt.NNN` prop instances (Tech.md §4),
+// Data for the 160 `grass_block_dirt.NNN` prop instances (Tech.md §4),
 // collection `grass_block_new` in the .blend (objects .001-.045 and
-// .047-.078; .046 is not in the collection — it sits alone in the scene
+// .047-.161; .046 is not in the collection — it sits alone in the scene
 // root at x≈-106 as the material/mesh donor, see below) — a long lane
-// border running both sides of the track from x≈-35 to x≈1565. Batch two
-// (.047-.078, the 32 rows after the blank line in RAW) carries the border
-// on from where batch one (.001-.045) stopped at x≈575. All 77 share one
-// exported mesh (`grass_block_dirt.glb`, built from grass_block_dirt.046 at
-// an identity transform: location/rotation/scale zeroed before export, so
-// the glTF holds the ~1m local block shape and nothing else) and differ
-// only in each instance's own transform — the import instruction's
-// "duplicate of grass_block_dirt.001, only the transform differs" holds for
-// the outer footprint every instance shares (verified against the .blend:
-// all 77 bound boxes are identical, -0.525..0.525 on X/Z and -0.5..0.5 on
-// Y-up/Z pre-remap); only a few interior cap vertices vary instance to
-// instance, which one shared render mesh intentionally discards — Tech.md
-// §6 caps prop tris at 500 and this is a background border, so that's the
-// right trade, not a shortcut.
+// border running both sides of the track from x≈-35 to x≈1636, in three
+// bands: an inner low kerb (.001-.045, mixed scales, x≈-35..575), a
+// uniform running border past it (.047-.078, yaw π/2, x≈637..1565), and a
+// raised outer double-row that alternates a mid wall with a taller back
+// wall (.079-.160, yaw 0, x≈134..1596). .161 is a far end cap turned
+// yaw -π/2, wide enough to close the gap between the two sides.
 //
-// grass_block_dirt.046 supplies the material for all 77 (per the import
-// instruction) — its two baked textures are already the smaller 256² pair
-// (vs. the 512² pair authored on .001-.045 and .047-.078), so reusing them
-// **is** the "optimize the material" step, on top of collapsing every
-// instance's own material datablocks down to the 2 that .046 already
-// carried. propModel.js's convertMaterial() does the PBR -> Lambert
-// conversion generically at load, same as every other imported prop
-// (Tech.md §7).
+// Every object in the collection is a duplicate of `grass_block_dirt.001`
+// and differs only in its own transform (verified against the .blend: all
+// 160 object bound boxes are the identical block, -0.525..0.525 on X/Y and
+// -0.5..0.5 on Z-up/Blender-Z, 24 verts / 18 polys). So all 160 share one
+// exported mesh (`grass_block_dirt.glb`, built from the donor
+// grass_block_dirt.046 at an identity transform: location/rotation/scale
+// zeroed before export, so the glTF holds the ~1m local block shape — a
+// dirt body plus a grass cap — and nothing else). This import only grew
+// the instance list (77 -> 160); the mesh is unchanged, so the .glb was
+// not re-exported.
+//
+// grass_block_dirt.046 supplies the material for all 160 (per the import
+// instruction). The .blend carries a per-instance-duplicated material pair
+// on every object (`grass_block_dirt_mat.NNN` / `grass_block_grass_mat.NNN`
+// — 85 identical pairs); exporting from one donor collapses that to the 2
+// the glTF carries, and propModel.js's convertMaterial() does the
+// PBR -> Lambert conversion generically at load (Tech.md §7), same as every
+// other imported prop. That pair of steps is the whole "optimize the
+// material" step — no Blender render/bake was run; this is an import only.
 //
 // Kept as exact as-authored transforms (no zFit) per the import
 // instruction — same precedent as data/wallProps.js and data/glowFloorPanel.js.
 export const GRASS_BLOCK_MODEL_URL = '/models/grass_block_dirt.glb'
 
 // Raw Blender transform per object, read directly off grass_block_dirt.001
-// through .078 (skipping .046, the donor): location, yaw (rotation around
+// through .161 (skipping .046, the donor): location, yaw (rotation around
 // Blender's Z axis — every instance's rotation_euler.x/y is exactly 0, only
-// Z ever rotates) and scale. Non-uniform and per-instance, unlike
-// wallProps.js's one shared scale — this border's blocks vary in both
-// footprint and height. Batch two (.047-.078) is the block below the blank
-// line: all 32 share yaw 1.570796 and scale [30.777733, 14.738917,
-// 14.685409], stepping X from ~637 to ~1565 with Y alternating between the
-// track's two sides (25.027731 / -32.479267).
+// Z ever rotates, to one of 0 / ±π/2) and scale. Non-uniform and
+// per-instance — this border's blocks vary in both footprint and height.
 const RAW = [
-  { location: [-35.214493, -39.446613, 5.336075], yaw: 1.570796, scale: [54.543262, 22.272581, 22.191719] },
+  // --- band one: grass_block_dirt.001 .. .045 — inner low kerb, x≈-35..575
+  { location: [-35.214493, -25.522144, 5.336075], yaw: 1.570796, scale: [54.543262, 22.272581, 22.191719] },
   { location: [-11.11717, -34.947086, 5.336075], yaw: 0, scale: [25.708996, 11.432119, 11.390615] },
   { location: [-35.214493, 32.19762, 5.336075], yaw: 1.570796, scale: [54.543262, 22.272581, 22.191719] },
   { location: [48.558731, 34.816277, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
@@ -86,7 +86,7 @@ const RAW = [
   { location: [574.997681, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [574.997681, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
 
-  // --- batch two: grass_block_dirt.047 .. .078 — border continues past x≈575
+  // --- band two: grass_block_dirt.047 .. .078 — uniform running border, x≈637..1565
   { location: [637.440247, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [637.440247, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [700.092285, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
@@ -119,6 +119,95 @@ const RAW = [
   { location: [1503.005249, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [1564.766235, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [1564.766235, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
+
+  // --- band three: grass_block_dirt.079 .. .160 — raised outer double-row
+  // (back wall scale [32.5, 22.2, 22.1] at z≈22.45, y ±(51.9 / -60.1);
+  // mid wall scale [45.8, 14.7, 14.7] at z≈19.10, y ±(32.6 / -40.9)), x≈134..1596
+  { location: [134.437454, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [134.437454, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [194.619888, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [194.619888, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [259.918274, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [259.918274, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [320.388123, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [320.388123, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [381.777771, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [381.777771, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [449.130432, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [449.130432, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [510.178802, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [510.178802, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [573.174866, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [573.174866, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [606.277527, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [606.277527, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [668.906372, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [668.906372, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [635.803711, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [635.803711, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [731.213562, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [731.213562, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [698.110901, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [698.110901, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [759.80835, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [759.80835, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [792.911011, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [792.911011, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [854.33728, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [854.33728, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [821.234619, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [821.234619, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [884.113525, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [884.113525, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [917.216187, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [917.216187, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [979.699585, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [979.699585, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [946.596924, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [946.596924, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1008.684937, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1008.684937, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1041.787598, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1041.787598, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1102.293701, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1102.293701, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1069.19104, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1069.19104, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1130.488037, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1130.488037, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1163.590698, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1163.590698, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1227.260498, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1227.260498, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1194.157837, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1194.157837, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1254.268433, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1254.268433, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1287.371094, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1287.371094, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1347.086304, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1347.086304, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1313.983643, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1313.983643, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1376.071655, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1376.071655, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1409.174316, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1409.174316, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1473.948608, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1473.948608, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1440.845947, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1440.845947, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1503.516113, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1503.516113, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1536.618774, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1536.618774, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1595.741943, 32.604839, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1595.741943, -40.894867, 19.09866], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
+  { location: [1562.639282, 51.933468, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+  { location: [1562.639282, -60.139683, 22.44809], yaw: 0, scale: [32.497292, 22.222477, 22.141796] },
+
+  // --- far end cap: grass_block_dirt.161 — turned yaw -π/2, spans the gap
+  { location: [1636.112305, -3.646088, 24.369425], yaw: -1.570796, scale: [86.387573, 27.827141, 27.726116] },
 ]
 
 // Blender Z-up -> three.js Y-up, matching the glTF exporter's own
@@ -157,18 +246,16 @@ export const GRASS_BLOCK_INSTANCES = RAW.map((r) => ({
   scale: [r.scale[0], r.scale[2], r.scale[1]],
 }))
 
-// Object-space (local, pre-scale) box shared by all 45 — object.bound_box,
-// identical across the set even though a few interior cap vertices differ
-// (see the file header).
+// Object-space (local, pre-scale) box shared by all 160 — object.bound_box,
+// identical across the set (see the file header).
 const LOCAL_MIN = { x: -0.525, y: -0.525, z: -0.5 }
 const LOCAL_MAX = { x: 0.525, y: 0.525, z: 0.5 }
 
 // World-space { min, max } AABBs for the kinematic collider (Tech.md §5.2)
 // — each block is a solid object, so its box IS its collider, same as the
-// building blocks, both podiums and the 25 walls (data/hub.js). The min/max
-// is taken over all 8 corners rather than assumed, since toThree's axis
-// remap plus each instance's own yaw both permute which local axis ends up
-// where.
+// building blocks, both podiums and the walls (data/hub.js). The min/max is
+// taken over all 8 corners rather than assumed, since toThree's axis remap
+// plus each instance's own yaw both permute which local axis ends up where.
 function worldAabb(r) {
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]
