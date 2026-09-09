@@ -12,6 +12,7 @@ import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
 import { step as stepWallDebris } from '../systems/wallDebris.js'
+import { step as stepNet, reportLocal } from '../systems/net.js'
 import { getAabbs } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
 import { inputState } from '../systems/input.js'
@@ -48,6 +49,11 @@ export default function GameLoop() {
     // queued its burst (systems/wallHealth.js strikeWall -> wallDebris.spawnBurst).
     stepWallDebris(dt)
     stepLaserParticles(dt)
+    // Multiplayer presence: advance remote-body interpolation, then relay our
+    // own transform + beam (throttled inside net.js). A no-op while offline —
+    // the game never waits on the socket (systems/net.js).
+    stepNet(dt)
+    reportLocal()
     // The game is interactive as soon as a frame is on screen, with or without
     // a signed-in avatar; dismiss the portal loading screen here. No-ops after
     // the first call.

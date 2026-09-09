@@ -9,6 +9,7 @@ import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import ActionPopups from './ActionPopups.jsx'
 import LevelBar from './LevelBar.jsx'
 import LevelUpPopup from './LevelUpPopup.jsx'
+import NetStatus from './NetStatus.jsx'
 import AuthPanel from './AuthPanel.jsx'
 import { useSettings } from './hooks.js'
 
@@ -194,6 +195,10 @@ export default function Hud() {
          transient store subscription that runs one Web-Animations pass per
          level rise — never re-renders per frame (Tech.md §5.4). */}
       <LevelUpPopup />
+
+      {/* Top-centre multiplayer status pill. Event-driven — re-renders only on
+         connect / disconnect / player-count changes (Tech.md §5.4). */}
+      <NetStatus />
 
       {/* Per-Action "+N" power badges around the player. Owns its own rAF loop
          and never re-renders (Tech.md §5.4). */}

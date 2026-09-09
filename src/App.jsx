@@ -14,6 +14,7 @@ import WallProps from './components/WallProps.jsx'
 import WallDebris from './components/WallDebris.jsx'
 import WallHealthBars from './components/WallHealthBars.jsx'
 import Player from './components/Player.jsx'
+import RemotePlayers from './components/RemotePlayers.jsx'
 import Laser from './components/Laser.jsx'
 import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
@@ -60,6 +61,7 @@ export default function App() {
         <WallDebris />
         <WallHealthBars />
         <Player />
+        <RemotePlayers />
         <Laser />
         <LaserParticles />
       </Canvas>
