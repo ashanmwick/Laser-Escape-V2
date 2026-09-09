@@ -52,12 +52,12 @@ export default function LevelBar() {
     const paint = () => {
       last = performance.now()
       const { power } = useGameStore.getState()
-      const { level, into, span, frac } = levelProgress(power)
+      const { level, frac, total, needed } = levelProgress(power)
       if (captionRef.current)
         captionRef.current.textContent = `${formatShort(power)} Power`
       if (levelRef.current) levelRef.current.textContent = `Level ${level}`
       if (countRef.current)
-        countRef.current.textContent = `${formatShort(into)} / ${formatShort(span)}`
+        countRef.current.textContent = `${formatShort(total)} / ${formatShort(needed)}`
       if (fillRef.current)
         fillRef.current.style.width = `${(frac * 100).toFixed(2)}%`
     }
