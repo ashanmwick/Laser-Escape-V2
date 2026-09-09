@@ -1,26 +1,41 @@
-// Data for the 10 distinct objects in collection `wall` (Tech.md §4/§6): a
-// shelf of material swatches — brick, cardboard, carpet, concrete, glass,
-// grass, leather, paper, rubber, wood — each its own mesh + material, like
-// data/targets.js (not 15 duplicates of one shared source, like
-// data/hexPowerPad.js). All ten share one identical box mesh (8 verts, 12
-// tris — comfortably inside Tech.md §6's <500-tri budget), one non-uniform
-// scale and one -90° yaw around Blender's Z axis; only location.x differs
-// between them (read directly off each object). Kept as exact
-// as-authored transforms (no zFit) per the import instruction, same
-// precedent as data/glowFloorPanel.js.
+// Data for the 25 distinct objects in collection `wall` (Tech.md §4/§6): a
+// shelf of material swatches that runs the length of the lane, soft to
+// legendary — paper, cardboard, carpet, leather, rubber, grass, wood, glass,
+// concrete, brick, limestone, stone, marble, iron, copper, granite, titanium,
+// steel, metal, diamond, carbon fibre, tungsten, void, magma, obsidian. Each
+// is its own mesh + material, like data/targets.js (not N duplicates of one
+// shared source, like data/hexPowerPad.js). All 25 share one identical box
+// mesh (8 verts, 12 tris — comfortably inside Tech.md §6's <500-tri budget),
+// one non-uniform scale and one -90° yaw around Blender's Z axis; only
+// location.x differs between them (read directly off each object). Kept as
+// exact as-authored transforms (no zFit) per the import instruction, same
+// precedent as data/glowFloorPanel.js — brick_wall's x was resynced here
+// after it moved in the .blend (628.41 -> 636.15); the other nine originals
+// were unchanged.
 //
-// Each source material carries a Normal Map input built from a
-// Blender-GENERATED texture (not a real authored asset) — the same
-// situation data/targets.js documents — so it was unlinked from the
-// Principled BSDF before export and restored after, leaving the .blend
-// untouched. glass_wall_mat's blend_method was Eevee BLEND despite its
-// Alpha input never being linked to anything but the constant default 1.0
-// — the same as-authored-for-Eevee case data/glowFloorPanel.js fixes — so
-// it was set OPAQUE for the export only, then restored. Every albedo map
-// was exported as JPEG rather than the glTF exporter's PNG default (no
-// material here has a used alpha channel): that alone took the ten walls
-// from ~5MB to ~430KB combined, which is what keeps Tech.md §7's <5MB
-// total download budget intact once they join the rest of the props.
+// The first ten (paper..brick) are textured: each source material carries a
+// Normal Map input built from a Blender-GENERATED texture (not a real
+// authored asset) — the same situation data/targets.js documents — so it was
+// unlinked from the Principled BSDF before export and restored after, leaving
+// the .blend untouched. glass_wall_mat's blend_method was Eevee BLEND despite
+// its Alpha input never being linked to anything but the constant default 1.0
+// — the same as-authored-for-Eevee case data/glowFloorPanel.js fixes — so it
+// was set OPAQUE for the export only, then restored. Every albedo map was
+// exported as JPEG rather than the glTF exporter's PNG default (no material
+// here has a used alpha channel): that alone took the ten walls from ~5MB to
+// ~430KB combined.
+//
+// The fifteen new ones (limestone..obsidian) are fully procedural in the
+// .blend — noise / Voronoi / Color Ramp graphs with no authored bitmap, which
+// the glTF exporter cannot carry and Tech.md §7 would reject as PBR anyway.
+// "Optimize the material to suit the game" here means: a single flat
+// baseColorFactor per wall, sampled straight from each material's own node
+// values (Color Ramp stops, Mix inputs, constant sockets) — no Blender
+// render/bake was run. void_wall and magma_wall additionally carry an
+// emissiveFactor so propModel.js's convertMaterial() promotes them to the
+// engine's unlit "glow without bloom" path (the same treatment as any neon
+// prop). All fifteen glTFs are ~2KB (31KB combined), so the whole 25-wall set
+// stays far inside Tech.md §7's <5MB download budget.
 const WALLS = [
   { id: 'paper_wall', x: 71.43270874023438 },
   { id: 'cardboard_wall', x: 138.57650756835938 },
@@ -31,7 +46,22 @@ const WALLS = [
   { id: 'wood_wall', x: 448.4115905761719 },
   { id: 'glass_wall', x: 514.3745727539062 },
   { id: 'concrete_wall', x: 577.2219848632812 },
-  { id: 'brick_wall', x: 628.4105224609375 },
+  { id: 'brick_wall', x: 636.1453857421875 },
+  { id: 'limestone_wall', x: 699.5711059570312 },
+  { id: 'stone_wall', x: 762.2233276367188 },
+  { id: 'marble_wall', x: 824.10205078125 },
+  { id: 'iron_wall', x: 885.67138671875 },
+  { id: 'copper_wall', x: 948.3236083984375 },
+  { id: 'granite_wall', x: 1010.2023315429688 },
+  { id: 'titanium_wall', x: 1071.3076171875 },
+  { id: 'steel_wall', x: 1133.9598388671875 },
+  { id: 'metal_wall', x: 1195.838623046875 },
+  { id: 'diamond_wall', x: 1254.5194091796875 },
+  { id: 'carbon_fiber_wall', x: 1317.171630859375 },
+  { id: 'tungsten_wall', x: 1379.05029296875 },
+  { id: 'void_wall', x: 1441.3934326171875 },
+  { id: 'magma_wall', x: 1504.045654296875 },
+  { id: 'obsidian_wall', x: 1565.9244384765625 },
 ]
 
 // Stage number (1-based, in roster order — paper_wall is Stage 1, brick_wall is
@@ -50,6 +80,21 @@ const WALL_DISPLAY_NAMES = {
   glass_wall: 'Glass',
   concrete_wall: 'Concrete',
   brick_wall: 'Brick',
+  limestone_wall: 'Limestone',
+  stone_wall: 'Stone',
+  marble_wall: 'Marble',
+  iron_wall: 'Iron',
+  copper_wall: 'Copper',
+  granite_wall: 'Granite',
+  titanium_wall: 'Titanium',
+  steel_wall: 'Steel',
+  metal_wall: 'Metal',
+  diamond_wall: 'Diamond',
+  carbon_fiber_wall: 'Carbon Fiber',
+  tungsten_wall: 'Tungsten',
+  void_wall: 'Void',
+  magma_wall: 'Magma',
+  obsidian_wall: 'Obsidian',
 }
 
 export const WALL_STAGES = WALLS.map((w, i) => ({
@@ -58,7 +103,7 @@ export const WALL_STAGES = WALLS.map((w, i) => ({
   name: WALL_DISPLAY_NAMES[w.id],
 }))
 
-// location.y / location.z, identical across all ten.
+// location.y / location.z, identical across all 25.
 const LOCATION_Y = -4.012638568878174
 const LOCATION_Z = -0.7776517271995544
 
@@ -68,7 +113,7 @@ const SCALE = { x: 7.254423141479492, y: 16.405601501464844, z: 4.81330156326293
 const YAW = -1.5707963705062866
 
 // Local (object-space, pre-scale) box — object.bound_box, identical for
-// all ten since they share one base mesh.
+// all 25 since they share one base mesh.
 const LOCAL_MIN = { x: -2, y: -0.125, z: 0 }
 const LOCAL_MAX = { x: 2, y: 0.125, z: 2.4000000953674316 }
 

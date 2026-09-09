@@ -13,6 +13,7 @@ import { PODIUM_MODEL_URL } from './podium.js'
 import { HEX_POWER_PAD_MODEL_URL } from './hexPowerPad.js'
 import { GLOW_FLOOR_PANEL_MODEL_URL } from './glowFloorPanel.js'
 import { GRASS_BLOCK_MODEL_URL } from './grassBlocks.js'
+import { GRASS_BLOCK_CUBE_MODEL_URL } from './grassBlockCubes.js'
 
 // Consumed by propModel.js loadProp() — scene-graph props, cached and cloned
 // per instance. power_podium appears once here but backs both podiums.
@@ -25,8 +26,8 @@ export const PRELOAD_PROP_URLS = [
 ]
 
 // Consumed by propModel.js loadPropParts() — the InstancedMesh source parts
-// GrassBlocks.jsx builds its lane border from.
-export const PRELOAD_PARTS_URLS = [GRASS_BLOCK_MODEL_URL]
+// GrassBlocks.jsx / GrassBlockCubes.jsx build their lane borders from.
+export const PRELOAD_PARTS_URLS = [GRASS_BLOCK_MODEL_URL, GRASS_BLOCK_CUBE_MODEL_URL]
 
 // What the loading bar counts up to.
 export const PRELOAD_TOTAL = PRELOAD_PROP_URLS.length + PRELOAD_PARTS_URLS.length

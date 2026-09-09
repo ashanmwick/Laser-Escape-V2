@@ -9,7 +9,7 @@ import { WALL_DAMAGE } from '../data/wallHealth.js'
 // tint) lives in data/wallHealth.js (Tech.md §4).
 const CRACK_TEXTURE_SIZE = 256
 
-// One procedural crack bitmap shared by all ten walls — generated detail costs
+// One procedural crack bitmap shared by all 25 walls — generated detail costs
 // nothing to download and stays one texture in GPU memory (Tech.md §7, same
 // trick as Ground.jsx / BuildingBlocks.jsx). White jagged fractures on a
 // transparent field; each wall tints and fades its own overlay material.
@@ -91,11 +91,11 @@ function makeCrackMaterial() {
 
 // Mounts one Blender-authored wall prop (Tech.md §6, collection `wall`) at
 // `position`, turned `rotationY` radians around the up axis. Like
-// TargetProp.jsx, `url` is a prop rather than a hardcoded import — the ten
+// TargetProp.jsx, `url` is a prop rather than a hardcoded import — the 25
 // wall objects are each their own mesh/material (data/wallProps.js) — and
 // like PodiumProp.jsx, rotation is applied to the mount group because
 // propModel.js's loader strips the glTF's baked position/rotation on load
-// (every one of these ten shares the same authored yaw).
+// (every one of these 25 shares the same authored yaw).
 //
 // The wall also degrades visually as it takes damage: each frame its material
 // is multiplied darker and a procedural crack overlay fades in, both driven by

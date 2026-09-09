@@ -1,8 +1,11 @@
 // Wall health/damage balance constants (Tech.md §4: src/data/ owns every
-// tunable number). Strength increases in the order the ten walls are defined
+// tunable number). Strength increases in the order the 25 walls are defined
 // in data/wallProps.js's WALLS array — each tougher material gates progress
 // behind more player Power (store/useGameStore.js), rather than being a hard
-// wall/laser-tier match.
+// wall/laser-tier match. The curve is the same linear +50 per stage the
+// original ten used (stage N -> (N-1)*50 for N >= 2), extended through the
+// fifteen new materials to obsidian at 1200 — comfortably clearable at the
+// POWER_MAX of 10000 (data/progression.js).
 export const WALL_STRENGTH = {
   paper_wall: 1,
   cardboard_wall: 50,
@@ -14,6 +17,21 @@ export const WALL_STRENGTH = {
   glass_wall: 350,
   concrete_wall: 400,
   brick_wall: 450,
+  limestone_wall: 500,
+  stone_wall: 550,
+  marble_wall: 600,
+  iron_wall: 650,
+  copper_wall: 700,
+  granite_wall: 750,
+  titanium_wall: 800,
+  steel_wall: 850,
+  metal_wall: 900,
+  diamond_wall: 950,
+  carbon_fiber_wall: 1000,
+  tungsten_wall: 1050,
+  void_wall: 1100,
+  magma_wall: 1150,
+  obsidian_wall: 1200,
 }
 
 export const HEALTH_MAX = 100
@@ -58,10 +76,11 @@ export const WALL_HEALTH_BAR = {
 }
 
 // Progressive damage look for each wall (components/WallProp.jsx): as
-// healthFraction(id) falls 1 -> 0, the wall's own MeshLambertMaterial (a JPEG
-// albedo, data/wallProps.js) is multiplied darker and a procedural crack
-// overlay fades in over it. Tech.md §4: the feel lives here; WallProp keeps
-// only the crack bitmap resolution.
+// healthFraction(id) falls 1 -> 0, the wall's own material (a Lambert JPEG
+// albedo for the first ten, a flat Lambert/Basic colour for the fifteen new
+// procedural ones — data/wallProps.js) is multiplied darker and a procedural
+// crack overlay fades in over it. Tech.md §4: the feel lives here; WallProp
+// keeps only the crack bitmap resolution.
 export const WALL_DAMAGE = {
   MIN_BRIGHTNESS: 0.4, // base-colour multiplier at 0 health (1.0 = as-authored)
   CRACK_ONSET: 0.8, // health fraction where cracks first appear

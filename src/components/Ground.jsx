@@ -7,12 +7,14 @@ import * as THREE from 'three'
 // `ground_checker_green`: a two-tone green checkerboard drawn to a
 // CanvasTexture so it costs nothing to download (Tech.md §7) and stays one
 // draw call on a MeshLambertMaterial. Position matches the reference's
-// location (302.284, 0, 0 in Blender Z-up; rotation 0; scale 1) so the code
-// floor sits exactly where the reference does; width/depth are the Blender
-// object's local X/Y dimensions in metres.
-const GROUND_WIDTH = 898.3155517578125 // Blender local X
-const GROUND_DEPTH = 137.60633850097656 // Blender local Y
-const GROUND_POSITION = [302.28363037109375, 0, 0] // Blender Z-up -> three Y-up
+// location (727.326, 0, 0 in Blender Z-up; rotation 0; object origin at the
+// plane's geometric centre) so the code floor sits exactly where the
+// reference does. The reference carries an unapplied object scale of
+// (2.027, 1, 1) on X — width/depth below are its world-space dimensions in
+// metres, which already bake that scale in.
+const GROUND_WIDTH = 1820.7913818359375 // Blender world X (dimensions.x)
+const GROUND_DEPTH = 137.60633850097656 // Blender world Y (dimensions.y)
+const GROUND_POSITION = [727.3260498046875, 0, 0] // Blender Z-up -> three Y-up
 const CELL = 2 // metres per checker cell (matches the old grid pitch)
 const DARK = '#54a739'
 const LIGHT = '#84ce54'
