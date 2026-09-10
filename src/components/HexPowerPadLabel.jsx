@@ -34,7 +34,7 @@ const BAR_GRADIENT_TEXTURE = (() => {
 // (Billboard) so it reads the same from any approach angle.
 export default function HexPowerPadLabel({ position, powerPerAction, winsRequired }) {
   return (
-    <Billboard position={[position[0], position[1] + LABEL_HEIGHT, position[2]]}>
+    <Billboard position={[position[0], position[1] + LABEL_HEIGHT, position[2]]} scale={2}>
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[BAR_WIDTH, BAR_HEIGHT]} />
         <meshBasicMaterial

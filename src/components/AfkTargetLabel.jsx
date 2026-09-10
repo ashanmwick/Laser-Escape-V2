@@ -33,7 +33,7 @@ const BAR_GRADIENT_TEXTURE = (() => {
 // AFK_LABEL_HEIGHT). Always faces the camera so it reads from any angle.
 export default function AfkTargetLabel({ position, power, rebirthRequired }) {
   return (
-    <Billboard position={position}>
+    <Billboard position={position} scale={2}>
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[BAR_WIDTH, BAR_HEIGHT]} />
         <meshBasicMaterial
