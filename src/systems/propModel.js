@@ -106,14 +106,28 @@ async function loadBase(url) {
 // — clones share the original's geometry and material references, so two
 // placed copies of one prop cost one draw-call set's worth of GPU memory, not
 // two.
+//
+// refCount is reserved SYNCHRONOUSLY, before the await: an in-flight
+// acquisition must hold a reference so a concurrent disposeProp (React
+// StrictMode mounts every effect twice, so a resolve can land after this
+// consumer's own cleanup) cannot tear the shared entry down and leave the
+// remount holding disposed geometry. On a load failure the reservation is
+// released so a 404 can't pin a dead entry.
 export async function loadProp(url) {
   let entry = cache.get(url)
   if (!entry) {
     entry = { promise: loadBase(url), refCount: 0 }
     cache.set(url, entry)
   }
-  const base = await entry.promise
   entry.refCount += 1
+  let base
+  try {
+    base = await entry.promise
+  } catch (err) {
+    entry.refCount -= 1
+    if (entry.refCount <= 0 && cache.get(url) === entry) cache.delete(url)
+    throw err
+  }
   const root = entry.refCount === 1 ? base.root : base.root.clone()
   return { root, materials: base.materials, url }
 }

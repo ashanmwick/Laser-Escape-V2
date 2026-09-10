@@ -9,7 +9,7 @@ import { WALL_DAMAGE, WALL_SHAKE } from '../data/wallHealth.js'
 // tint) lives in data/wallHealth.js (Tech.md §4).
 const CRACK_TEXTURE_SIZE = 256
 
-// One procedural crack bitmap shared by all 25 walls — generated detail costs
+// One procedural crack bitmap shared by every wall — generated detail costs
 // nothing to download and stays one texture in GPU memory (Tech.md §7, same
 // trick as Ground.jsx / BuildingBlocks.jsx). White jagged fractures on a
 // transparent field; each wall tints and fades its own overlay material.
@@ -89,23 +89,24 @@ function makeCrackMaterial() {
   })
 }
 
-// Mounts one Blender-authored wall prop (Tech.md §6, collection `wall`) at
-// `position`, turned `rotationY` radians around the up axis. Like
-// TargetProp.jsx, `url` is a prop rather than a hardcoded import — the 25
-// wall objects are each their own mesh/material (data/wallProps.js) — and
-// like PodiumProp.jsx, rotation is applied to the mount group because
-// propModel.js's loader strips the glTF's baked position/rotation on load
-// (every one of these 25 shares the same authored yaw).
+// Mounts one destructible wall (Tech.md §6, collection `wall`) at `position`,
+// turned `rotationY` radians around the up axis. Like TargetProp.jsx, `url` is
+// a prop rather than a hardcoded import — and it is keyed on the material type,
+// so a stacked wall's 2–3 panels each mount their own WallProp off the same
+// glTF (propModel.js clones it from cache — no extra download or GPU geometry).
+// Like PodiumProp.jsx, rotation is applied to the mount group because
+// propModel.js's loader strips the glTF's baked position/rotation on load.
 //
 // The wall also degrades visually as it takes damage: each frame its material
 // is multiplied darker and a procedural crack overlay fades in, both driven by
-// healthFraction(id) from systems/wallHealth.js (see the useFrame below).
+// healthFraction(id) from systems/wallHealth.js (see the useFrame below) — each
+// panel drains independently, so its darken/crack look is its own.
 export default function WallProp({ id, url, position, rotationY = 0 }) {
   const groupRef = useRef(null)
   // Populated once the prop loads, read every frame: the per-wall material
-  // clones darkened in place, and the crack-overlay materials faded in.
+  // clones darkened in place, and the crack-overlay meshes faded in.
   const cloneEntriesRef = useRef(null)
-  const crackMatsRef = useRef(null)
+  const overlaysRef = useRef(null)
   const lastFractionRef = useRef(-1)
   // True while an impact wobble is mid-replay, so the mount group is settled
   // back to its authored transform exactly once when the buzz ends.
@@ -131,10 +132,10 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
         if (o.isMesh) meshes.push(o)
       })
 
-      // Clone each wall material so this wall darkens independently (the user
-      // asked for it; also guards propModel.js's clone path, which shares
-      // material refs between instances of one url). A crack quad rides on each
-      // mesh's own geometry so the fractures follow the wall's shape.
+      // Clone each wall material so this panel darkens independently (also
+      // guards propModel.js's clone path, which shares material refs between
+      // instances of one url). A crack quad rides on each mesh's own geometry
+      // so the fractures follow the wall's shape.
       const cloneByOrig = new Map()
       for (const mesh of meshes) {
         const orig = mesh.material
@@ -147,12 +148,13 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
 
         const overlay = new THREE.Mesh(mesh.geometry, makeCrackMaterial())
         overlay.renderOrder = 1
+        overlay.visible = false // no draw call until cracks actually show
         mesh.add(overlay)
         overlays.push(overlay)
       }
       cloneEntries = [...cloneByOrig.values()]
       cloneEntriesRef.current = cloneEntries
-      crackMatsRef.current = overlays.map((o) => o.material)
+      overlaysRef.current = overlays
       lastFractionRef.current = -1
 
       groupRef.current.add(built.root)
@@ -180,7 +182,7 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
       // built.materials (the originals). Only dispose the clone itself.
       for (const entry of cloneEntries) entry.mat.dispose()
       cloneEntriesRef.current = null
-      crackMatsRef.current = null
+      overlaysRef.current = null
       if (built) disposeProp(built)
     }
   }, [url])
@@ -241,10 +243,14 @@ export default function WallProp({ id, url, position, rotationY = 0 }) {
     }
 
     // Cracks: nothing until health falls below CRACK_ONSET, then ramp opacity
-    // to CRACK_MAX_OPACITY as it reaches 0.
+    // to CRACK_MAX_OPACITY as it reaches 0. The overlay stays invisible (no
+    // draw call) until it has something to show.
     const onset = WALL_DAMAGE.CRACK_ONSET
     const crackO = f >= onset ? 0 : WALL_DAMAGE.CRACK_MAX_OPACITY * ((onset - f) / onset)
-    for (const m of crackMatsRef.current) m.opacity = crackO
+    for (const o of overlaysRef.current) {
+      o.material.opacity = crackO
+      o.visible = crackO > 0
+    }
   })
 
   return (

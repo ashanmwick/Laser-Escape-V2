@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../../store/useGameStore.js'
-import { levelProgress } from '../../data/progression.js'
+import { levelProgress, canAcceptRebirth } from '../../data/progression.js'
 import { formatShort } from '../../data/format.js'
 import {
   LEVEL_BAR_POLL_MS,
@@ -40,6 +40,7 @@ const LABEL_FONT = `800 ${LEVEL_BAR_LABEL_FONT_PX}px/1 ui-rounded, 'Nunito', sys
 // change several times a second while the player holds to fire; a selector hook
 // would re-render this node on each one.
 export default function LevelBar() {
+  const rebirthRef = useRef(null)
   const captionRef = useRef(null)
   const levelRef = useRef(null)
   const countRef = useRef(null)
@@ -51,8 +52,12 @@ export default function LevelBar() {
 
     const paint = () => {
       last = performance.now()
-      const { power } = useGameStore.getState()
+      const { power, rebirth } = useGameStore.getState()
       const { level, frac, total, needed } = levelProgress(power)
+      if (rebirthRef.current)
+        rebirthRef.current.style.display = canAcceptRebirth(level, rebirth)
+          ? 'inline-block'
+          : 'none'
       if (captionRef.current)
         captionRef.current.textContent = `${formatShort(power)} Power`
       if (levelRef.current) levelRef.current.textContent = `Level ${level}`
@@ -99,6 +104,26 @@ export default function LevelBar() {
         maxWidth: `${LEVEL_BAR_MAX_VW}vw`,
       }}
     >
+      {/* Sits just above the "N Power" caption. Shown only while a rebirth can
+         be accepted — same canAcceptRebirth gate as the HUD rebirth button —
+         and toggled from the throttled paint() below, never a React render. */}
+      <div style={{ textAlign: 'center', marginBottom: 6 }}>
+        <span
+          ref={rebirthRef}
+          style={{
+            display: 'none',
+            padding: `${LEVEL_BAR_CAPTION_BAND_PAD_Y}px ${LEVEL_BAR_CAPTION_BAND_PAD_X}px`,
+            font: `800 ${LEVEL_BAR_CAPTION_FONT_PX}px/1 ui-rounded, 'Nunito', system-ui, sans-serif`,
+            letterSpacing: 0.5,
+            color: '#ffd21e',
+            textShadow: TEXT_OUTLINE,
+            background: LEVEL_BAR_CAPTION_BAND,
+          }}
+        >
+          Rebirth Available
+        </span>
+      </div>
+
       <div style={{ textAlign: 'center', marginBottom: 10 }}>
         <span
           ref={captionRef}
