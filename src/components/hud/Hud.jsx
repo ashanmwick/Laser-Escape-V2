@@ -7,6 +7,8 @@ import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import ActionPopups from './ActionPopups.jsx'
+import TouchControls from './TouchControls.jsx'
+import RotatePrompt from './RotatePrompt.jsx'
 import LevelBar from './LevelBar.jsx'
 import LevelUpPopup from './LevelUpPopup.jsx'
 import NetStatus from './NetStatus.jsx'
@@ -37,7 +39,10 @@ function LeftCenterControls() {
   const canRebirth = useGameStore((s) => canAcceptRebirth(s.level, s.rebirth))
   const acceptRebirth = useGameStore((s) => s.acceptRebirth)
   return (
-    <div className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2">
+    <div
+      data-hud="left-center"
+      className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2"
+    >
       <div className="flex items-center gap-2 rounded-lg border border-slate-400/30 bg-black/50 px-3 py-2 text-slate-100 shadow-lg">
         <img src="/ui/xp_cup.png" alt="" className="h-8 w-8" draggable={false} />
         <span
@@ -164,6 +169,11 @@ export default function Hud() {
 
   return (
     <div className="pointer-events-none absolute inset-0 p-4 font-mono text-xs leading-5 text-slate-200">
+      {/* First child: the touch look-zone paints beneath the interactive HUD
+         panels (auth, wins/rebirth, retry) so their taps still land, while its
+         own Fire/Jump/E buttons sit at z-40 above everything. */}
+      <TouchControls />
+
       <div
         ref={afkPromptRef}
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
@@ -203,6 +213,10 @@ export default function Hud() {
       {/* Per-Action "+N" power badges around the player. Owns its own rAF loop
          and never re-renders (Tech.md §5.4). */}
       <ActionPopups />
+
+      {/* Full-screen "rotate to landscape" gate for touch sessions. Last child
+         + z-100 so it covers the touch controls while it is up. */}
+      <RotatePrompt />
     </div>
   )
 }

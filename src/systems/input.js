@@ -21,6 +21,77 @@ export const inputState = {
   interact: false, // edge-triggered on AFK_INTERACT_KEY keydown; consumed by systems/afk.js
 }
 
+// Touch sessions have no keyboard and no cursor: the on-screen controls
+// (components/hud/TouchControls.jsx) drive `inputState` through the setters
+// below, and the laser aims at screen centre (a fixed crosshair) instead of a
+// mouse. `active` flips once — on the first real touch, or immediately when the
+// primary pointer is coarse — and never flips back for the session.
+export const touchState = {
+  active: false,
+}
+
+const touchModeSubs = new Set()
+
+export function subscribeTouchMode(cb) {
+  touchModeSubs.add(cb)
+  return () => touchModeSubs.delete(cb)
+}
+
+function enableTouchMode() {
+  if (touchState.active) return
+  touchState.active = true
+  // Centre-aim: with no pointermove events feeding it (see the guards in the
+  // pointer handlers), pointerNDC would otherwise sit at its last mouse value.
+  inputState.pointerNDC.x = 0
+  inputState.pointerNDC.y = 0
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.add('touch-mode')
+  }
+  touchModeSubs.forEach((cb) => cb(true))
+}
+
+function onTouchStartDetect() {
+  enableTouchMode()
+}
+
+// Called by TouchControls.jsx. Movement is analog here (magnitude 0..1), unlike
+// the keyboard's unit vector — playerMovement scales by SPEED either way.
+export function setTouchMove(x, z) {
+  inputState.move.x = x
+  inputState.move.z = z
+}
+
+export function addTouchLook(dx, dy) {
+  inputState.look.dx += dx
+  inputState.look.dy += dy
+}
+
+export function addTouchZoom(dz) {
+  inputState.zoom += dz
+}
+
+// Mirrors onPointerDown / onPointerUp's fire bookkeeping so a poller
+// (systems/actionTracker.js) reconstructs touch presses the same way.
+export function setTouchFiring(on) {
+  if (on) {
+    if (inputState.firing) return
+    inputState.firing = true
+    inputState.firePressAt = performance.now()
+    inputState.firePressSeq++
+  } else if (inputState.firing) {
+    inputState.firing = false
+    inputState.fireReleaseAt = performance.now()
+  }
+}
+
+export function pressTouchJump() {
+  inputState.jump = true // consumed + cleared next frame by playerMovement
+}
+
+export function pressTouchInteract() {
+  inputState.interact = true // consumed + cleared next frame (afk.js / hexPowerPad.js / GameLoop.jsx)
+}
+
 const held = new Set()
 let orbiting = false
 let installed = false
@@ -87,6 +158,10 @@ function onKeyUp(e) {
 }
 
 function onPointerDown(e) {
+  // Touch pointers are handled entirely by TouchControls.jsx — never the
+  // desktop mouse path (which would fire the laser at the raw tap point and
+  // give no camera or movement control).
+  if (e.pointerType === 'touch') return
   // Scoped to the canvas so clicking a HUD element (the Rebirth button, auth
   // panel, chat box) never also fires the laser — those are separate DOM
   // elements the pointer lands on, never the canvas itself.
@@ -100,6 +175,7 @@ function onPointerDown(e) {
 }
 
 function onPointerUp(e) {
+  if (e.pointerType === 'touch') return
   // Not target-scoped: this only closes a press that onPointerDown actually
   // opened (inputState.firing already true), so a drag that started on the
   // canvas and released over the HUD still ends correctly.
@@ -111,6 +187,7 @@ function onPointerUp(e) {
 }
 
 function onPointerMove(e) {
+  if (e.pointerType === 'touch') return
   // Tracked unconditionally (not just while orbiting) — this is what the
   // laser aims at, updated regardless of whether a button is held.
   inputState.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1
@@ -156,6 +233,19 @@ export function install() {
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('contextmenu', onContextMenu)
   window.addEventListener('blur', onBlur)
+  window.addEventListener('touchstart', onTouchStartDetect, { passive: true })
+
+  // A coarse primary pointer (phone / tablet / handheld console) means there is
+  // no mouse coming — show the on-screen controls right away rather than
+  // waiting for the first touch.
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches &&
+    (navigator.maxTouchPoints || 0) > 0
+  ) {
+    enableTouchMode()
+  }
 }
 
 export function uninstall() {
@@ -172,4 +262,5 @@ export function uninstall() {
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('contextmenu', onContextMenu)
   window.removeEventListener('blur', onBlur)
+  window.removeEventListener('touchstart', onTouchStartDetect)
 }

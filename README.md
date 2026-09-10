@@ -21,6 +21,13 @@ Scaffold only — a ground plane and a kinematic-capsule player with basic contr
 | mouse wheel | zoom |
 | space | jump |
 | hold left-click | fire flag (reserved for the action verb, §5.1) |
+| E | interact (AFK here / buy / equip) |
+
+On touch devices the on-screen controls appear automatically
+(`components/hud/TouchControls.jsx`): a floating stick on the left half moves,
+dragging the right half orbits the camera, pinch zooms, and the bottom-right
+cluster is Fire (hold) / Jump / E. The laser aims at the centre crosshair. A
+portrait phone gets a "rotate to landscape" gate (`RotatePrompt.jsx`).
 
 ### Layout
 

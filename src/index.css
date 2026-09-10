@@ -14,6 +14,16 @@
     font-family: ui-sans-serif, system-ui, sans-serif;
     -webkit-user-select: none;
     user-select: none;
+    /* Mobile: the whole surface is a game control. Kill rubber-band scroll,
+       the tap flash, and the iOS long-press callout so a held fire button or a
+       drag on the look zone never selects text or bounces the page. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  body {
+    touch-action: none;
   }
 
   /* The HUD is DOM siblings of the canvas (Tech.md §5.4); #root is their
@@ -25,5 +35,25 @@
   canvas {
     display: block;
     touch-action: none;
+  }
+}
+
+@layer components {
+  /* `touch-mode` is set on <html> by systems/input.js once the session is
+     judged touch-driven (see subscribeTouchMode). The on-screen controls
+     (components/hud/TouchControls.jsx) then mount, and the pointer HUD is
+     scaled back so it clears the joystick / action buttons on a phone. */
+  .touch-mode [data-hud='level-bar'] {
+    transform: translateX(-50%) scale(0.6);
+    transform-origin: bottom center;
+  }
+
+  /* Move the wins + rebirth stack out of the vertical centre (where the
+     joystick and a landscape phone's short height would collide with it) up to
+     the top-left, opposite the auth panel. */
+  .touch-mode [data-hud='left-center'] {
+    top: 4.5rem;
+    transform: scale(0.85);
+    transform-origin: top left;
   }
 }

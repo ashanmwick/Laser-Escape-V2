@@ -91,6 +91,7 @@ export default function LevelBar() {
 
   return (
     <div
+      data-hud="level-bar"
       className="pointer-events-none absolute left-1/2 -translate-x-1/2"
       style={{
         bottom: LEVEL_BAR_BOTTOM,
