@@ -7,6 +7,7 @@ import Ground from './components/Ground.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PowerPodium from './components/PowerPodium.jsx'
 import TargetPodium from './components/TargetPodium.jsx'
+import MerchantShop from './components/MerchantShop.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
@@ -54,6 +55,7 @@ export default function App() {
         <Obstacles />
         <PowerPodium />
         <TargetPodium />
+        <MerchantShop />
         <HexPowerPads />
         <Targets />
         <GlowFloorPanels />
