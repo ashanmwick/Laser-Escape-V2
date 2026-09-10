@@ -40,7 +40,7 @@ export default function AuthPanel({ panelStyle }) {
             type="button"
             onClick={onLogin}
             disabled={busy}
-            className="w-full rounded bg-slate-100/10 px-2 py-1 text-slate-100 hover:bg-slate-100/20 disabled:opacity-50"
+            className="w-full rounded border border-emerald-400/50 bg-emerald-600 px-2 py-1.5 font-semibold text-white shadow-lg transition hover:bg-emerald-500 disabled:opacity-50"
           >
             {busy ? 'Opening…' : 'Log in'}
           </button>

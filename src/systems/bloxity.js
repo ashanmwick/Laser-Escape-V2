@@ -31,9 +31,13 @@ export function isAvailable() {
 // --- Auth state -----------------------------------------------------------
 // What the UI renders. `user` is only ever written from the onUserChanged
 // handler, which re-reads getUser() rather than trusting a cached object.
+// `guest` is the Bloxity-generated guest identity ({ username, displayName,
+// pfp } — e.g. "bear5") every player has before signing in; null once `user`
+// is set, or when the SDK is too old to expose getGuest().
 export const authState = {
   ready: false,
   user: null,
+  guest: null,
   friends: [],
   balance: null,
   embedded: false,
@@ -142,6 +146,20 @@ function loadAvatar() {
   }
 }
 
+// Bloxity assigns every unsigned player a stable guest identity (generated
+// name + pfp). Optional-chained because older SDK builds lack it; never throws
+// (Tech.md §5.6).
+function readGuest() {
+  const SDK = sdk()
+  if (!SDK || typeof SDK.auth.getGuest !== 'function') return null
+  try {
+    const g = SDK.auth.getGuest()
+    return g && (g.username || g.displayName) ? g : null
+  } catch {
+    return null
+  }
+}
+
 function onUser() {
   const SDK = sdk()
   // Re-read rather than trusting the callback argument, so nothing downstream
@@ -151,6 +169,7 @@ function onUser() {
 
   authState.ready = true
   authState.user = user
+  authState.guest = user ? null : readGuest()
   authState.friends = []
   authState.balance = null
   emitAuth()

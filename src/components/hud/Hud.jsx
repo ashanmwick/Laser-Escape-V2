@@ -13,6 +13,7 @@ import LevelBar from './LevelBar.jsx'
 import LevelUpPopup from './LevelUpPopup.jsx'
 import NetStatus from './NetStatus.jsx'
 import AuthPanel from './AuthPanel.jsx'
+import IdentityChip from './IdentityChip.jsx'
 import { useSettings } from './hooks.js'
 
 // 1000 -> "1K", 1500 -> "1.5K", 2_000_000 -> "2M". Trims a trailing ".0".
@@ -193,6 +194,11 @@ export default function Hud() {
       />
 
       <LeftCenterControls />
+
+      {/* Top-left identity chip: "Guest" + Bloxity default picture until login,
+         the real avatar + name after. Always visible, even with the SDK
+         blocked. Event-driven, never per frame (Tech.md §5.4). */}
+      <IdentityChip panelStyle={panelStyle} />
 
       <AuthPanel panelStyle={panelStyle} />
 

@@ -48,11 +48,18 @@
     transform-origin: bottom center;
   }
 
+  /* The identity chip sits in the top-left corner; scale it back on a phone so
+     it clears the joystick wedge, matching the other touch HUD tweaks. */
+  .touch-mode [data-hud='identity-chip'] {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+
   /* Move the wins + rebirth stack out of the vertical centre (where the
      joystick and a landscape phone's short height would collide with it) up to
-     the top-left, opposite the auth panel. */
+     the top-left, below the identity chip. */
   .touch-mode [data-hud='left-center'] {
-    top: 4.5rem;
+    top: 6rem;
     transform: scale(0.85);
     transform-origin: top left;
   }

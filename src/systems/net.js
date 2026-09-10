@@ -124,9 +124,11 @@ async function loadSdk() {
 }
 
 function currentUsername() {
-  const u = authState.user
+  // Signed-in account, else Bloxity's generated guest identity ("bear5" …),
+  // matching the HUD identity chip. Plain "Guest" only if neither exists.
+  const u = authState.user || authState.guest
   const name = u && (u.displayName || u.username || u.name)
-  return typeof name === 'string' && name.trim() ? name.trim().slice(0, 64) : 'Player'
+  return typeof name === 'string' && name.trim() ? name.trim().slice(0, 64) : 'Guest'
 }
 
 // --- Avatar sync -------------------------------------------------------

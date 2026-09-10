@@ -56,7 +56,7 @@ export default function HexPowerPadLabel({ position, powerPerAction, winsRequire
       </Text>
       <Text
         position={[0, BAR_HEIGHT / 2 + 0.2, 0]}
-        fontSize={0.17}
+        fontSize={0.18}
         color="#ffd21e"
         outlineWidth={0.018}
         outlineColor="#000000"

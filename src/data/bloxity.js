@@ -9,6 +9,13 @@ export const GAME_SLUG = 'laser-escape'
 
 export const AVATAR_CDN = 'https://static.bloxity.io/avatars'
 
+// Profile picture shown for a guest (not signed in) or when a signed-in user
+// has no `pfp`. A remote Bloxity asset — the <img> onError in
+// components/hud/IdentityChip.jsx falls back to an inline silhouette so a
+// blocked CDN never leaves an empty slot (same stance as Tech.md §5.6).
+export const GUEST_PFP_URL =
+  'https://static.bloxity.io/img/pfps/s0.png?width=128&quality=85&v=2'
+
 // The base rig, measured from the shipped player.glb: origin at the feet, 6.4
 // units tall at bind pose. Player.jsx's group origin is also the feet, so the
 // model only needs a uniform scale to land in metres.
