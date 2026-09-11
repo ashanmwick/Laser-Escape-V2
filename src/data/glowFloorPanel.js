@@ -91,3 +91,12 @@ export const GLOW_FLOOR_PANEL_WINS = [
 // overlapping; sized to roughly the scaled panel footprint plus a little
 // slack. Tune here if the panel mesh size changes.
 export const GLOW_FLOOR_PANEL_RANGE = 3.5
+
+// Local-space (pre-node-scale) vertical extent of the glow_floor_panel mesh —
+// the glTF POSITION accessor's y min/max, read directly off the .glb (min 0,
+// max below). The top face, at this y, is where the emissive/albedo
+// textures' yellow band is UV-mapped (the mid/black and lower/navy bands
+// cover the side walls and base). GlowFloorPanelProp uses this to fade the
+// material from opaque at the top face down to fully transparent by the
+// mesh's vertical midpoint, so only that glowing yellow top reads as solid.
+export const GLOW_FLOOR_PANEL_TOP_Y = 0.5628908276557922

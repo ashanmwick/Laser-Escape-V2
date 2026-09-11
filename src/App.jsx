@@ -4,6 +4,7 @@ import BuildingBlocks from './components/BuildingBlocks.jsx'
 import GrassBlocks from './components/GrassBlocks.jsx'
 import GrassBlockCubes from './components/GrassBlockCubes.jsx'
 import Ground from './components/Ground.jsx'
+import Road from './components/Road.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PowerPodium from './components/PowerPodium.jsx'
 import TargetPodium from './components/TargetPodium.jsx'
@@ -49,6 +50,7 @@ export default function App() {
 
         <GameLoop />
         <Ground />
+        <Road />
         <BuildingBlocks />
         <GrassBlocks />
         <GrassBlockCubes />
