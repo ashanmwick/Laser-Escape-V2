@@ -8,6 +8,7 @@ import Road from './components/Road.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PowerPodium from './components/PowerPodium.jsx'
 import TargetPodium from './components/TargetPodium.jsx'
+import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
@@ -22,6 +23,7 @@ import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
 import LoadingScreen from './components/LoadingScreen.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
+import { PODIUM_STAGE_HUB_TRANSFORM } from './data/podiumStage.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
@@ -39,9 +41,13 @@ export default function App() {
         dpr={[1, dprCap]}
         shadows={false}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
-        camera={{ fov: 55, near: 0.1, far: 500, position: [0, 6, 12] }}
+        camera={{ fov: 55, near: 0.1, far: 200, position: [0, 6, 12] }}
       >
         <color attach="background" args={['#afd3ff']} />
+        {/* Fog matches the sky color and fades out just inside the camera's
+           far plane, so distant objects dissolve into the sky instead of
+           hard-clipping/popping at the view distance edge. */}
+        <fog attach="fog" args={['#afd3ff', 40, 200]} />
         {/* One hemisphere + one directional light, shadows off (Tech.md §7).
            Tuned for bright midday: strong sky fill + warm ground bounce so
            nothing reads as shadowed. */}
@@ -57,6 +63,7 @@ export default function App() {
         <Obstacles />
         <PowerPodium />
         <TargetPodium />
+        <PodiumStage transform={PODIUM_STAGE_HUB_TRANSFORM} />
         <MerchantShop />
         <HexPowerPads />
         <Targets />

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>podium_stage — prop inspector</title>
+    <!-- Dev harness for the code-generated podium_stage prop (src/
+         podiumStagePreview.js). Separate entry from the game's index.html so
+         nothing here — OrbitControls, GLTFExporter — reaches the game bundle. -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #f2f5f8;
+        background: #afd3ff;
+      }
+      #view {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #panel {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        max-width: min(360px, calc(100vw - 24px));
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(18, 14, 10, 0.78);
+        border: 1px solid rgba(255, 233, 184, 0.25);
+        backdrop-filter: blur(6px);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #ffe9b8;
+      }
+      #readout {
+        margin: 0 0 10px;
+        white-space: pre-line;
+        color: #d8dee6;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 10px;
+        border-radius: 7px;
+        cursor: pointer;
+        color: #f2f5f8;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+      }
+      button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      button.on {
+        background: #ffe9b8;
+        border-color: #ffe9b8;
+        color: #2b1a0e;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        margin: 8px 0 0;
+        min-height: 1.5em;
+        color: #ffe9b8;
+      }
+      #atlas-panel canvas {
+        display: block;
+        margin-top: 10px;
+        width: 100%;
+        height: auto;
+        image-rendering: pixelated;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 6px;
+      }
+      #hint {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(18, 14, 10, 0.6);
+        color: #d8dee6;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="panel">
+      <h1>podium_stage</h1>
+      <pre id="readout"></pre>
+      <div class="row">
+        <button id="wireframe">wireframe</button>
+        <button id="collider">collider</button>
+        <button id="atlas">atlas</button>
+        <button id="export">export .glb</button>
+      </div>
+      <p id="status"></p>
+      <div id="atlas-panel"></div>
+    </div>
+    <div id="hint">drag to orbit · scroll to zoom · right-drag to pan</div>
+    <script type="module" src="/src/podiumStagePreview.js"></script>
+  </body>
+</html>

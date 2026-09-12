@@ -10,6 +10,13 @@ npm install
 npm run dev
 ```
 
+`/podium-stage.html` on that dev server is the inspector for the code-generated
+`podium_stage` prop (`src/data/podiumStage.js` + `src/systems/podiumStageModel.js`):
+orbit it, toggle wireframe / its collider boxes / the generated texture atlas, read
+its triangle and draw-call cost, and export a baked `.glb`. It is a separate Vite
+entry, so its dev-only imports (`OrbitControls`, `GLTFExporter`) stay out of the game
+bundle.
+
 ## Current state
 
 Scaffold only — a ground plane and a kinematic-capsule player with basic control.
