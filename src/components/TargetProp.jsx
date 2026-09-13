@@ -2,13 +2,15 @@ import { useEffect, useRef } from 'react'
 import { loadProp, disposeProp } from '../systems/propModel.js'
 
 // Mounts one Blender-authored target prop (Tech.md §6, collection `Targets`)
-// at `position`. Unlike HexPowerPadProp.jsx / PodiumProp.jsx, `url` is a prop
-// rather than a hardcoded import — the nine target objects are each their
-// own mesh/material (data/targets.js), not duplicates of one shared source —
+// at `position`. Unlike HexPowerPadProp.jsx, `url` is a prop rather than a
+// hardcoded import — the nine target objects are each their own
+// mesh/material (data/targets.js), not duplicates of one shared source —
 // but the mount/dispose flow is identical: propModel.js's loader strips the
 // glTF's baked position/rotation on load, so this group's own transform is
-// what actually places it.
-export default function TargetProp({ url, position }) {
+// what actually places it. `scale` multiplies the glTF's own baked scale
+// (propModel.js leaves that alone) — data/targets.js TARGET_SCALE is what
+// actually sets it, uniformly, for all nine.
+export default function TargetProp({ url, position, scale = 1 }) {
   const groupRef = useRef(null)
 
   useEffect(() => {
@@ -39,5 +41,5 @@ export default function TargetProp({ url, position }) {
     }
   }, [url])
 
-  return <group ref={groupRef} position={position} matrixAutoUpdate={false} />
+  return <group ref={groupRef} position={position} scale={scale} matrixAutoUpdate={false} />
 }

@@ -94,8 +94,8 @@ function makeCrackMaterial() {
 // a prop rather than a hardcoded import — and it is keyed on the material type,
 // so a stacked wall's 2–3 panels each mount their own WallProp off the same
 // glTF (propModel.js clones it from cache — no extra download or GPU geometry).
-// Like PodiumProp.jsx, rotation is applied to the mount group because
-// propModel.js's loader strips the glTF's baked position/rotation on load.
+// Rotation is applied to the mount group because propModel.js's loader
+// strips the glTF's baked position/rotation on load.
 //
 // The wall also degrades visually as it takes damage: each frame its material
 // is multiplied darker and a procedural crack overlay fades in, both driven by

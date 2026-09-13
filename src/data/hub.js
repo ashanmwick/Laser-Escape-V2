@@ -1,9 +1,8 @@
 import { BLOCK_AABBS } from './blocks.js'
 import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_AABBS } from './grassBlockCubes.js'
-import { TARGET_PODIUM_AABBS } from './podium.js'
 import { MERCHANT_SHOP_AABBS } from './merchantShop.js'
-import { PODIUM_STAGE_HUB_AABBS } from './podiumStage.js'
+import { PODIUM_STAGE_HUB_AABBS, PODIUM_STAGE_TARGET_AABBS } from './podiumStage.js'
 import { WALL_AABBS } from './wallProps.js'
 
 // Hub geometry (Tech.md §4). Level layout is data, not a Blender file — Blender
@@ -25,7 +24,7 @@ export const HUB_AABBS = [
   ...BLOCK_AABBS,
   ...GRASS_BLOCK_AABBS,
   ...GRASS_BLOCK_CUBE_AABBS,
-  ...TARGET_PODIUM_AABBS,
+  ...PODIUM_STAGE_TARGET_AABBS,
   ...PODIUM_STAGE_HUB_AABBS,
   ...MERCHANT_SHOP_AABBS,
   ...WALL_AABBS,

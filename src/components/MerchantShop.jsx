@@ -3,10 +3,10 @@ import { buildMerchantShop } from '../systems/merchantShopModel.js'
 import { SHOP_TRANSFORM } from '../data/merchantShop.js'
 
 // Mounts the code-generated "AURA" crystal-merchant stall beside the target
-// podium (data/podium.js). Same shape as PodiumProp.jsx: build the root once,
-// add it under a mount group carrying this prop's world transform, freeze all
-// matrices (Tech.md §7 — static once placed), and dispose the geometry /
-// materials on unmount (three.js does not GC GPU memory).
+// podium (data/podiumStage.js). Same shape as PodiumStage.jsx: build the root
+// once, add it under a mount group carrying this prop's world transform,
+// freeze all matrices (Tech.md §7 — static once placed), and dispose the
+// geometry / materials on unmount (three.js does not GC GPU memory).
 //
 // Every tunable number — placement, dimensions, palette, the wares and the
 // merchant — lives in data/merchantShop.js; systems/merchantShopModel.js is

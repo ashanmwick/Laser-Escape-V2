@@ -13,9 +13,9 @@ const equippedColor = new THREE.Color(HEX_POWER_PAD_EQUIPPED_COLOR)
 
 // Mounts one instance of the Blender-authored `hex_power_pad` prop (Tech.md
 // §6, collection `PowerPad`) at `position`. None of the 15 placed objects
-// carry rotation (data/hexPowerPad.js), so there's no rotationY prop here —
-// unlike PodiumProp.jsx's power_podium/target_podium pair. propModel.js's
-// loader caches by url and strips each load's baked position/rotation, so
+// carry rotation (data/hexPowerPad.js), so there's no rotationY prop here.
+// propModel.js's loader caches by url and strips each load's baked
+// position/rotation, so
 // every instance beyond the first clones the base geometry/materials rather
 // than re-fetching/re-converting the glTF — but that shared-material clone
 // (THREE.Object3D.clone() copies material *references*) is exactly what this

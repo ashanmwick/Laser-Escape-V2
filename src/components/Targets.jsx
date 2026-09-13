@@ -1,4 +1,5 @@
 import TargetProp from './TargetProp.jsx'
+import TargetGroundMats from './TargetGroundMats.jsx'
 import AfkTargetLabel from './AfkTargetLabel.jsx'
 import { TARGET_PROPS, TARGET_AIM_OFFSET } from '../data/targets.js'
 import { AFK_TARGET_CONFIG, AFK_LABEL_HEIGHT } from '../data/afk.js'
@@ -7,12 +8,16 @@ import { AFK_TARGET_CONFIG, AFK_LABEL_HEIGHT } from '../data/afk.js'
 // placed once. See TargetProp.jsx and data/targets.js for the shared loader
 // and per-object transform. Each also gets a floating Power / Rebirth-required
 // sign (AfkTargetLabel.jsx) from its data/afk.js AFK_TARGET_CONFIG entry,
-// floated AFK_LABEL_HEIGHT above the same aim point systems/afk.js fires at.
+// floated AFK_LABEL_HEIGHT above the same aim point systems/afk.js fires at,
+// and its own ground mat (TargetGroundMats.jsx) — a code-generated checker
+// plate under its feet, same size/position for all nine, independently
+// recolorable per target (data/targetGroundMat.js).
 export default function Targets() {
   return (
     <>
+      <TargetGroundMats />
       {TARGET_PROPS.map((t) => (
-        <TargetProp key={t.id} url={t.url} position={t.position} />
+        <TargetProp key={t.id} url={t.url} position={t.position} scale={t.scale} />
       ))}
       {TARGET_PROPS.map((t) => {
         const cfg = AFK_TARGET_CONFIG[t.id]

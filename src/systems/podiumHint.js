@@ -7,12 +7,12 @@
 // the prop the hint has served its purpose and the text clears.
 import { player } from './playerState.js'
 import {
-  TARGET_PODIUM_POSITION,
-  TARGET_PODIUM_AABBS,
-  TARGET_PODIUM_HINT_TEXT,
-  PODIUM_HINT_RANGE,
-  PODIUM_ON_MIN_Y,
-} from '../data/podium.js'
+  PODIUM_STAGE_TARGET_POSITION,
+  PODIUM_STAGE_TARGET_AABBS,
+  PODIUM_STAGE_TARGET_HINT_TEXT,
+  PODIUM_STAGE_HINT_RANGE,
+  PODIUM_STAGE_ON_MIN_Y,
+} from '../data/podiumStage.js'
 
 export const podiumHintState = {
   text: null, // hint to show this frame, or null when on/away from every podium
@@ -33,12 +33,16 @@ function footprintOf(aabbs) {
 
 // One entry per podium instance, built once at module load.
 const PODIUMS = [
-  { pos: TARGET_PODIUM_POSITION, footprint: footprintOf(TARGET_PODIUM_AABBS), text: TARGET_PODIUM_HINT_TEXT },
+  {
+    pos: PODIUM_STAGE_TARGET_POSITION,
+    footprint: footprintOf(PODIUM_STAGE_TARGET_AABBS),
+    text: PODIUM_STAGE_TARGET_HINT_TEXT,
+  },
 ]
 
 function isOnPodium(p, f) {
   return (
-    p.y >= PODIUM_ON_MIN_Y &&
+    p.y >= PODIUM_STAGE_ON_MIN_Y &&
     p.x >= f.minX &&
     p.x <= f.maxX &&
     p.z >= f.minZ &&
@@ -52,7 +56,7 @@ export function step() {
   for (const podium of PODIUMS) {
     const dx = p.x - podium.pos[0]
     const dz = p.z - podium.pos[2]
-    if (dx * dx + dz * dz > PODIUM_HINT_RANGE * PODIUM_HINT_RANGE) continue
+    if (dx * dx + dz * dz > PODIUM_STAGE_HINT_RANGE * PODIUM_STAGE_HINT_RANGE) continue
     if (isOnPodium(p, podium.footprint)) continue
     text = podium.text
     break

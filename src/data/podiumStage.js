@@ -1,13 +1,14 @@
 // Data for the code-generated `podium_stage` prop — a wooden tiered display
-// stage with real climbable side staircases and a neon "POWER" sign
+// stage with real climbable side staircases and a neon sign
 // (Tech.md §4: every tunable number lives here, never in a component).
 //
-// This is the code-generated counterpart to the Blender-authored
-// power_podium (data/podium.js, Tech.md §6): same subject, built from the
-// tables below by systems/podiumStageModel.js instead of loaded as a glTF,
-// the same way data/merchantShop.js drives systems/merchantShopModel.js.
-// Nothing here is downloaded — geometry and the wood/sign texture atlas are
-// both generated at boot.
+// This started as the code-generated counterpart to the Blender-authored
+// power_podium, then also replaced its sibling target_podium (both retired —
+// see PODIUM_STAGE_HUB_TRANSFORM / PODIUM_STAGE_TARGET_TRANSFORM below):
+// built from the tables here by systems/podiumStageModel.js instead of
+// loaded as a glTF, the same way data/merchantShop.js drives systems/
+// merchantShopModel.js. Nothing here is downloaded — geometry and the
+// wood/sign texture atlas are both generated at boot.
 //
 // Local space: origin at the BASE CENTRE (x = centreline, y = 0 on the
 // ground, z = centre of the footprint), +Y up, +Z is the front — the side a
@@ -31,6 +32,21 @@
 // limit. The staircases themselves project further forward of that block's
 // front face — see STAIR_APRON. The flanking staircases (FOOTPRINT.flankWidth
 // each) push the *total* width past the display area's own 2.25 m.
+//
+// Both hub instances (PODIUM_STAGE_HUB_TRANSFORM "POWER" and PODIUM_STAGE_
+// TARGET_TRANSFORM "TARGETS") used to share every one of these numbers, tier
+// count included. They no longer do: the tables directly below (TIER_RISES/
+// TIER_STEP_COUNTS/TIER_WIDTHS/TIER_DEPTHS) describe the Hub instance's own
+// 4-tier shape, and PODIUM_STAGE_PROFILE (see the "tier profile" section
+// below) is what actually turns a tier table into everything the geometry/
+// collider need — the Target instance now builds from a shorter, 3-tier
+// PODIUM_STAGE_TARGET_PROFILE instead, reusing tiers 0-2's own numbers
+// unchanged. Every other knob in this file (LANDING_FACTOR, FOOTPRINT,
+// STAIR_APRON, TRIM, ATLAS, the palette) is still genuinely shared between
+// both instances. ALL_STEPS_DEPTH_MULT is the exception: the Target instance
+// has its own independent TARGET_ALL_STEPS_DEPTH_MULT instead (see that
+// constant's own comment), the same split as TARGET_TIER_DEPTHS/
+// TARGET_TIER_WIDTHS.
 
 // --- placement -----------------------------------------------------------
 // World transform of the local model, same shape as merchantShop's
@@ -84,7 +100,50 @@ export const PODIUM_STAGE_HUB_TRANSFORM = {
   scale: 6.5,
 }
 
-// --- step profile --------------------------------------------------------
+// The target-podium placement: a second instance of this same prop, dead
+// centre of the now-retired Blender `target_podium`'s own old footprint
+// (former data/podium.js TARGET_PODIUM_TRANSFORM, world [13.571624755859375,
+// 0, 17.854000091552734]) — the spot data/targets.js's nine shooting props
+// already sit around. yaw is Math.PI (not exactly target_podium's old
+// 3.1193714141845703, ~1.3° off — that value was tuned to this model's own
+// front convention, which no longer applies) so this model's own front (+Z,
+// the sign side) faces back toward -Z, the same direction target_podium's
+// stairs faced: spawn (hub.js SPAWN, z = 3) and the old power_podium spot
+// both sit at a smaller world Z than this podium, on that side.
+//
+// This instance now builds from PODIUM_STAGE_TARGET_PROFILE (3 tiers, see
+// the "tier profile" section below) rather than the Hub's own 4-tier
+// profile — its own TOTAL_DEPTH is tiers 0-2's combined depth alone (still
+// less than the Hub's), so at any given `scale` its world-space footprint is
+// strictly shallower (and shorter) than the 4-tier version was, centred on
+// the same local origin. The 4-tier version was previously checked clear of
+// every neighbouring AABB set in data/hub.js (grass blocks/cubes, the walls,
+// the merchant shop, the hub instance) at this `x`/`z`/`scale` — since the
+// 3-tier footprint's depth/height only shrink from that, symmetrically
+// around the same centre, clearance still holds (re-confirmed directly for
+// the 3-tier profile too — zero overlaps against every set above). Re-run
+// that same check (build PODIUM_STAGE_TARGET_AABBS at the candidate
+// transform and test its boxes) after changing `scale` or any of PODIUM_
+// STAGE_TARGET_PROFILE's own tier tables, same as PODIUM_STAGE_HUB_
+// TRANSFORM's own comment describes.
+export const PODIUM_STAGE_TARGET_TRANSFORM = {
+  x: 13.571624755859375,
+  y: 0,
+  z: 17.854000091552734,
+  yaw: Math.PI,
+  scale: 6.5,
+}
+
+// World-space [x, y, z] of the target instance's own mount origin — the same
+// shape as the old TARGET_PODIUM_POSITION (data/podium.js, now retired), used
+// by systems/podiumHint.js for its proximity scan.
+export const PODIUM_STAGE_TARGET_POSITION = [
+  PODIUM_STAGE_TARGET_TRANSFORM.x,
+  PODIUM_STAGE_TARGET_TRANSFORM.y,
+  PODIUM_STAGE_TARGET_TRANSFORM.z,
+]
+
+// --- step profile (Hub instance's own shape) ------------------------------
 // TIER_RISES/TIER_DEPTHS are the fixed design target for each tier's own
 // climb — unchanged since this prop was first authored, except that neither
 // the rise nor the depth is the same for every tier any more: TIER_RISES[0]
@@ -103,12 +162,13 @@ export const PODIUM_STAGE_HUB_TRANSFORM = {
 // model is still a whole number of RISEs and every depth a whole number of
 // TREADs, so the side staircases land exactly on the centre tiers' ledges by
 // construction — that now holds tier by tier (see riseOf/CUM_RISE and
-// normalTreadOf/CUM_DEPTH below), not uniformly. Adding tier 3 here is
-// exactly this: one more entry in each of TIER_RISES/TIER_STEP_COUNTS/
-// TIER_DEPTHS below — everything downstream (CUM_RISE, CUM_DEPTH,
-// STEP_TIER/STEP_POS, TOP_Y, STAIR_DEPTH, TOTAL_DEPTH, the centre-tier and
-// flank-step loops in podiumStageModel.js) already iterates over `TIERS`
-// (= TIER_RISES.length), so nothing else needed to change to grow a tier.
+// normalTreadOf/CUM_DEPTH inside buildPodiumStageProfile below), not
+// uniformly.
+//
+// This is the HUB instance's own shape (4 tiers) — the default profile
+// (PODIUM_STAGE_PROFILE below). The TARGET instance builds from a shorter,
+// 3-tier profile instead (PODIUM_STAGE_TARGET_PROFILE), reusing tiers 0-2's
+// own numbers from these same four arrays.
 export const TIER_RISES = [0.04, 0.4, 0.4, 0.4] // first stage a few inches at hub scale, rest unchanged
 // Every climbing tier's group (1-3) matches — 6 steps, the same fine tread
 // size throughout the climb. Tier 0 stays a single step: at its
@@ -166,94 +226,6 @@ export const LANDING_FACTOR = 1.5
 export const TIER_DEPTHS = [0.6, 0.8, 0.8, 0.9]
 export const TIERS = TIER_RISES.length
 
-// Cumulative depth from the front, through the end of tier k — the per-tier
-// analogue of CUM_RISE below, needed now that TIER_DEPTHS is no longer
-// uniform: tierSpan/STAIR_DEPTH can no longer just multiply by TIERS.
-const CUM_DEPTH = (() => {
-  const out = []
-  let sum = 0
-  for (const d of TIER_DEPTHS) {
-    sum += d
-    out.push(sum)
-  }
-  return out
-})()
-
-// Rise for a step belonging to tier k's group — that tier's own
-// TIER_RISES[k] divided across its own TIER_STEP_COUNTS[k], so the first
-// stage's one step is exactly as shallow as the stage itself.
-function riseOf(k) {
-  return TIER_RISES[k] / TIER_STEP_COUNTS[k]
-}
-
-// The "ordinary" (non-landing) tread for tier k's group; treadOf below
-// makes the last step of the group LANDING_FACTOR times this instead.
-function normalTreadOf(k) {
-  return TIER_DEPTHS[k] / (TIER_STEP_COUNTS[k] - 1 + LANDING_FACTOR)
-}
-
-
-// Step 6 (tier 1's own landing — the last step of its group): widening it
-// beyond its normal LANDING_FACTOR tread extends ITS own front edge forward
-// (+Z — toward the viewer, the same direction STAIR_APRON already leans the
-// lower steps), not its back edge: everything from tier 1's own back edge on
-// (tier 1's centre ledge, tier 2, tier 3, the sign, BACK_Z) stays exactly
-// where it always was — only steps 0-5 (in front of step 6) get carried
-// forward along with it, each keeping its OWN size unchanged, just
-// repositioned. TIER1_LANDING_STEP names its global index, computed rather
-// than hardcoded so it stays correct if tier 0 or 1's own step counts change
-// again. See STEP_DEPTH_MULT below for how the multiplier is actually
-// applied (the same mechanism now works for any step, not just this one).
-const TIER1_LANDING_STEP = TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1] - 1 // = 6
-const TIER1_LANDING_WIDEN_MULT = 4
-
-// Step 12 (tier 2's own landing) — the exact same idea, one tier up:
-// widening it extends ITS own front edge forward, carrying every step in
-// front of it (0 through 11 — tier 0, all of tier 1 including its own
-// widened landing, and tier 2's ordinary steps) forward with it, each
-// keeping its own size. Tier 2's own back edge and everything behind it
-// (tier 3, the sign, BACK_Z) stay untouched. The two stack: widen both and
-// step 12 carries step 6's own forward growth along with it, on top of its
-// own.
-const TIER2_LANDING_STEP = TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1] + TIER_STEP_COUNTS[2] - 1 // = 12
-const TIER2_LANDING_WIDEN_MULT = 4
-
-// Step 18 (tier 3's own landing, and the very last step overall) — same
-// mechanism again: widening it extends ITS own front edge forward, carrying
-// every step in front of it (0 through 17 — every earlier tier and their own
-// widened landings) forward with it, each keeping its own size. Since tier 3
-// is the topmost tier, there's nothing left behind step 18 for this to
-// disturb (just the sign/back platform, which sit relative to BACK_Z, not
-// this step). All three landing widens stack the same way.
-const TIER3_LANDING_STEP =
-  TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1] + TIER_STEP_COUNTS[2] + TIER_STEP_COUNTS[3] - 1 // = 18
-const TIER3_LANDING_WIDEN_MULT = 5
-
-// Cumulative height at the TOP of tier k (i.e. tierSpan(k).top) —
-// precompute once since every tier above the first depends on every one
-// below it.
-const CUM_RISE = (() => {
-  const out = []
-  let sum = 0
-  for (const r of TIER_RISES) {
-    sum += r
-    out.push(sum)
-  }
-  return out
-})()
-
-// Global step index i -> which tier's group it belongs to, and i's position
-// within that group — precomputed once since groups are no longer a fixed
-// size, so a step's tier can no longer be found with a single division.
-const STEP_TIER = []
-const STEP_POS = []
-for (let k = 0; k < TIERS; k++) {
-  for (let p = 0; p < TIER_STEP_COUNTS[k]; p++) {
-    STEP_TIER.push(k)
-    STEP_POS.push(p)
-  }
-}
-
 // --- footprint -----------------------------------------------------------
 // Full widths, measured across X. Per-tier centre width now lives in
 // TIER_WIDTHS above (was a single centreWidth here); flankWidth is still one
@@ -269,210 +241,6 @@ export const FOOTPRINT = {
   // as the whole object (TOTAL_DEPTH) with no separate strip tacked on past
   // it. The back-platform box (collider + model) is skipped when this is 0.
   backDepth: 0,
-}
-
-// --- derived dimensions --------------------------------------------------
-// Kept here (not in the builder) so the collider and the geometry read the
-// exact same numbers. TOP_Y/STAIR_DEPTH/TOTAL_DEPTH/TOTAL_WIDTH are all built
-// from TIERS/TIER_RISES/TIER_DEPTHS/FOOTPRINT only — never from
-// TIER_STEP_COUNTS — which is what keeps the object's overall silhouette
-// fixed no matter how many steps each tier's group asks for.
-export const STEPS_PER_FLIGHT = STEP_TIER.length
-export const TOP_Y = CUM_RISE[TIERS - 1] // 0.84 m (0.04 + 0.4 + 0.4)
-// No STEP_DEPTH_MULT entry is included here: an overridden step's extra
-// depth grows that step forward (+Z, toward the viewer), not backward, so
-// it never touches how deep the object is from FRONT_Z back to BACK_Z.
-// STAIR_DEPTH is exactly the centre tiers' own combined depth, same as if
-// no step's depth were ever overridden.
-export const STAIR_DEPTH = CUM_DEPTH[TIERS - 1]
-// FOOTPRINT.backDepth is 0 (folded into TIER_DEPTHS[2] — see FOOTPRINT
-// above), so TOTAL_DEPTH is just STAIR_DEPTH now: the staircase's own Z
-// extent IS the whole object's, with no separate back-platform strip
-// stretching past it. The + is kept (not simplified away) so this stays
-// correct if backDepth is ever reintroduced as a nonzero separate region.
-export const TOTAL_DEPTH = STAIR_DEPTH + FOOTPRINT.backDepth
-// The widest tier's width, plus a flank strip on each side — used wherever
-// a single conservative "how wide is this object" number is needed (hub
-// placement/overlap math, the back-platform box). Individual tiers/flanks
-// can be narrower than this; none is ever wider, so it stays a safe bound.
-const MAX_TIER_WIDTH = Math.max(...TIER_WIDTHS)
-export const TOTAL_WIDTH = MAX_TIER_WIDTH + 2 * FOOTPRINT.flankWidth // 2.6 m
-// FRONT_Z/BACK_Z bound the centre tiers exactly (TOTAL_DEPTH is already
-// override-independent — see STAIR_DEPTH above). The staircases can still
-// reach forward of FRONT_Z — STAIR_APRON always could, and now any
-// STEP_DEPTH_MULT entry can too — see STEP_SPANS below for how all of these
-// are applied as forward shifts on top of this unchanged frame.
-export const FRONT_Z = TOTAL_DEPTH / 2
-export const BACK_Z = FRONT_Z - TOTAL_DEPTH
-
-// How far the staircase's front projects forward of FRONT_Z, so the flights
-// visibly come forward from the tiered block instead of sitting flush with
-// its front face. Was FOOTPRINT.backDepth * 0.1 (0.04) — now a plain literal
-// of that same value, decoupled from FOOTPRINT.backDepth now that the latter
-// is 0 (folded into TIER_DEPTHS[2] instead — see FOOTPRINT above), so this
-// forward lean stays exactly what it was rather than silently zeroing out
-// alongside it. Positive pushes forward; a negative value here would pull
-// the flared steps back instead (toward the centre tiers).
-export const STAIR_APRON = 0.04
-
-// How many steps, counting from the ground step, share in that forward
-// projection — back to covering the ground step through the tier 1 landing
-// (step 6 included), the same span as before "still not the same" pulled it
-// back to the ground step alone. Tapering it across several steps means each
-// gets a slightly different tread depth from its neighbour (full STAIR_APRON
-// right at the ground, fading to none by step 6) rather than a uniform
-// block offset — that gradient is deliberate this time, not an oversight.
-// Derived from TIER_STEP_COUNTS rather than hardcoded, so it stays correct
-// (still ending exactly at the tier 1 landing) if tier 0 or tier 1's own
-// step counts change again.
-export const STAIR_FLARE_STEPS = TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1]
-
-// Tier k (0 = frontmost, lowest) as a local box: its walkable top height and
-// the Z span of its ledge, running back from the previous tier's front edge.
-// Plain CUM_DEPTH — no per-step depth override (see STEP_DEPTH_MULT below)
-// ever touches the centre tiers: each grows its own step forward instead, so
-// every tier's own ledge sits exactly where its TIER_DEPTHS entry alone puts
-// it, regardless of what any step's own multiplier is set to.
-export function tierSpan(k) {
-  const z1 = FRONT_Z - (k === 0 ? 0 : CUM_DEPTH[k - 1]) // front edge of this ledge
-  return { top: CUM_RISE[k], z0: FRONT_Z - CUM_DEPTH[k], z1 }
-}
-
-// The tread depth of step i: normalTreadOf(k) for an ordinary step, deeper
-// by LANDING_FACTOR for the last step in its group (the landing) — k and the
-// position within the group come from the STEP_TIER/STEP_POS lookup above,
-// since groups are no longer all the same size. Deliberately does NOT apply
-// any of STEP_DEPTH_MULT — a step's own multiplier is a forward SHIFT
-// applied to boundaries in STEP_SPANS below, not a bigger tread here, so it
-// grows that step toward +Z instead of pushing every step behind it
-// backward. This is each step's PLAIN size, unaffected by any override.
-function treadOf(i) {
-  const k = STEP_TIER[i]
-  const isLanding = STEP_POS[i] === TIER_STEP_COUNTS[k] - 1
-  const norm = normalTreadOf(k)
-  return isLanding ? norm * LANDING_FACTOR : norm
-}
-
-// Per-step depth multiplier: how many times its own plain treadOf() a
-// specific step is, applied in STEP_SPANS as a forward shift on every
-// boundary from the very front up through that step's own (boundaries 0..i)
-// — so every step in front of it is carried forward but keeps its own size
-// unchanged, only the overridden step itself absorbs the difference as extra
-// depth on its own front edge, and everything from its own back edge on
-// (including any tier it happens to be the landing for) is untouched. Key =
-// global step index, value = multiplier (1 = no change). Seeded with the two
-// named landing multipliers above so they keep working exactly as before —
-// add any OTHER step index here (e.g. `3: 1.5` to make step 3 1.5x its own
-// depth) to make an ordinary step individually adjustable too; nothing else
-// needs to change, STEP_SPANS applies every entry here the same way. Two
-// overrides can stack (a later step's shift carries an earlier step's own
-// growth forward with it), the same way the two landings already do.
-const STEP_DEPTH_MULT = {
-  [TIER1_LANDING_STEP]: TIER1_LANDING_WIDEN_MULT,
-  [TIER2_LANDING_STEP]: TIER2_LANDING_WIDEN_MULT,
-  [TIER3_LANDING_STEP]: TIER3_LANDING_WIDEN_MULT,
-}
-
-// A single multiplier applied to EVERY step at once — still without ever
-// touching TIER_DEPTHS/TIER_RISES/TIER_WIDTHS: it's layered under
-// STEP_DEPTH_MULT (a step's actual multiplier is ALL_STEPS_DEPTH_MULT times
-// whatever STEP_DEPTH_MULT gives it, or just ALL_STEPS_DEPTH_MULT for a step
-// with no entry there), and applied through the exact same forward-shift
-// mechanism, once per step in STEP_SPANS below — so every step keeps its own
-// distinct size (an ordinary tread is still shallower than a landing, a
-// TIER_DEPTH_MULT override is still bigger than its siblings), just each
-// scaled by the same factor. Because every step's own shift only reaches
-// boundaries in front of it, a uniform bump like this telescopes correctly
-// toward the front: the object's front edge (step 0) ends up carrying the
-// combined extra depth of every step behind it, exactly as it would if you
-// physically made each individual stair deeper by that ratio — while every
-// tier's own centre ledge and TOTAL_DEPTH/FRONT_Z/BACK_Z stay completely
-// untouched, same as any single-step override. 1 = no change.
-const ALL_STEPS_DEPTH_MULT = 0.4
-
-// Step i (0 = bottom, at the front) of a flight: solid from the ground to its
-// tread, so the box's top face IS the tread quad and its +Z face IS the riser
-// quad — what a collider or navmesh bake needs to see. Treads are not all the
-// same depth (see treadOf), so a step's Z position can only be found by
-// summing every tread before it. Built in four passes:
-//  1. the plain chain of BOUNDARIES (one more than there are steps — boundary
-//     i is the front face of step i, and also the back face of step i-1),
-//     exactly as if no forward projection or overrides existed.
-//  2. STAIR_APRON's forward shift on the first STAIR_FLARE_STEPS+1
-//     boundaries, tapering linearly from the full STAIR_APRON at boundary 0
-//     (the very front of the ground step) down to zero at boundary
-//     STAIR_FLARE_STEPS (the back of the last flared step) — so the
-//     projection reads as one continuous lean forward across the ground
-//     step and the steps just above it, not a lone jut on the ground step
-//     alone.
-//  3. one flat (not tapered) forward shift per STEP_DEPTH_MULT entry, on
-//     boundaries 0 through that entry's own step index — every boundary in
-//     a given entry's range gets the exact same shift, so every step in
-//     that range keeps its own size, just carried forward, and only the
-//     overridden step itself absorbs the difference as extra depth on its
-//     own front edge.
-//  4. the same flat-shift treatment again, but for EVERY step at once
-//     (ALL_STEPS_DEPTH_MULT), skipped entirely when it's 1 (the common
-//     case) so it costs nothing when unused.
-// Every pass is summed (not replaced) with the others, since each is just a
-// forward shift on some range of boundaries, and ranges can overlap (e.g.
-// both landings' ranges include boundary 0, and pass 4's range is every
-// other pass's range at once). Every shift lands exactly on zero at the
-// boundary just past its own range, so every landing (or any other
-// overridden step) still lines up with whatever comes right after it
-// untouched.
-// Precomputed once here rather than on every call, since STEPS_PER_FLIGHT is
-// tiny and every caller wants the same numbers.
-const STEP_SPANS = (() => {
-  const boundary = [FRONT_Z]
-  for (let i = 0; i < STEPS_PER_FLIGHT; i++) boundary.push(boundary[i] - treadOf(i))
-
-  const apronSteps = Math.min(STAIR_FLARE_STEPS, STEPS_PER_FLIGHT)
-  for (let j = 0; j <= apronSteps; j++) {
-    boundary[j] += (STAIR_APRON * (apronSteps - j)) / apronSteps
-  }
-
-  for (const [stepStr, mult] of Object.entries(STEP_DEPTH_MULT)) {
-    const step = Number(stepStr)
-    const extra = treadOf(step) * (mult - 1)
-    for (let j = 0; j <= step; j++) boundary[j] += extra
-  }
-
-  if (ALL_STEPS_DEPTH_MULT !== 1) {
-    for (let step = 0; step < STEPS_PER_FLIGHT; step++) {
-      const extra = treadOf(step) * (ALL_STEPS_DEPTH_MULT - 1)
-      for (let j = 0; j <= step; j++) boundary[j] += extra
-    }
-  }
-
-  const spans = []
-  let top = 0
-  for (let i = 0; i < STEPS_PER_FLIGHT; i++) {
-    top += riseOf(STEP_TIER[i])
-    spans.push({ top, z0: boundary[i + 1], z1: boundary[i] })
-  }
-  return spans
-})()
-
-export function stepSpan(i) {
-  return STEP_SPANS[i]
-}
-
-// Which tier's group step i belongs to — callers (the collider builder here,
-// and podiumStageModel.js's stairs loop) use this with flankSpan(k) to find
-// the right X span for a given step, since that now varies by tier.
-export function tierOfStep(i) {
-  return STEP_TIER[i]
-}
-
-// X span of the right-hand flank for tier k's own steps; the left flank is
-// its mirror (negated). Anchored to that tier's own TIER_WIDTHS[k] — not one
-// shared width — so the flank always hugs its tier's edge exactly, whatever
-// that tier's own width is: no gap if a tier is narrower than its neighbours,
-// no overhang if it's wider.
-export function flankSpan(k) {
-  const x0 = TIER_WIDTHS[k] / 2
-  return { x0, x1: x0 + FOOTPRINT.flankWidth }
 }
 
 // --- trim ----------------------------------------------------------------
@@ -492,6 +260,8 @@ export const TRIM = {
   lipProud: 0.018, // how far it stands above the tread
   // The small ribbed nub centred on each climbing tier's riser (every tier
   // but the near-ground first stage — see TIERS in the step-profile section).
+  // Tier indices 2/3 simply never exist on a shorter profile (the Target
+  // instance's own 2-tier one), so this list works unchanged for either.
   nub: { width: 0.26, ribs: 3, ribHeight: 0.045, proud: 0.05, onTiers: [1, 2, 3] },
 }
 
@@ -538,103 +308,474 @@ export const PODIUM_STAGE_COLORS = {
 // be tone-mapped, or the "neon" reads as dull cream instead of glowing.
 export const SIGN_FACE_TONE_MAPPED = false
 
-// --- sign ----------------------------------------------------------------
-// Backboard on two posts at the rear centre of the top platform, face square
-// to +Z. The glowing neon frame, the word POWER and the two star bursts are
-// all baked into the sign region of the texture atlas and drawn unlit
-// (Tech.md §7: no postprocessing — "glow" is an unlit bright surface, the
-// same trick the laser beam uses), so there is no alpha and no extra
-// geometry for the glow.
-//
 // The sign artwork is baked into a fixed 768x256 px region — a 3:1 w:h —
 // so boardHeight is derived from that ratio (ATLAS.regions.sign, not a
 // literal) rather than fixed at a constant: boardWidth tracks whatever width
-// the topmost tier ends up (see below), and stretching that same 3:1 image
-// over a wider-but-not-taller board is what squashed the neon frame and
-// warped the two circular star bursts into ellipses once TIER_WIDTHS grew.
-// A wider tier now gets a taller sign at the same undistorted shape instead.
+// the topmost tier ends up (see buildPodiumStageProfile's own `sign` below),
+// and stretching that same 3:1 image over a wider-but-not-taller board is
+// what squashed the neon frame and warped the two circular star bursts into
+// ellipses once TIER_WIDTHS grew. A wider tier now gets a taller sign at the
+// same undistorted shape instead. Shared by every profile.
 const SIGN_ASPECT = ATLAS.regions.sign[2] / ATLAS.regions.sign[3]
-export const SIGN = {
-  postHeight: 0.5,
-  postSection: 0.055,
-  // Board spans the same width as the tier it actually stands on — the
-  // topmost one, TIER_WIDTHS[TIERS - 1] (board and posts scale with that,
-  // not a separate literal, so widening/narrowing that tier widens/narrows
-  // the sign to match instead of leaving it mismatched with the platform it
-  // sits over).
-  boardWidth: TIER_WIDTHS[TIERS - 1],
-  postSpread: TIER_WIDTHS[TIERS - 1] / 3, // +/- X of the two posts
-  boardHeight: TIER_WIDTHS[TIERS - 1] / SIGN_ASPECT,
-  boardThickness: 0.06,
-  faceInset: 0.004, // the unlit quad, proud of the board face
-  capHeight: 0.04, // brushed-metal cap along the board's top edge
-  capOverhang: 0.03,
-  z: BACK_Z + 0.2, // centre of the board in Z, over the back platform
-}
-export const SIGN_TEXT = 'POWER'
 
-// --- collider ------------------------------------------------------------
-// The stage is walked ON, not around, so the collider is the real stepped
-// profile, not one enclosing box: every stair step, every centre tier and the
-// back platform, each solid from the ground to its own top (Tech.md §5.2 —
-// the kinematic capsule scans a flat AABB list). These boxes are generated
-// from the same spans the geometry uses, so they cannot drift from it.
-function worldBox(t, x0, x1, y1, z0, z1) {
-  const cos = Math.cos(t.yaw)
-  const sin = Math.sin(t.yaw)
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (const lx of [x0, x1]) {
-    for (const lz of [z0, z1]) {
-      for (const ly of [0, y1]) {
-        const sx = lx * t.scale
-        const sy = ly * t.scale
-        const sz = lz * t.scale
-        const p = [t.x + sx * cos + sz * sin, t.y + sy, t.z - sx * sin + sz * cos]
-        for (let i = 0; i < 3; i++) {
-          if (p[i] < min[i]) min[i] = p[i]
-          if (p[i] > max[i]) max[i] = p[i]
+export const SIGN_TEXT = 'POWER'
+// The target instance's own sign text (systems/podiumStageAtlas.js bakes one
+// atlas per distinct string — see getPodiumStageAtlas). Replaces the old
+// Blender-authored target_podium's baked sign panel, TARGET_PODIUM_SIGN_TEXT
+// (data/podium.js, now retired).
+export const TARGET_SIGN_TEXT = 'TARGETS'
+
+// How far the staircase's front projects forward of FRONT_Z, so the flights
+// visibly come forward from the tiered block instead of sitting flush with
+// its front face. Was FOOTPRINT.backDepth * 0.1 (0.04) — now a plain literal
+// of that same value, decoupled from FOOTPRINT.backDepth now that the latter
+// is 0 (folded into TIER_DEPTHS[2] instead — see FOOTPRINT above), so this
+// forward lean stays exactly what it was rather than silently zeroing out
+// alongside it. Positive pushes forward; a negative value here would pull
+// the flared steps back instead (toward the centre tiers). Shared by every
+// profile — not tier-count-dependent.
+export const STAIR_APRON = 0.04
+
+// A single multiplier applied to EVERY step at once — still without ever
+// touching TIER_DEPTHS/TIER_RISES/TIER_WIDTHS: it's layered under a
+// profile's own per-tier landing widen multipliers (a step's actual
+// multiplier is allStepsDepthMult times whatever its own landing widen
+// gives it, or just allStepsDepthMult for a step with no landing-widen
+// entry), applied through the same forward-shift mechanism, once per step —
+// so every step keeps its own distinct size (an ordinary tread is still
+// shallower than a landing, a widened landing is still bigger than its
+// siblings), just each scaled by the same factor. Because every step's own
+// shift only reaches boundaries in front of it, a uniform bump like this
+// telescopes correctly toward the front: the object's front edge (step 0)
+// ends up carrying the combined extra depth of every step behind it, exactly
+// as it would if you physically made each individual stair deeper by that
+// ratio — while every tier's own centre ledge and TOTAL_DEPTH/FRONT_Z/BACK_Z
+// stay completely untouched, same as any single-step override. 1 = no
+// change. This is the Hub instance's own value, passed to
+// buildPodiumStageProfile as its `allStepsDepthMult` default; the Target
+// instance uses its own independent TARGET_ALL_STEPS_DEPTH_MULT below
+// instead (same split as TARGET_TIER_DEPTHS/TARGET_TIER_WIDTHS from
+// TIER_DEPTHS/TIER_WIDTHS), so tuning one instance's ordinary stair-step
+// depth never moves the other's.
+const ALL_STEPS_DEPTH_MULT = 0.4
+
+// --- tier profile ----------------------------------------------------------
+// Turns one set of TIER_RISES/TIER_STEP_COUNTS/TIER_WIDTHS/TIER_DEPTHS
+// tables into every geometry/collider number the builder (systems/
+// podiumStageModel.js) and the collider below actually need. This used to be
+// one set of module-level constants computed straight from the four arrays
+// above — now it's a factory so the Hub and Target instances can each have
+// their own tier count/shape (PODIUM_STAGE_PROFILE vs PODIUM_STAGE_
+// TARGET_PROFILE below) while still sharing every OTHER knob in this file
+// (LANDING_FACTOR, FOOTPRINT, STAIR_APRON, TRIM, ATLAS, the palette)
+// unchanged — plus their own independent allStepsDepthMult (ALL_STEPS_
+// DEPTH_MULT for the Hub, TARGET_ALL_STEPS_DEPTH_MULT for the Target).
+//
+// `landingWidenMult[k]` is tier k's own landing-step widen multiplier — the
+// same idea this file used to spell out one tier at a time as TIER1_LANDING_
+// STEP/TIER2_LANDING_STEP/TIER3_LANDING_STEP + their own *_WIDEN_MULT
+// constants (widening a tier's own landing extends ITS front edge forward,
+// carrying every step in front of it along for the ride, each keeping its
+// own size — see the per-step loop inside for exactly how). Index 0 is never
+// read: tier 0's single step has no separate landing to widen.
+function buildPodiumStageProfile({
+  tierRises,
+  tierStepCounts,
+  tierWidths,
+  tierDepths,
+  landingWidenMult,
+  allStepsDepthMult = ALL_STEPS_DEPTH_MULT,
+}) {
+  const tiers = tierRises.length
+
+  // Cumulative depth/height through the end of tier k — CUM_DEPTH/CUM_RISE's
+  // old role, needed since TIER_DEPTHS/TIER_RISES are no longer uniform.
+  const cumDepth = []
+  {
+    let sum = 0
+    for (const d of tierDepths) {
+      sum += d
+      cumDepth.push(sum)
+    }
+  }
+  const cumRise = []
+  {
+    let sum = 0
+    for (const r of tierRises) {
+      sum += r
+      cumRise.push(sum)
+    }
+  }
+
+  // Rise for a step belonging to tier k's group — that tier's own rise
+  // divided across its own step count, so the first stage's one step is
+  // exactly as shallow as the stage itself.
+  function riseOf(k) {
+    return tierRises[k] / tierStepCounts[k]
+  }
+  // The "ordinary" (non-landing) tread for tier k's group; treadOf below
+  // makes the last step of the group LANDING_FACTOR times this instead.
+  function normalTreadOf(k) {
+    return tierDepths[k] / (tierStepCounts[k] - 1 + LANDING_FACTOR)
+  }
+
+  // Global step index i -> which tier's group it belongs to, and i's
+  // position within that group.
+  const stepTier = []
+  const stepPos = []
+  for (let k = 0; k < tiers; k++) {
+    for (let p = 0; p < tierStepCounts[k]; p++) {
+      stepTier.push(k)
+      stepPos.push(p)
+    }
+  }
+  const stepsPerFlight = stepTier.length
+
+  // TOP_Y/STAIR_DEPTH/TOTAL_DEPTH/TOTAL_WIDTH are all built from tiers/
+  // tierRises/tierDepths/FOOTPRINT only — never from tierStepCounts — which
+  // is what keeps the object's overall silhouette fixed no matter how many
+  // steps each tier's group asks for.
+  const topY = cumRise[tiers - 1]
+  const stairDepth = cumDepth[tiers - 1]
+  // FOOTPRINT.backDepth is 0 (folded into the topmost tier's own depth), so
+  // totalDepth is just stairDepth now — the + is kept (not simplified away)
+  // so this stays correct if backDepth is ever reintroduced.
+  const totalDepth = stairDepth + FOOTPRINT.backDepth
+  const maxTierWidth = Math.max(...tierWidths)
+  const totalWidth = maxTierWidth + 2 * FOOTPRINT.flankWidth
+  // FRONT_Z/BACK_Z bound the centre tiers exactly and are symmetric about
+  // the model's own local z = 0 — so a profile with a smaller totalDepth
+  // (like the Target instance's 2-tier one) sits with both edges pulled in
+  // toward that same centre, never past where a taller profile's edges sat.
+  const frontZ = totalDepth / 2
+  const backZ = frontZ - totalDepth
+
+  // How many steps, counting from the ground step, share in STAIR_APRON's
+  // forward projection — through the tier 1 landing. Every profile here has
+  // at least 2 tiers, so tierStepCounts[1] always exists.
+  const stairFlareSteps = tierStepCounts[0] + tierStepCounts[1]
+
+  // Tier k (0 = frontmost, lowest) as a local box: its walkable top height
+  // and the Z span of its ledge, running back from the previous tier's front
+  // edge. Plain cumDepth — no per-step depth override ever touches the
+  // centre tiers: each grows its own step forward instead, so every tier's
+  // own ledge sits exactly where its tierDepths entry alone puts it.
+  function tierSpan(k) {
+    const z1 = frontZ - (k === 0 ? 0 : cumDepth[k - 1]) // front edge of this ledge
+    return { top: cumRise[k], z0: frontZ - cumDepth[k], z1 }
+  }
+
+  // The tread depth of step i: normalTreadOf(k) for an ordinary step, deeper
+  // by LANDING_FACTOR for the last step in its group (the landing). This is
+  // each step's PLAIN size, unaffected by any landing-widen override.
+  function treadOf(i) {
+    const k = stepTier[i]
+    const isLanding = stepPos[i] === tierStepCounts[k] - 1
+    const norm = normalTreadOf(k)
+    return isLanding ? norm * LANDING_FACTOR : norm
+  }
+
+  // Per-step depth multiplier, keyed by global step index: how many times
+  // its own plain treadOf() that step is, applied below as a forward shift
+  // on every boundary from the very front up through that step's own — so
+  // every step in front of it is carried forward but keeps its own size
+  // unchanged, only the overridden step itself absorbs the difference as
+  // extra depth on its own front edge. Built from landingWidenMult: tier k's
+  // own landing is the last step of its group, at global index
+  // sum(tierStepCounts[0..k]) - 1.
+  const stepDepthMult = {}
+  for (let k = 1; k < tiers; k++) {
+    const mult = landingWidenMult[k]
+    if (!mult || mult === 1) continue
+    let landingStep = -1
+    for (let j = 0; j <= k; j++) landingStep += tierStepCounts[j]
+    stepDepthMult[landingStep] = mult
+  }
+
+  // Step i (0 = bottom, at the front) of a flight: solid from the ground to
+  // its tread, so the box's top face IS the tread quad and its +Z face IS
+  // the riser quad. Treads are not all the same depth, so a step's Z
+  // position can only be found by summing every tread before it. Built in
+  // four passes: (1) the plain chain of boundaries, (2) STAIR_APRON's
+  // tapered forward shift on the ground step through the tier 1 landing,
+  // (3) one flat forward shift per stepDepthMult entry, (4) the same flat
+  // shift again for EVERY step at once (ALL_STEPS_DEPTH_MULT). Every pass is
+  // summed (not replaced), since each is just a forward shift on some range
+  // of boundaries, and ranges can overlap.
+  const stepSpans = (() => {
+    const boundary = [frontZ]
+    for (let i = 0; i < stepsPerFlight; i++) boundary.push(boundary[i] - treadOf(i))
+
+    const apronSteps = Math.min(stairFlareSteps, stepsPerFlight)
+    for (let j = 0; j <= apronSteps; j++) {
+      boundary[j] += (STAIR_APRON * (apronSteps - j)) / apronSteps
+    }
+
+    for (const [stepStr, mult] of Object.entries(stepDepthMult)) {
+      const step = Number(stepStr)
+      const extra = treadOf(step) * (mult - 1)
+      for (let j = 0; j <= step; j++) boundary[j] += extra
+    }
+
+    if (allStepsDepthMult !== 1) {
+      for (let step = 0; step < stepsPerFlight; step++) {
+        const extra = treadOf(step) * (allStepsDepthMult - 1)
+        for (let j = 0; j <= step; j++) boundary[j] += extra
+      }
+    }
+
+    const spans = []
+    let top = 0
+    for (let i = 0; i < stepsPerFlight; i++) {
+      top += riseOf(stepTier[i])
+      spans.push({ top, z0: boundary[i + 1], z1: boundary[i] })
+    }
+    return spans
+  })()
+
+  function stepSpan(i) {
+    return stepSpans[i]
+  }
+  // Which tier's group step i belongs to — used with flankSpan(k) to find
+  // the right X span for a given step, since that varies by tier.
+  function tierOfStep(i) {
+    return stepTier[i]
+  }
+  // X span of the right-hand flank for tier k's own steps; the left flank is
+  // its mirror (negated). Anchored to that tier's own tierWidths[k] — not
+  // one shared width — so the flank always hugs its tier's edge exactly.
+  function flankSpan(k) {
+    const x0 = tierWidths[k] / 2
+    return { x0, x1: x0 + FOOTPRINT.flankWidth }
+  }
+
+  // Board spans the same width as the tier it actually stands on — the
+  // topmost one (board and posts scale with that, not a separate literal),
+  // so widening/narrowing that tier widens/narrows the sign to match instead
+  // of leaving it mismatched with the platform it sits over.
+  const topWidth = tierWidths[tiers - 1]
+  const sign = {
+    postHeight: 0.5,
+    postSection: 0.055,
+    boardWidth: topWidth,
+    postSpread: topWidth / 3, // +/- X of the two posts
+    boardHeight: topWidth / SIGN_ASPECT,
+    boardThickness: 0.06,
+    faceInset: 0.004, // the unlit quad, proud of the board face
+    capHeight: 0.04, // brushed-metal cap along the board's top edge
+    capOverhang: 0.03,
+    z: backZ + 0.2, // centre of the board in Z, over the back platform
+  }
+
+  function worldBox(t, x0, x1, y1, z0, z1) {
+    const min = [Infinity, Infinity, Infinity]
+    const max = [-Infinity, -Infinity, -Infinity]
+    for (const lx of [x0, x1]) {
+      for (const lz of [z0, z1]) {
+        for (const ly of [0, y1]) {
+          const p = localToWorld(t, lx, ly, lz)
+          for (let i = 0; i < 3; i++) {
+            if (p[i] < min[i]) min[i] = p[i]
+            if (p[i] > max[i]) max[i] = p[i]
+          }
         }
       }
     }
+    return {
+      min: { x: min[0], y: min[1], z: min[2] },
+      max: { x: max[0], y: max[1], z: max[2] },
+    }
   }
+
+  // The stage is walked ON, not around, so the collider is the real stepped
+  // profile, not one enclosing box: every stair step, every centre tier and
+  // the back platform, each solid from the ground to its own top (Tech.md
+  // §5.2 — the kinematic capsule scans a flat AABB list). These boxes are
+  // generated from the same spans the geometry uses, so they cannot drift.
+  function buildAabbs(t = PODIUM_STAGE_TRANSFORM) {
+    const out = []
+    // both staircases, step by step — each using its own tier's flank span
+    for (let i = 0; i < stepsPerFlight; i++) {
+      const s = stepSpan(i)
+      const f = flankSpan(tierOfStep(i))
+      out.push(worldBox(t, f.x0, f.x1, s.top, s.z0, s.z1))
+      out.push(worldBox(t, -f.x1, -f.x0, s.top, s.z0, s.z1))
+    }
+    // the centre tiers, each its own tierWidths[k]
+    for (let k = 0; k < tiers; k++) {
+      const c = tierSpan(k)
+      const halfWidth = tierWidths[k] / 2
+      out.push(worldBox(t, -halfWidth, halfWidth, c.top, c.z0, c.z1))
+    }
+    // full-width back platform — skipped when FOOTPRINT.backDepth is 0
+    // (folded into the topmost tier's own depth instead), since a
+    // zero-depth box is degenerate.
+    if (FOOTPRINT.backDepth > 0) {
+      out.push(worldBox(t, -totalWidth / 2, totalWidth / 2, topY, backZ, backZ + FOOTPRINT.backDepth))
+    }
+    return out
+  }
+
   return {
-    min: { x: min[0], y: min[1], z: min[2] },
-    max: { x: max[0], y: max[1], z: max[2] },
+    TIERS: tiers,
+    STEPS_PER_FLIGHT: stepsPerFlight,
+    TOP_Y: topY,
+    STAIR_DEPTH: stairDepth,
+    TOTAL_DEPTH: totalDepth,
+    TOTAL_WIDTH: totalWidth,
+    FRONT_Z: frontZ,
+    BACK_Z: backZ,
+    STAIR_FLARE_STEPS: stairFlareSteps,
+    TIER_WIDTHS: tierWidths,
+    SIGN: sign,
+    tierSpan,
+    stepSpan,
+    tierOfStep,
+    flankSpan,
+    buildAabbs,
   }
 }
 
-export function buildPodiumStageAabbs(t = PODIUM_STAGE_TRANSFORM) {
-  const out = []
-  // both staircases, step by step — each using its own tier's flank span
-  // (flankSpan), since TIER_WIDTHS (and so the flank position) can now
-  // differ per tier.
-  for (let i = 0; i < STEPS_PER_FLIGHT; i++) {
-    const s = stepSpan(i)
-    const f = flankSpan(tierOfStep(i))
-    out.push(worldBox(t, f.x0, f.x1, s.top, s.z0, s.z1))
-    out.push(worldBox(t, -f.x1, -f.x0, s.top, s.z0, s.z1))
-  }
-  // the centre tiers (TIERS of them), each its own TIER_WIDTHS[k]
-  for (let k = 0; k < TIERS; k++) {
-    const c = tierSpan(k)
-    const halfWidth = TIER_WIDTHS[k] / 2
-    out.push(worldBox(t, -halfWidth, halfWidth, c.top, c.z0, c.z1))
-  }
-  // full-width (MAX_TIER_WIDTH-based) back platform — skipped when
-  // FOOTPRINT.backDepth is 0 (folded into TIER_DEPTHS[TIERS-1] instead),
-  // since a zero-depth box is degenerate: the flank's top-tier landing step
-  // and that tier's own centre-tier box already cover that depth between
-  // them.
-  if (FOOTPRINT.backDepth > 0) {
-    out.push(
-      worldBox(t, -TOTAL_WIDTH / 2, TOTAL_WIDTH / 2, TOP_Y, BACK_Z, BACK_Z + FOOTPRINT.backDepth),
-    )
-  }
-  return out
+// Point at local (lx, ly, lz) under transform t, in world space — the
+// rotate-scale-translate every collider box corner (and, via
+// PODIUM_STAGE_TARGET_PROFILE, data/targets.js's own prop placements) goes
+// through. yaw rotates about +Y.
+export function localToWorld(t, lx, ly, lz) {
+  const cos = Math.cos(t.yaw)
+  const sin = Math.sin(t.yaw)
+  const sx = lx * t.scale
+  const sy = ly * t.scale
+  const sz = lz * t.scale
+  return [t.x + sx * cos + sz * sin, t.y + sy, t.z - sx * sin + sz * cos]
 }
 
-export const PODIUM_STAGE_AABBS = buildPodiumStageAabbs()
-// The collider for the actual hub placement — data/hub.js spreads this into
-// HUB_AABBS, the same way TARGET_PODIUM_AABBS and MERCHANT_SHOP_AABBS are.
-export const PODIUM_STAGE_HUB_AABBS = buildPodiumStageAabbs(PODIUM_STAGE_HUB_TRANSFORM)
+// The Hub instance's own profile — every export below this point that used
+// to be its own module-level constant (TIERS, STEPS_PER_FLIGHT, TOP_Y, ...,
+// tierSpan/stepSpan/tierOfStep/flankSpan, SIGN) is now an alias of the
+// matching field here, so every existing caller of this file (systems/
+// podiumStagePreview.js, components/PodiumStage.jsx's default profile prop)
+// keeps working unchanged.
+// The Hub instance's own per-tier landing widen multiplier, keyed by tier
+// index (index 0 is never read: tier 0's single step has no separate landing
+// to widen — see buildPodiumStageProfile's own comment on landingWidenMult).
+// Each entry is independently tunable — index 1 widens only global step 6
+// (tier 1's landing: tierStepCounts[0] + tierStepCounts[1] - 1 = 1+6-1),
+// index 2 only step 12 (tier 2's landing: 1+6+6-1), index 3 only step 18
+// (tier 3's landing) — changing one never moves the others' depth.
+export const LANDING_WIDEN_MULT = [undefined, 2, 4, 5]
+
+export const PODIUM_STAGE_PROFILE = buildPodiumStageProfile({
+  tierRises: TIER_RISES,
+  tierStepCounts: TIER_STEP_COUNTS,
+  tierWidths: TIER_WIDTHS,
+  tierDepths: TIER_DEPTHS,
+  landingWidenMult: LANDING_WIDEN_MULT,
+})
+export const {
+  STEPS_PER_FLIGHT,
+  TOP_Y,
+  STAIR_DEPTH,
+  TOTAL_DEPTH,
+  TOTAL_WIDTH,
+  FRONT_Z,
+  BACK_Z,
+  STAIR_FLARE_STEPS,
+  SIGN,
+  tierSpan,
+  stepSpan,
+  tierOfStep,
+  flankSpan,
+} = PODIUM_STAGE_PROFILE
+export const buildPodiumStageAabbs = PODIUM_STAGE_PROFILE.buildAabbs
+
+// The Target instance's own tier depths — its own knob, independent of the
+// Hub's TIER_DEPTHS above (unlike tierRises/tierStepCounts below, which the
+// Target profile still reuses straight from the Hub's own tables). Defaults
+// to the same three values TIER_DEPTHS[0..2] already has, so nothing changes
+// visually until this is edited — change an entry here to make the Target
+// podium's tiers deeper/shallower without touching the Hub instance at all.
+// Same rules as TIER_DEPTHS apply (see that comment): changing this only
+// moves TOP_Y/STAIR_DEPTH/TOTAL_DEPTH/tierSpan, never TIER_STEP_COUNTS.
+//
+// Changing tier depth/width here resizes the Target podium's own footprint
+// (TOTAL_DEPTH/TOTAL_WIDTH) — re-check it against every neighbouring AABB
+// set in data/hub.js (grass blocks/cubes, the walls, the merchant shop, the
+// hub instance) the same way PODIUM_STAGE_HUB_TRANSFORM's own comment
+// describes, since a bigger tier can grow the footprint back into them.
+export const TARGET_TIER_DEPTHS = [1.2, 1.2, 0.8]
+
+// The Target instance's own tier widths — its own knob, independent of the
+// Hub's TIER_WIDTHS above, the same way TARGET_TIER_DEPTHS is independent of
+// TIER_DEPTHS. Defaults to the same three values TIER_WIDTHS[0..2] already
+// has, so nothing changes visually until this is edited. A tier's own width
+// also sets its flank's X position (flankSpan) and, for the topmost tier,
+// the sign board's width/height (see buildPodiumStageProfile's own `sign`)
+// — so widening/narrowing the Target's own topmost tier resizes its sign to
+// match, independently of the Hub's sign.
+export const TARGET_TIER_WIDTHS = [3.2, 3.2, 3.2]
+
+// The Target instance's own ordinary (non-landing) stair-step depth
+// multiplier — its own knob, independent of the Hub's ALL_STEPS_DEPTH_MULT
+// above, the same way TARGET_TIER_DEPTHS is independent of TIER_DEPTHS. This
+// is NOT tier depth (TARGET_TIER_DEPTHS, the walkable ledge/landing you stand
+// on) — it only scales the depth of the repeating steps making up each
+// tier's own climb, exactly like ALL_STEPS_DEPTH_MULT does for the Hub (see
+// that constant's own comment for the forward-shift mechanics). Defaults to
+// the same value ALL_STEPS_DEPTH_MULT already has, so nothing changes
+// visually until this is edited. As with TARGET_TIER_DEPTHS, this can grow
+// the Target podium's real (rendered) footprint out past its computed
+// TOTAL_DEPTH/FRONT_Z without moving those constants themselves — re-check
+// against neighbouring AABBs in data/hub.js the same way.
+export const TARGET_ALL_STEPS_DEPTH_MULT = 0.4
+
+// The Target instance's own per-tier landing widen multiplier — its own
+// knob, independent of the Hub's LANDING_WIDEN_MULT above, the same way
+// TARGET_TIER_DEPTHS is independent of TIER_DEPTHS. Index 0 is never read
+// (tier 0 has no landing). Index 1 widens only global step 6 (tier 1's
+// landing: tierStepCounts[0] + tierStepCounts[1] - 1 = 1+6-1) and index 2
+// only step 12 (tier 2's landing: 1+6+6-1) — each independently tunable,
+// changing one never moves the other's depth or the Hub's. Defaults to the
+// same two values LANDING_WIDEN_MULT[1..2] already has, so nothing changes
+// visually until this is edited.
+export const TARGET_LANDING_WIDEN_MULT = [4, 4, 4]
+
+// The Target instance's own profile — 3 tiers. Rise/step-count still come
+// straight from the Hub's own tables (tiers 0-2, unchanged) so the two
+// instances read as visually consistent (same step sizing); depth, width,
+// ordinary step depth, and landing widen are each their own TARGET_TIER_
+// DEPTHS/TARGET_TIER_WIDTHS/TARGET_ALL_STEPS_DEPTH_MULT/TARGET_LANDING_
+// WIDEN_MULT above instead, so any of them can differ from the Hub without
+// the Hub's own shape moving too.
+export const PODIUM_STAGE_TARGET_PROFILE = buildPodiumStageProfile({
+  tierRises: TIER_RISES.slice(0, 3),
+  tierStepCounts: TIER_STEP_COUNTS.slice(0, 3),
+  tierWidths: TARGET_TIER_WIDTHS,
+  tierDepths: TARGET_TIER_DEPTHS,
+  landingWidenMult: TARGET_LANDING_WIDEN_MULT,
+  allStepsDepthMult: TARGET_ALL_STEPS_DEPTH_MULT,
+})
+
+export const PODIUM_STAGE_AABBS = PODIUM_STAGE_PROFILE.buildAabbs()
+// The collider for each of the two hub placements — data/hub.js spreads both
+// into HUB_AABBS, the same way MERCHANT_SHOP_AABBS is.
+export const PODIUM_STAGE_HUB_AABBS = PODIUM_STAGE_PROFILE.buildAabbs(PODIUM_STAGE_HUB_TRANSFORM)
+export const PODIUM_STAGE_TARGET_AABBS = PODIUM_STAGE_TARGET_PROFILE.buildAabbs(
+  PODIUM_STAGE_TARGET_TRANSFORM,
+)
+
+// --- target-instance proximity hint ---------------------------------------
+// Same coaching hint the old Blender target_podium carried (data/podium.js,
+// now retired) — systems/podiumHint.js shows this text while the player is
+// near the target instance's footprint and still on the ground, same shape
+// as the afk / hex-pad prompts. Range is sized to trigger a little outside
+// this instance's own footprint, not right on the steps.
+export const PODIUM_STAGE_HINT_RANGE = 15
+export const PODIUM_STAGE_TARGET_HINT_TEXT =
+  'Climb the side stairs using the Spacebar, then use the targets'
+
+// The hint is coaching for someone still on the ground working out how to
+// get up. Once the player has actually climbed onto a prop — feet inside its
+// XZ footprint and at least this far above the ground plane — the advice has
+// done its job, so systems/podiumHint.js drops the flag and the HUD hides
+// it. Well below the first tier's own world-space top on either instance.
+export const PODIUM_STAGE_ON_MIN_Y = 0.1

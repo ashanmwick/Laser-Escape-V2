@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { buildPodiumStage } from '../systems/podiumStageModel.js'
-import { PODIUM_STAGE_TRANSFORM } from '../data/podiumStage.js'
+import { PODIUM_STAGE_TRANSFORM, PODIUM_STAGE_PROFILE } from '../data/podiumStage.js'
 
 // Mounts the code-generated wooden tiered display stage (the `podium_stage`
 // prop). Same shape as MerchantShop.jsx: build the root once, add it under a
@@ -14,14 +14,18 @@ import { PODIUM_STAGE_TRANSFORM } from '../data/podiumStage.js'
 // texture. The collider comes from PODIUM_STAGE_AABBS in the same data file:
 // add it to HUB_AABBS (data/hub.js) when this prop is placed in the hub, the
 // way MERCHANT_SHOP_AABBS is.
-export default function PodiumStage({ transform = PODIUM_STAGE_TRANSFORM }) {
+export default function PodiumStage({
+  transform = PODIUM_STAGE_TRANSFORM,
+  signText,
+  profile = PODIUM_STAGE_PROFILE,
+}) {
   const groupRef = useRef(null)
 
   useEffect(() => {
     const mount = groupRef.current
     if (!mount) return
 
-    const built = buildPodiumStage()
+    const built = buildPodiumStage(signText, profile)
     mount.add(built.root)
     built.root.traverse((o) => {
       o.matrixAutoUpdate = false

@@ -30,19 +30,10 @@ import { getPodiumStageAtlas, regionUv } from './podiumStageAtlas.js'
 import {
   ATLAS,
   FOOTPRINT,
-  SIGN,
   SIGN_FACE_TONE_MAPPED,
-  STEPS_PER_FLIGHT,
-  TIERS,
-  TIER_WIDTHS,
-  TOP_Y,
-  TOTAL_WIDTH,
-  BACK_Z,
+  SIGN_TEXT,
+  PODIUM_STAGE_PROFILE,
   TRIM,
-  flankSpan,
-  stepSpan,
-  tierOfStep,
-  tierSpan,
 } from '../data/podiumStage.js'
 
 // Same deterministic mulberry32 the atlas paints with: grain placement must
@@ -100,7 +91,32 @@ function mapBoxUv(geo, w, h, d, region, seed) {
 }
 
 // --- build ---------------------------------------------------------------
-export function buildPodiumStage() {
+// `signText` selects which sign artwork the board's face samples (see
+// systems/podiumStageAtlas.js getPodiumStageAtlas) — defaulting to the data
+// file's own SIGN_TEXT ("POWER") so existing callers (the preview page, the
+// GLB exporter) keep building that instance unchanged; components/
+// PodiumStage.jsx's second, "TARGETS" instance passes its own.
+//
+// `profile` is one of data/podiumStage.js's tier profiles (PODIUM_STAGE_
+// PROFILE by default — the Hub instance's own 4-tier shape — or PODIUM_
+// STAGE_TARGET_PROFILE for the shorter 2-tier Target instance): everything
+// below that depends on tier count/shape reads off it instead of a fixed
+// module-level constant, so the same builder produces either shape.
+export function buildPodiumStage(signText = SIGN_TEXT, profile = PODIUM_STAGE_PROFILE) {
+  const {
+    STEPS_PER_FLIGHT,
+    TIERS,
+    TIER_WIDTHS,
+    TOP_Y,
+    TOTAL_WIDTH,
+    BACK_Z,
+    SIGN,
+    flankSpan,
+    stepSpan,
+    tierOfStep,
+    tierSpan,
+  } = profile
+
   const root = new THREE.Group()
   root.name = 'podium_stage'
 
@@ -298,7 +314,7 @@ export function buildPodiumStage() {
   // =====================================================================
   // merge: one lit wood mesh + one unlit sign mesh, sharing one texture
   // =====================================================================
-  const atlas = getPodiumStageAtlas()
+  const atlas = getPodiumStageAtlas(signText)
 
   const woodGeo = mergeGeometries(wood, false)
   for (const g of wood) g.dispose()

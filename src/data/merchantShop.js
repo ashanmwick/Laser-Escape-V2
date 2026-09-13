@@ -11,10 +11,10 @@
 // The model is authored in its own local space: origin at the baseplate
 // centre, +Y up, +Z is the shop *front* (counter, awning, sign face, the
 // side the merchant looks out from). SHOP_TRANSFORM turns and drops it into
-// world space beside data/podium.js's TARGET_PODIUM_POSITION (≈ world
-// [13.57, 0, 17.85], footprint ≈ ±11 X by ±7 Z). The shop sits just east of
-// that footprint, front turned back toward the hub so a player climbing the
-// target podium's stairs walks past its counter.
+// world space beside data/podiumStage.js's PODIUM_STAGE_TARGET_POSITION
+// (≈ world [13.57, 0, 17.85], footprint ≈ ±9 X by ±7 Z). The shop sits just
+// east of that footprint, front turned back toward the hub so a player
+// climbing the target podium's stairs walks past its counter.
 
 // --- placement -------------------------------------------------------------
 // World transform of the local model. yaw is a rotation about +Y (radians):

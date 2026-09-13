@@ -6,7 +6,6 @@ import GrassBlockCubes from './components/GrassBlockCubes.jsx'
 import Ground from './components/Ground.jsx'
 import Road from './components/Road.jsx'
 import Obstacles from './components/Obstacles.jsx'
-import TargetPodium from './components/TargetPodium.jsx'
 import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
@@ -22,7 +21,12 @@ import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
 import LoadingScreen from './components/LoadingScreen.jsx'
 import { QUALITY_DPR } from './data/bloxity.js'
-import { PODIUM_STAGE_HUB_TRANSFORM } from './data/podiumStage.js'
+import {
+  PODIUM_STAGE_HUB_TRANSFORM,
+  PODIUM_STAGE_TARGET_TRANSFORM,
+  PODIUM_STAGE_TARGET_PROFILE,
+  TARGET_SIGN_TEXT,
+} from './data/podiumStage.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
@@ -60,8 +64,12 @@ export default function App() {
         <GrassBlocks />
         <GrassBlockCubes />
         <Obstacles />
-        <TargetPodium />
         <PodiumStage transform={PODIUM_STAGE_HUB_TRANSFORM} />
+        <PodiumStage
+          transform={PODIUM_STAGE_TARGET_TRANSFORM}
+          signText={TARGET_SIGN_TEXT}
+          profile={PODIUM_STAGE_TARGET_PROFILE}
+        />
         <MerchantShop />
         <HexPowerPads />
         <Targets />

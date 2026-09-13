@@ -17,12 +17,12 @@
 // enforces it for remote avatar glTFs.
 //
 // The exporter bakes whichever Blender object was exported (position and
-// rotation — power_podium's own, here) into the glTF node, but that's only
-// one instance's placement. Every mounted instance needs its own position
-// *and* rotation (target_podium turns independently to face power_podium),
-// so the node's baked position/rotation are reset to identity on load —
-// scale is left alone, it's shared — and callers supply position/rotation
-// themselves (data/podium.js) — see loadProp below.
+// rotation — the one instance it was authored at) into the glTF node, but
+// callers place this same source mesh at many independent positions *and*
+// rotations of their own (e.g. data/wallProps.js's panels, each turned to
+// face its own wall), so the node's baked position/rotation are reset to
+// identity on load — scale is left alone, it's shared — and callers supply
+// position/rotation themselves — see loadProp below.
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 

@@ -15,6 +15,13 @@
 import * as THREE from 'three'
 import { ATLAS, PODIUM_STAGE_COLORS as C, SIGN_TEXT } from '../data/podiumStage.js'
 
+// The prop is now placed twice in the hub (data/podiumStage.js
+// PODIUM_STAGE_HUB_TRANSFORM "POWER", PODIUM_STAGE_TARGET_TRANSFORM
+// "TARGETS"), each wanting different sign artwork baked into the same
+// canvas layout — so the atlas is keyed by sign text below rather than
+// being a single singleton, one canvas (and texture) per distinct string,
+// each still shared by every instance that asks for that same text.
+
 // Deterministic PRNG (mulberry32) — the grain must be identical across
 // reloads rather than reshuffling every session, and identical between the
 // runtime texture and an exported GLB's baked one.
@@ -164,7 +171,7 @@ function paintStar(g, cx, cy, r, points, inner, red, hot) {
   spike(r * 0.52, hot)
 }
 
-function paintSign(g, [x, y, w, h]) {
+function paintSign(g, [x, y, w, h], signText) {
   g.save()
   g.beginPath()
   g.rect(x, y, w, h)
@@ -216,11 +223,11 @@ function paintSign(g, [x, y, w, h]) {
   g.fillStyle = C.signInk
   g.shadowColor = 'rgba(255,235,190,0.75)'
   g.shadowBlur = 14
-  g.fillText(SIGN_TEXT, x + w / 2, cy + h * 0.01)
+  g.fillText(signText, x + w / 2, cy + h * 0.01)
   g.shadowBlur = 0
 
   const starR = h * 0.17
-  const textHalf = g.measureText(SIGN_TEXT).width / 2
+  const textHalf = g.measureText(signText).width / 2
   const starX = Math.min(w / 2 - m - starR * 1.6, textHalf + starR * 2.1)
   paintStar(g, x + w / 2 - starX, cy, starR, 6, 0.4, C.starRed, C.starHot)
   paintStar(g, x + w / 2 + starX, cy, starR, 6, 0.4, C.starRed, C.starHot)
@@ -229,9 +236,14 @@ function paintSign(g, [x, y, w, h]) {
 }
 
 // --- the atlas -----------------------------------------------------------
-let atlas = null
+// Keyed by sign text: every part of the atlas except the sign region paints
+// identically regardless of text, but re-running the whole paint per key is
+// simpler than splicing just the sign region into a shared canvas, and this
+// still only runs once per distinct string (data/podiumStage.js only defines
+// two: SIGN_TEXT "POWER" and TARGET_SIGN_TEXT "TARGETS").
+const atlases = new Map()
 
-function paintAtlas() {
+function paintAtlas(signText) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = ATLAS.size
   const g = canvas.getContext('2d')
@@ -245,24 +257,27 @@ function paintAtlas() {
   paintWood(g, r.walnut, C.walnutBase, C.walnutGrain, C.walnutLight, 0x2b71c3)
   paintWood(g, r.trim, C.trimBase, C.trimGrain, C.walnutBase, 0x7c3a19)
   paintMetal(g, r.metal, C.metalBase, C.metalGrain, 0x1de9a4)
-  paintSign(g, r.sign)
+  paintSign(g, r.sign, signText)
   return canvas
 }
 
-// One texture, built on first use and shared by every instance of the prop
-// (the same module-level singleton WallProp.jsx uses for its crack bitmap).
+// One texture per distinct sign text, built on first use and shared by every
+// instance of the prop asking for that text (the same module-level-singleton
+// idea WallProp.jsx uses for its crack bitmap, just keyed instead of solo).
 // Mipmapped and sRGB, anisotropy left at 1 per Tech.md §7.
-export function getPodiumStageAtlas() {
+export function getPodiumStageAtlas(signText = SIGN_TEXT) {
+  let atlas = atlases.get(signText)
   if (!atlas) {
-    atlas = new THREE.CanvasTexture(paintAtlas())
+    atlas = new THREE.CanvasTexture(paintAtlas(signText))
     atlas.colorSpace = THREE.SRGBColorSpace
     atlas.wrapS = atlas.wrapT = THREE.ClampToEdgeWrapping
     atlas.generateMipmaps = true
     atlas.minFilter = THREE.LinearMipmapLinearFilter
     atlas.magFilter = THREE.LinearFilter
     atlas.anisotropy = 1
-    atlas.name = 'podium_stage_atlas'
+    atlas.name = `podium_stage_atlas:${signText}`
     atlas.needsUpdate = true
+    atlases.set(signText, atlas)
   }
   return atlas
 }

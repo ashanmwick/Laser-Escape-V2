@@ -6,10 +6,11 @@
 // is meant to be hand-edited: it's the one place to adjust the route. It
 // currently runs a short stretch from the spawn point (hub.js SPAWN,
 // {0, 0, 3}) out toward the target podium / merchant shop cluster
-// (data/podium.js TARGET_PODIUM_POSITION ≈ [13.57, 0, 17.85], data/
-// merchantShop.js SHOP_TRANSFORM at [50, 0, 20]) — the landmarks nearest
-// spawn in the reference screenshots. Stops short of the podium's own stair
-// footprint (±11 x, ±7 z around it) so the road doesn't run into the steps.
+// (data/podiumStage.js PODIUM_STAGE_TARGET_POSITION ≈ [13.57, 0, 17.85],
+// data/merchantShop.js SHOP_TRANSFORM at [50, 0, 20]) — the landmarks
+// nearest spawn in the reference screenshots. Stops short of the podium's
+// own stair footprint (±9 x, ±7 z around it) so the road doesn't run into
+// the steps.
 export const ROAD_WAYPOINTS = [
   { x: -40, z: 0 },
   { x: 65, z: 5 },

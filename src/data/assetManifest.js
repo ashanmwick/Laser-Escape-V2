@@ -9,18 +9,17 @@
 // only make boot slower and flakier.
 import { TARGET_PROPS } from './targets.js'
 import { WALL_PROPS } from './wallProps.js'
-import { PODIUM_MODEL_URL } from './podium.js'
 import { HEX_POWER_PAD_MODEL_URL } from './hexPowerPad.js'
 import { GLOW_FLOOR_PANEL_MODEL_URL } from './glowFloorPanel.js'
 import { GRASS_BLOCK_MODEL_URL } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_MODEL_URL } from './grassBlockCubes.js'
 
 // Consumed by propModel.js loadProp() — scene-graph props, cached and cloned
-// per instance. power_podium appears once here but backs both podiums.
+// per instance. Both podiums are code-generated (components/PodiumStage.jsx)
+// rather than loaded glTFs, so neither appears here any more.
 export const PRELOAD_PROP_URLS = [
   ...TARGET_PROPS.map((t) => t.url),
   ...WALL_PROPS.map((w) => w.url),
-  PODIUM_MODEL_URL,
   HEX_POWER_PAD_MODEL_URL,
   GLOW_FLOOR_PANEL_MODEL_URL,
 ]
