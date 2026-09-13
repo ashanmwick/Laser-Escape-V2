@@ -41,8 +41,11 @@ export const SPECKLE = {
   alpha: 0.16, // dot darkness over the band colour
   // 8 dots per tile, so this is dots per metre / 8. Finer than ~16 dots per
   // metre and minification just averages the speckle back into flat colour at
-  // the distance the third-person camera actually sits.
-  tilesPerMetre: 2,
+  // the distance the third-person camera actually sits. Dirt and the grass cap
+  // scale independently (baked into each band's UVs) even though they share
+  // one texture, so tuning one never shifts the other.
+  dirtTilesPerMetre: 5,
+  grassTilesPerMetre: 2,
 }
 
 // Where the blocks stand. Empty for now — no blocks are placed.

@@ -3,6 +3,7 @@ import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_AABBS } from './grassBlockCubes.js'
 import { MERCHANT_SHOP_AABBS } from './merchantShop.js'
 import { PODIUM_STAGE_HUB_AABBS, PODIUM_STAGE_TARGET_AABBS } from './podiumStage.js'
+import { WOOD_CRATE_AABBS } from './woodCrate.js'
 import { WALL_AABBS } from './wallProps.js'
 
 // Hub geometry (Tech.md §4). Level layout is data, not a Blender file — Blender
@@ -15,10 +16,10 @@ export const SPAWN = { x: 0, y: 0, z: 3 }
 export const HUB_BOXES = []
 
 // Everything the kinematic collider scans (Tech.md §5.2). The building blocks,
-// both podiums and the merchant shop draw themselves, so their boxes join the
-// scan here but never HUB_BOXES — only props whose collider *is* their drawn
-// shape belong in that list. Each set is pre-merged/derived to keep the linear
-// scan short.
+// both podiums, the merchant shop and the crate stack draw themselves, so
+// their boxes join the scan here but never HUB_BOXES — only props whose
+// collider *is* their drawn shape belong in that list. Each set is
+// pre-merged/derived to keep the linear scan short.
 export const HUB_AABBS = [
   ...HUB_BOXES,
   ...BLOCK_AABBS,
@@ -27,5 +28,6 @@ export const HUB_AABBS = [
   ...PODIUM_STAGE_TARGET_AABBS,
   ...PODIUM_STAGE_HUB_AABBS,
   ...MERCHANT_SHOP_AABBS,
+  ...WOOD_CRATE_AABBS,
   ...WALL_AABBS,
 ]

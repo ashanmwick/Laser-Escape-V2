@@ -32,8 +32,11 @@ export const useGameStore = create((set, get) => ({
   wins: WINS_INITIAL,
   powerPerAction: POWER_PER_ACTION_INITIAL,
   destroyedWalls: new Set(),
-  ownedHexPads: new Set(), // indices into data/hexPowerPad.js's HEX_POWER_PAD_TIERS
-  equippedHexPad: null, // index of the currently equipped pad, or null
+  // Tier 0 (data/hexPowerPad.js HEX_POWER_PAD_TIERS[0]) has winsRequired: 0
+  // and powerPerAction 1 — same as POWER_PER_ACTION_INITIAL above — so it's
+  // the free starter tier, owned and equipped from the start.
+  ownedHexPads: new Set([0]), // indices into data/hexPowerPad.js's HEX_POWER_PAD_TIERS
+  equippedHexPad: 0, // index of the currently equipped pad, or null
 
   // One Action's worth of Power. Called only from systems/actionTracker.js,
   // never directly from a component. `multiplier` is the AFK target's "xN"

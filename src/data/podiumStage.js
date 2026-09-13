@@ -135,8 +135,7 @@ export const PODIUM_STAGE_TARGET_TRANSFORM = {
 }
 
 // World-space [x, y, z] of the target instance's own mount origin — the same
-// shape as the old TARGET_PODIUM_POSITION (data/podium.js, now retired), used
-// by systems/podiumHint.js for its proximity scan.
+// shape as the old TARGET_PODIUM_POSITION (data/podium.js, now retired).
 export const PODIUM_STAGE_TARGET_POSITION = [
   PODIUM_STAGE_TARGET_TRANSFORM.x,
   PODIUM_STAGE_TARGET_TRANSFORM.y,
@@ -762,20 +761,3 @@ export const PODIUM_STAGE_HUB_AABBS = PODIUM_STAGE_PROFILE.buildAabbs(PODIUM_STA
 export const PODIUM_STAGE_TARGET_AABBS = PODIUM_STAGE_TARGET_PROFILE.buildAabbs(
   PODIUM_STAGE_TARGET_TRANSFORM,
 )
-
-// --- target-instance proximity hint ---------------------------------------
-// Same coaching hint the old Blender target_podium carried (data/podium.js,
-// now retired) — systems/podiumHint.js shows this text while the player is
-// near the target instance's footprint and still on the ground, same shape
-// as the afk / hex-pad prompts. Range is sized to trigger a little outside
-// this instance's own footprint, not right on the steps.
-export const PODIUM_STAGE_HINT_RANGE = 15
-export const PODIUM_STAGE_TARGET_HINT_TEXT =
-  'Climb the side stairs using the Spacebar, then use the targets'
-
-// The hint is coaching for someone still on the ground working out how to
-// get up. Once the player has actually climbed onto a prop — feet inside its
-// XZ footprint and at least this far above the ground plane — the advice has
-// done its job, so systems/podiumHint.js drops the flag and the HUD hides
-// it. Well below the first tier's own world-space top on either instance.
-export const PODIUM_STAGE_ON_MIN_Y = 0.1

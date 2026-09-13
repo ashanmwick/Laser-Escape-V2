@@ -8,6 +8,7 @@ import Road from './components/Road.jsx'
 import Obstacles from './components/Obstacles.jsx'
 import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
+import WoodCrateStack from './components/WoodCrateStack.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
@@ -71,6 +72,7 @@ export default function App() {
           profile={PODIUM_STAGE_TARGET_PROFILE}
         />
         <MerchantShop />
+        <WoodCrateStack />
         <HexPowerPads />
         <Targets />
         <GlowFloorPanels />

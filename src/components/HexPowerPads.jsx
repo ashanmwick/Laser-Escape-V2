@@ -19,6 +19,7 @@ export default function HexPowerPads() {
           position={position}
           powerPerAction={HEX_POWER_PAD_TIERS[i].powerPerAction}
           winsRequired={HEX_POWER_PAD_TIERS[i].winsRequired}
+          beamColor={HEX_POWER_PAD_TIERS[i].beamColor}
         />
       ))}
     </>

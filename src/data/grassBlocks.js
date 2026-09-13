@@ -36,7 +36,70 @@
 // see the comment at its old spot — dropped because PodiumStage's hub
 // placement (data/podiumStage.js) ended up looming right behind it, not
 // because the .blend import itself changed.
-export const GRASS_BLOCK_MODEL_URL = '/models/grass_block_dirt.glb'
+//
+// The exported glTF (`grass_block_dirt.glb`) is now retired — same move as
+// data/podiumStage.js retiring power_podium/target_podium: this prop's shape
+// is two flat boxes under one baked-texture look, cheap enough to generate at
+// boot (Tech.md §7) instead of downloading, and generating it means the two
+// materials' tile density becomes a tunable number instead of being fixed
+// forever in a baked image. GRASS_BLOCK_SHAPE/COLORS/SPECKLE below replace the
+// glTF; components/GrassBlocks.jsx builds the geometry and canvas textures
+// from them. The .blend stays the visual reference, same as every other
+// code-generated prop — nothing here was re-authored, only re-measured off
+// the donor object's own bound box and the two baked PNGs it carried.
+//
+// Local space is unchanged from the retired glTF (Blender Z-up, pre-remap):
+// the dirt body is a box, footprint ±dirtHalf on X/Y, height dirtY0..dirtY1
+// on Z; the grass cap overhangs it slightly, ±capHalf, capY0..capY1 — capY0
+// equals dirtY1 so the two sit flush with no seam or gap. Read straight off
+// grass_block_dirt.046's own mesh (see LOCAL_MIN/LOCAL_MAX below, which this
+// agrees with: capHalf/capY1 match LOCAL_MAX, dirtY0 matches LOCAL_MIN.z).
+export const GRASS_BLOCK_SHAPE = {
+  dirtHalf: 0.5,
+  dirtY0: -0.5,
+  dirtY1: 0.3,
+  capHalf: 0.525,
+  capY0: 0.3,
+  capY1: 0.5,
+}
+
+// sRGB hex sampled directly off the retired glTF's two baked PNGs (base =
+// the dominant pixel, speckle = the next most common — both bakes are a flat
+// fill plus lighter irregular blobs, no gradient). Reproducing the drawing
+// procedurally instead of the pixels means these two tones are the only
+// thing tying the new look back to the old one — everything else
+// (blob shape/placement) is regenerated, not traced.
+export const GRASS_BLOCK_COLORS = {
+  dirtBase: '#906c4b',
+  dirtSpeckle: '#b18961',
+  grassBase: '#3cad30',
+  grassSpeckle: '#5dce4b',
+}
+
+// The canvas-noise texture each material samples (components/GrassBlocks.jsx
+// makeSpeckleTexture). Unlike BuildingBlocks.jsx's regular dot grid, the
+// source bake was irregular soft blobs, so this draws random ellipses rather
+// than a lattice. dirtTileCount/grassTileCount are genuinely independent
+// (separate textures, one per material — no shared-canvas constraint the way
+// BuildingBlocks.jsx's dirt bands and grass cap have) and are a plain repeat
+// count over each face's own 0..1 UV, not a per-metre density: this prop's
+// 160 instances span an 11x-86x range of scale, and the retired glTF's own
+// single non-tiling bake already stretched with instance size rather than
+// staying grain-locked, so matching that means tying the tile count to the
+// UV unit square, not world metres.
+export const GRASS_BLOCK_SPECKLE = {
+  canvasSize: 64,
+  blobCount: 25,
+  blobAlpha: 0.55,
+  blobMinRadius: 1,
+  blobMaxRadius: 3,
+  // Independent per-axis repeat (x = around the box's horizontal faces / X-Z,
+  // y = up the box's height / Y) — texture.repeat.set(x, y) in
+  // GrassBlocks.jsx's makeSpeckleTexture, so a face's tiling can be denser
+  // one way than the other instead of always squares.
+  dirtTileCount: { x: 12, y: 8 },
+  grassTileCount: { x: 8, y: 1 },
+}
 
 // Raw Blender transform per object, read directly off grass_block_dirt.001
 // through .161 (skipping .046, the donor): location, yaw (rotation around

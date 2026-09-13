@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { afkState } from '../../systems/afk.js'
 import { hexPowerPadState } from '../../systems/hexPowerPad.js'
-import { podiumHintState } from '../../systems/podiumHint.js'
 import { settings } from '../../systems/settingsState.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth } from '../../data/progression.js'
@@ -85,7 +84,6 @@ export default function Hud() {
   useSettings()
   const afkPromptRef = useRef(null)
   const hexPadPromptRef = useRef(null)
-  const podiumHintRef = useRef(null)
 
   // afkState (systems/afk.js) changes at human speed — near a target, locked
   // on, or neither — so a throttled textContent poll keeps this out of
@@ -142,25 +140,6 @@ export default function Hud() {
     return () => clearInterval(id)
   }, [])
 
-  // Same throttled-poll pattern. Coaching hint shown while the player is near
-  // a podium and still on the ground (systems/podiumHint.js picks the message
-  // per prop). Sits higher than the afk / hex-pad prompts so it never
-  // overlaps one if both are relevant at once.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const el = podiumHintRef.current
-      if (!el) return
-      const text = podiumHintState.text
-      if (text) {
-        if (el.textContent !== text) el.textContent = text
-        el.style.display = ''
-      } else {
-        el.style.display = 'none'
-      }
-    }, 100)
-    return () => clearInterval(id)
-  }, [])
-
   // background_transparency (0.2–1.0, default 0.9) scales the panel backing
   // rather than replacing it, so the default lands on the 0.4 alpha the HUD was
   // designed with instead of a hard black slab.
@@ -184,12 +163,6 @@ export default function Hud() {
       <div
         ref={hexPadPromptRef}
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
-        style={{ display: 'none' }}
-      />
-
-      <div
-        ref={podiumHintRef}
-        className="pointer-events-none absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
         style={{ display: 'none' }}
       />
 

@@ -22,13 +22,13 @@ import {
 // its height and a scaled instance carries its speckle with it.
 const scratchColor = new THREE.Color()
 
-function quad(o, corners, uvAxes, color) {
+function quad(o, corners, uvAxes, color, uvScale) {
   const base = o.positions.length / 3
   scratchColor.setStyle(color) // sRGB hex -> the renderer's linear working space
   const [uAxis, vAxis] = uvAxes
   for (const c of corners) {
     o.positions.push(c[0], c[1], c[2])
-    o.uvs.push(c[uAxis], c[vAxis])
+    o.uvs.push(c[uAxis] * uvScale, c[vAxis] * uvScale)
     o.colors.push(scratchColor.r, scratchColor.g, scratchColor.b)
   }
   o.indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
@@ -38,15 +38,18 @@ const X = 0
 const Y = 1
 const Z = 2
 
-function box(o, half, y0, y1, top, side, bottom) {
+// uvScale bakes the speckle tile density into the UVs themselves (rather than
+// the shared texture's `repeat`), so dirt bands and the grass cap can tile at
+// different rates without needing separate textures or materials.
+function box(o, half, y0, y1, top, side, bottom, uvScale) {
   const a = -half
   const b = half
-  quad(o, [[a, y1, b], [b, y1, b], [b, y1, a], [a, y1, a]], [X, Z], top) // +Y
-  quad(o, [[a, y0, a], [b, y0, a], [b, y0, b], [a, y0, b]], [X, Z], bottom) // -Y
-  quad(o, [[a, y0, b], [b, y0, b], [b, y1, b], [a, y1, b]], [X, Y], side) // +Z
-  quad(o, [[b, y0, a], [a, y0, a], [a, y1, a], [b, y1, a]], [X, Y], side) // -Z
-  quad(o, [[b, y0, b], [b, y0, a], [b, y1, a], [b, y1, b]], [Z, Y], side) // +X
-  quad(o, [[a, y0, a], [a, y0, b], [a, y1, b], [a, y1, a]], [Z, Y], side) // -X
+  quad(o, [[a, y1, b], [b, y1, b], [b, y1, a], [a, y1, a]], [X, Z], top, uvScale) // +Y
+  quad(o, [[a, y0, a], [b, y0, a], [b, y0, b], [a, y0, b]], [X, Z], bottom, uvScale) // -Y
+  quad(o, [[a, y0, b], [b, y0, b], [b, y1, b], [a, y1, b]], [X, Y], side, uvScale) // +Z
+  quad(o, [[b, y0, a], [a, y0, a], [a, y1, a], [b, y1, a]], [X, Y], side, uvScale) // -Z
+  quad(o, [[b, y0, b], [b, y0, a], [b, y1, a], [b, y1, b]], [Z, Y], side, uvScale) // +X
+  quad(o, [[a, y0, a], [a, y0, b], [a, y1, b], [a, y1, a]], [Z, Y], side, uvScale) // -X
 }
 
 function makeBlockGeometry() {
@@ -56,7 +59,16 @@ function makeBlockGeometry() {
   // to back inside the solid, so they are backface-culled rather than z-fighting
   // — and no interior face is ever drawn.
   for (const band of DIRT_BANDS) {
-    box(o, BLOCK_SIZE / 2, band.y0, band.y1, band.color, band.color, band.color)
+    box(
+      o,
+      BLOCK_SIZE / 2,
+      band.y0,
+      band.y1,
+      band.color,
+      band.color,
+      band.color,
+      SPECKLE.dirtTilesPerMetre,
+    )
   }
   box(
     o,
@@ -66,6 +78,7 @@ function makeBlockGeometry() {
     GRASS_CAP.top,
     GRASS_CAP.side,
     GRASS_CAP.bottom,
+    SPECKLE.grassTilesPerMetre,
   )
 
   const geo = new THREE.BufferGeometry()
@@ -97,8 +110,9 @@ function makeSpeckleTexture() {
   }
 
   const tex = new THREE.CanvasTexture(canvas)
+  // Tile density is baked into each band's UVs (see box()/quad() in
+  // makeBlockGeometry), so this texture itself just wraps at its native scale.
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(SPECKLE.tilesPerMetre, SPECKLE.tilesPerMetre)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 1 // Tech.md §7
   // Crisp texels up close, mipmapped on the way out — the pixel grid is the
