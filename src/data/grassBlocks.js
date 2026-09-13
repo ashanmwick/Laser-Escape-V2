@@ -31,6 +31,11 @@
 //
 // Kept as exact as-authored transforms (no zFit) per the import
 // instruction — same precedent as data/wallProps.js and data/glowFloorPanel.js.
+//
+// One exception: grass_block_dirt.010 (band one) is no longer in RAW below —
+// see the comment at its old spot — dropped because PodiumStage's hub
+// placement (data/podiumStage.js) ended up looming right behind it, not
+// because the .blend import itself changed.
 export const GRASS_BLOCK_MODEL_URL = '/models/grass_block_dirt.glb'
 
 // Raw Blender transform per object, read directly off grass_block_dirt.001
@@ -49,7 +54,10 @@ const RAW = [
   { location: [71.179611, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [71.179611, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [48.558731, -32.290203, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
-  { location: [15.991965, 28.380663, 4.706303], yaw: 0, scale: [20.987415, 8.570149, 8.539035] },
+  // grass_block_dirt.010 (was here, location [15.991965, 28.380663, 4.706303])
+  // removed: at PodiumStage's current scale/placement (data/podiumStage.js
+  // PODIUM_STAGE_HUB_TRANSFORM) this mound sat only ~0.37m behind the
+  // stage's own back edge, looming directly over it.
   { location: [35.709614, 24.980011, 3.415384], yaw: 0, scale: [17.6152, 7.193115, 7.167] },
   { location: [102.927322, 33.746742, 16.882303], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
   { location: [15.601585, -32.141685, 4.789442], yaw: 0, scale: [22.491165, 10.001233, 9.964924] },

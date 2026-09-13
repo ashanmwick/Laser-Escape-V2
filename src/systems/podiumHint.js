@@ -3,14 +3,10 @@
 // proximity-scan shape of systems/afk.js and systems/hexPowerPad.js, but
 // carries no interaction — it only publishes the hint text the HUD should
 // show (components/hud/Hud.jsx polls podiumHintState.text) while the player
-// is near a podium and still on the ground. power_podium and target_podium
-// each get their own message; once the player climbs onto a prop the hint
-// has served its purpose and the text clears.
+// is near the podium and still on the ground. Once the player climbs onto
+// the prop the hint has served its purpose and the text clears.
 import { player } from './playerState.js'
 import {
-  POWER_PODIUM_POSITION,
-  POWER_PODIUM_AABBS,
-  POWER_PODIUM_HINT_TEXT,
   TARGET_PODIUM_POSITION,
   TARGET_PODIUM_AABBS,
   TARGET_PODIUM_HINT_TEXT,
@@ -37,7 +33,6 @@ function footprintOf(aabbs) {
 
 // One entry per podium instance, built once at module load.
 const PODIUMS = [
-  { pos: POWER_PODIUM_POSITION, footprint: footprintOf(POWER_PODIUM_AABBS), text: POWER_PODIUM_HINT_TEXT },
   { pos: TARGET_PODIUM_POSITION, footprint: footprintOf(TARGET_PODIUM_AABBS), text: TARGET_PODIUM_HINT_TEXT },
 ]
 

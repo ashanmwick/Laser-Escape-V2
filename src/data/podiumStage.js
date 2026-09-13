@@ -47,38 +47,41 @@ export const PODIUM_STAGE_TRANSFORM = {
   y: 0,
   z: 0,
   yaw: 0,
-  scale: 1,
+  scale: 0.8,
 }
 
-// The hub placement: just west of power_podium's footprint (data/podium.js
-// POWER_PODIUM_AABBS spans world x 2.47..24.67, z -22.95..-8.71), aligned on
-// that podium's own z-centre, facing yaw 0 (+Z) so the sign reads toward the
-// road/spawn a player arrives from (data/road.js, data/hub.js SPAWN).
+// The hub placement: dead centre of the now-retired power_podium's own
+// footprint (data/podium.js's former POWER_PODIUM_TRANSFORM: x =
+// 13.571624755859375, world z = -15.831555366516113), facing yaw 0 (+Z) so
+// the sign reads toward the road/spawn a player arrives from (data/road.js,
+// data/hub.js SPAWN).
 //
-// `scale` moved from 1 to 8, so `x` is re-derived from the current footprint
-// rather than hand-picked: a 2 m gap off power_podium's west edge
-// (x = 2.4728164970874786 - 2 - TOTAL_WIDTH/2*scale). TIER_STEP_COUNTS (the
-// step count) can change freely without touching this block — TOTAL_WIDTH
-// and TOTAL_DEPTH no longer move with it (see the step-profile section
-// below) — but re-run the overlap check (build PODIUM_STAGE_HUB_AABBS, test
-// its enclosing box against every import in data/hub.js) after changing
-// `scale`, TIER_RISES, TIER_DEPTHS, TIER_WIDTHS, or FOOTPRINT.flankWidth,
-// since those still resize it.
+// `z` used to be nudged +2.5 m off power_podium's own z (to
+// -13.331555366516113): at `scale` 5.5 the object's south edge (z, since
+// yaw 0 runs the depth along world -Z here) was deep enough — TOTAL_DEPTH*
+// scale, see the step-profile section below — to clip a grass mound
+// (data/grassBlocks.js, grass_block_dirt.010) that sat comfortably clear of
+// power_podium's own, much shallower footprint. That mound has since been
+// removed from grassBlocks.js (it ended up looming right behind the bigger
+// stage regardless), so the nudge is gone too and this sits at
+// power_podium's exact old z. Re-check against every import in data/hub.js
+// (build PODIUM_STAGE_HUB_AABBS at the candidate z and test its boxes) after
+// changing `scale`, TIER_RISES, TIER_DEPTHS, TIER_WIDTHS, or
+// FOOTPRINT.flankWidth, since those still resize the footprint — the next
+// nearest grass kerb block is only ~5.7 m further back at this z.
 //
 // `scale` is 5.5, not 7: adding a 4th tier grew TOTAL_DEPTH from ~2.59 m to
-// ~4.32 m, and at scale 7 the object's now-much-deeper south edge (z, since
-// yaw 0 runs the depth along world -Z here) ran into a grass patch south of
-// power_podium (data/grassBlocks.js) that the shallower 3-tier version
-// cleared comfortably. 5.5 is the largest scale that still clears every
-// neighbouring AABB set (power_podium, target_podium, the grass blocks/
-// cubes, the walls, the merchant shop) with the same 2 m gap off
-// power_podium's west edge.
+// ~3.7 m, and at scale 7 the object's south edge ran into that same grass
+// mound by more than the old z-nudge could clear. 5.5 is the largest scale
+// that cleared every neighbouring AABB set (target_podium, the grass blocks/
+// cubes, the walls, the merchant shop) with only that nudge; unchanged now
+// that the mound itself is gone.
 export const PODIUM_STAGE_HUB_TRANSFORM = {
-  x: -8.739683502912522,
+  x: 13.571624755859375,
   y: 0,
-  z: -15.831555366516113,
+  z: -20,
   yaw: 0,
-  scale: 5.5,
+  scale: 6.5,
 }
 
 // --- step profile --------------------------------------------------------
@@ -127,7 +130,7 @@ export const TIER_STEP_COUNTS = [1, 6, 6, 6] // steps in each tier's own group
 // own tier is (see flankSpan below) — same span as the flank always is, just
 // anchored to that tier's own edge instead of one shared width, so a
 // narrower or wider tier never leaves a gap or overhang next to its steps.
-export const TIER_WIDTHS = [2.25, 2.25, 2.25, 2.25]
+export const TIER_WIDTHS = [3, 3, 3, 3]
 
 // Tread is uniform WITHIN a tier's own group of steps EXCEPT for the last
 // step, the landing a climber arrives at: it reads as a landing (a wider
@@ -160,7 +163,7 @@ export const LANDING_FACTOR = 1.5
 // topmost tier's own depth, so its flank landing step (and the flank's own
 // STAIR_DEPTH) reaches exactly as far back as the whole object does, with no
 // separate platform strip needed to make up the difference. 0.18 + 0.4 = 0.58.
-export const TIER_DEPTHS = [0.4, 1.2, 1.2, 0.9]
+export const TIER_DEPTHS = [0.6, 0.8, 0.8, 0.9]
 export const TIERS = TIER_RISES.length
 
 // Cumulative depth from the front, through the end of tier k — the per-tier
@@ -492,32 +495,6 @@ export const TRIM = {
   nub: { width: 0.26, ribs: 3, ribHeight: 0.045, proud: 0.05, onTiers: [1, 2, 3] },
 }
 
-// --- sign ----------------------------------------------------------------
-// Backboard on two posts at the rear centre of the top platform, face square
-// to +Z. The glowing neon frame, the word POWER and the two star bursts are
-// all baked into the sign region of the texture atlas and drawn unlit
-// (Tech.md §7: no postprocessing — "glow" is an unlit bright surface, the
-// same trick the laser beam uses), so there is no alpha and no extra
-// geometry for the glow.
-export const SIGN = {
-  postHeight: 0.5,
-  postSection: 0.055,
-  // Board spans the same width as the tier it actually stands on — the
-  // topmost one, TIER_WIDTHS[TIERS - 1] (board and posts scale with that,
-  // not a separate literal, so widening/narrowing that tier widens/narrows
-  // the sign to match instead of leaving it mismatched with the platform it
-  // sits over).
-  boardWidth: TIER_WIDTHS[TIERS - 1],
-  postSpread: TIER_WIDTHS[TIERS - 1] / 3, // +/- X of the two posts
-  boardHeight: 0.5,
-  boardThickness: 0.06,
-  faceInset: 0.004, // the unlit quad, proud of the board face
-  capHeight: 0.04, // brushed-metal cap along the board's top edge
-  capOverhang: 0.03,
-  z: BACK_Z + 0.2, // centre of the board in Z, over the back platform
-}
-export const SIGN_TEXT = 'POWER'
-
 // --- material / texture --------------------------------------------------
 // ONE 1024^2 canvas atlas for the whole prop (systems/podiumStageAtlas.js),
 // which is what keeps the model at two draw calls: the wood (Lambert, lit)
@@ -560,6 +537,41 @@ export const PODIUM_STAGE_COLORS = {
 // The wood mesh is lit (Lambert); the sign face is unlit (Basic) and must not
 // be tone-mapped, or the "neon" reads as dull cream instead of glowing.
 export const SIGN_FACE_TONE_MAPPED = false
+
+// --- sign ----------------------------------------------------------------
+// Backboard on two posts at the rear centre of the top platform, face square
+// to +Z. The glowing neon frame, the word POWER and the two star bursts are
+// all baked into the sign region of the texture atlas and drawn unlit
+// (Tech.md §7: no postprocessing — "glow" is an unlit bright surface, the
+// same trick the laser beam uses), so there is no alpha and no extra
+// geometry for the glow.
+//
+// The sign artwork is baked into a fixed 768x256 px region — a 3:1 w:h —
+// so boardHeight is derived from that ratio (ATLAS.regions.sign, not a
+// literal) rather than fixed at a constant: boardWidth tracks whatever width
+// the topmost tier ends up (see below), and stretching that same 3:1 image
+// over a wider-but-not-taller board is what squashed the neon frame and
+// warped the two circular star bursts into ellipses once TIER_WIDTHS grew.
+// A wider tier now gets a taller sign at the same undistorted shape instead.
+const SIGN_ASPECT = ATLAS.regions.sign[2] / ATLAS.regions.sign[3]
+export const SIGN = {
+  postHeight: 0.5,
+  postSection: 0.055,
+  // Board spans the same width as the tier it actually stands on — the
+  // topmost one, TIER_WIDTHS[TIERS - 1] (board and posts scale with that,
+  // not a separate literal, so widening/narrowing that tier widens/narrows
+  // the sign to match instead of leaving it mismatched with the platform it
+  // sits over).
+  boardWidth: TIER_WIDTHS[TIERS - 1],
+  postSpread: TIER_WIDTHS[TIERS - 1] / 3, // +/- X of the two posts
+  boardHeight: TIER_WIDTHS[TIERS - 1] / SIGN_ASPECT,
+  boardThickness: 0.06,
+  faceInset: 0.004, // the unlit quad, proud of the board face
+  capHeight: 0.04, // brushed-metal cap along the board's top edge
+  capOverhang: 0.03,
+  z: BACK_Z + 0.2, // centre of the board in Z, over the back platform
+}
+export const SIGN_TEXT = 'POWER'
 
 // --- collider ------------------------------------------------------------
 // The stage is walked ON, not around, so the collider is the real stepped
@@ -624,5 +636,5 @@ export function buildPodiumStageAabbs(t = PODIUM_STAGE_TRANSFORM) {
 
 export const PODIUM_STAGE_AABBS = buildPodiumStageAabbs()
 // The collider for the actual hub placement — data/hub.js spreads this into
-// HUB_AABBS, the same way POWER_PODIUM_AABBS and MERCHANT_SHOP_AABBS are.
+// HUB_AABBS, the same way TARGET_PODIUM_AABBS and MERCHANT_SHOP_AABBS are.
 export const PODIUM_STAGE_HUB_AABBS = buildPodiumStageAabbs(PODIUM_STAGE_HUB_TRANSFORM)

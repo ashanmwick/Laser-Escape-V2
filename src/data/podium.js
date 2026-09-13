@@ -1,9 +1,9 @@
-// Data for the `power_podium` prop and its duplicate `target_podium`
-// (Tech.md §4: every tunable number lives here, never in a component).
-// Both objects share one Blender mesh/material set (`data_name` power_podium
-// in the .blend) and differ only in placement, so this file holds one local
-// (object-space) geometry description and generates each instance's world
-// AABBs — and mount position/rotation — from its own transform, rather than
+// Data for the `target_podium` prop (Tech.md §4: every tunable number lives
+// here, never in a component). It reuses the Blender mesh/material set
+// (`data_name` power_podium in the .blend, now otherwise retired in favour
+// of the code-generated PodiumStage prop), so this file holds one local
+// (object-space) geometry description and generates the instance's world
+// AABBs — and mount position/rotation — from its transform, rather than
 // authoring the box list (or the model) twice.
 //
 // The prop is a tiered display riser: a flight of 12 steps up EACH side
@@ -20,25 +20,15 @@
 // height, matching the model exactly.
 export const PODIUM_MODEL_URL = '/models/power_podium.glb'
 
-// Each object's transform: location.x/y, +Z height already corrected to sit
+// The object's transform: location.x/y, +Z height already corrected to sit
 // flush on this scene's ground (zFit), a `yaw` — rotation around the up
-// axis, radians, independent of position — and uniform scale.
-// power_podium's authored Z sits 1.5014272928237915 below the scene's ground
-// reference, which would bury its entire first flight under the ground
-// plane; target_podium's does not. Both end up flush at world Y=0, which is
-// the design intent for a floor-standing prop, not a coincidence.
-export const POWER_PODIUM_TRANSFORM = {
-  x: 13.571624755859375,
-  y: 15.831555366516113,
-  zFit: 0,
-  yaw: 0,
-  scale: 1.1043590307235718,
-}
+// axis, radians, independent of position — and uniform scale. It ends up
+// flush at world Y=0, the design intent for a floor-standing prop.
 export const TARGET_PODIUM_TRANSFORM = {
   x: 13.571624755859375,
   y: -17.854000091552734,
   zFit: 0,
-  yaw: 3.1193714141845703, // ~178.7°: turns its stairs to face power_podium's
+  yaw: 3.1193714141845703, // ~178.7°: turns its stairs to face the old power_podium spot
   scale: 1.1043599843978882,
 }
 
@@ -61,24 +51,22 @@ function toThree(t, lx, ly, lz) {
   return [t.x + t.scale * rx, t.zFit + t.scale * lz, -(t.y + t.scale * ry)]
 }
 
-// The position to set on each instance's own mount group (PodiumProp.jsx).
+// The position to set on the instance's own mount group (PodiumProp.jsx).
 // PodiumProp also applies `t.yaw` as the group's own rotation-y, so the
 // loaded model (whose baked placement propModel.js strips to identity on
 // load) ends up exactly here, turned exactly this far.
-export const POWER_PODIUM_POSITION = toThree(POWER_PODIUM_TRANSFORM, 0, 0, 0)
 export const TARGET_PODIUM_POSITION = toThree(TARGET_PODIUM_TRANSFORM, 0, 0, 0)
 
-// Proximity coaching hint for either podium: when the player comes within
+// Proximity coaching hint for the podium: when the player comes within
 // PODIUM_HINT_RANGE metres (measured in the ground plane from the mount
-// origin) of a prop, the HUD shows that prop's *_HINT_TEXT — the centre
+// origin) of the prop, the HUD shows its hint text — the centre
 // tiers are sheer risers, so a first-time visitor needs telling that the
 // side staircases (climbed with Space) are the only way up.
-// systems/podiumHint.js scans both instances; components/hud/Hud.jsx polls
+// systems/podiumHint.js scans the instance; components/hud/Hud.jsx polls
 // and draws it, same shape as the afk / hex-pad prompts. Range is sized to
 // trigger a little outside the ~11m x ~7m footprint half-extents, not right
 // on the steps.
 export const PODIUM_HINT_RANGE = 15
-export const POWER_PODIUM_HINT_TEXT = 'Climb the side stairs using the Spacebar'
 export const TARGET_PODIUM_HINT_TEXT =
   'Climb the side stairs using the Spacebar, then use the targets'
 
@@ -122,9 +110,8 @@ const CENTRE_PROFILE = [
 ]
 
 // The enclosing world AABB of a local box after rotate+scale+translate is
-// applied to all 8 corners — exact for an unrotated instance (power_podium)
-// and, for a turn this close to 180° like target_podium's, only
-// fractionally looser than the box itself.
+// applied to all 8 corners — for a turn this close to 180° like
+// target_podium's, only fractionally looser than the box itself.
 function box(t, x0, x1, y0, y1, z1) {
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]
@@ -157,7 +144,6 @@ export function buildPodiumAabbs(t) {
   return out
 }
 
-export const POWER_PODIUM_AABBS = buildPodiumAabbs(POWER_PODIUM_TRANSFORM)
 export const TARGET_PODIUM_AABBS = buildPodiumAabbs(TARGET_PODIUM_TRANSFORM)
 
 // In-world text for the blank sign panel baked into the model — primitive 3,
@@ -172,19 +158,18 @@ export const TARGET_PODIUM_AABBS = buildPodiumAabbs(TARGET_PODIUM_TRANSFORM)
 // are pre-multiplied by it here.
 const SIGN_SCALE = 1.1043590307235718
 export const PODIUM_SIGN = {
-  // Local offset from a podium mount-group origin to the text anchor:
+  // Local offset from the podium mount-group origin to the text anchor:
   // sign-face centre * SIGN_SCALE, nudged +0.05 off the panel along its
   // normal so the glyphs don't z-fight the neon frame.
   localPos: [0, 9.05 * SIGN_SCALE, -5.555 * SIGN_SCALE + 0.05],
-  // Text yaw relative to its podium. 0 => faces local +Z. If it renders
+  // Text yaw relative to the podium. 0 => faces local +Z. If it renders
   // facing INTO the podium (or mirrored), set Math.PI and negate the +0.05
   // in localPos above.
   faceYaw: 0,
-  fontSize: 1.7, // ~2.8m face height; one line for POWER / TARGETS
+  fontSize: 1.7, // ~2.8m face height; one line for TARGETS
   maxWidth: 9, // ~10.3m face width, less a margin
   color: '#ffef9f',
   outlineWidth: 0.06,
   outlineColor: '#3a1d05',
 }
-export const POWER_PODIUM_SIGN_TEXT = 'POWER'
 export const TARGET_PODIUM_SIGN_TEXT = 'TARGETS'

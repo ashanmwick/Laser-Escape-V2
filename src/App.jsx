@@ -6,7 +6,6 @@ import GrassBlockCubes from './components/GrassBlockCubes.jsx'
 import Ground from './components/Ground.jsx'
 import Road from './components/Road.jsx'
 import Obstacles from './components/Obstacles.jsx'
-import PowerPodium from './components/PowerPodium.jsx'
 import TargetPodium from './components/TargetPodium.jsx'
 import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
@@ -61,7 +60,6 @@ export default function App() {
         <GrassBlocks />
         <GrassBlockCubes />
         <Obstacles />
-        <PowerPodium />
         <TargetPodium />
         <PodiumStage transform={PODIUM_STAGE_HUB_TRANSFORM} />
         <MerchantShop />

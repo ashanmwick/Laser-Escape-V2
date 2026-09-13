@@ -3,13 +3,12 @@ import { loadProp, disposeProp } from '../systems/propModel.js'
 import { PODIUM_MODEL_URL } from '../data/podium.js'
 
 // Mounts one instance of the Blender-authored `power_podium` prop (Tech.md
-// §6) at `position`, turned `rotationY` radians around the up axis —
-// power_podium and target_podium both use this, since they're the same
-// mesh/material set placed (and, for target_podium, turned) independently.
+// §6) at `position`, turned `rotationY` radians around the up axis. Used by
+// target_podium (see data/podium.js); the standalone power_podium instance
+// has since been retired in favour of the code-generated PodiumStage prop.
 // propModel.js's loader caches by url and strips each load's baked
-// position/rotation, so a second instance both clones the first's
-// geometry/materials (rather than re-fetching/re-converting the glTF) and
-// can be placed and turned on its own.
+// position/rotation, so an instance can be placed and turned independently
+// of the mesh's own authored transform.
 export default function PodiumProp({ position, rotationY = 0 }) {
   const groupRef = useRef(null)
 
