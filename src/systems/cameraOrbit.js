@@ -20,6 +20,16 @@ const FOLLOW_LERP = 12 // higher = snappier follow
 // Scratch, hoisted to module scope — zero allocation per frame (Tech.md §7).
 const target = { x: 0, y: 0, z: 0 }
 
+// Smoothed separately from target.x/z: playerMovement's stair step-up assist
+// (systems/playerMovement.js STEP_HEIGHT) snaps player.position.y in discrete
+// jumps as the player crosses each tread, and lookAt() has no lerp of its own
+// the way camera.position does below — aiming it straight at the player's raw
+// Y each frame made the camera visibly judder climbing stairs. Easing this
+// with the same time constant as the position follow removes that without
+// making the camera feel any less responsive.
+let eyeY = 0
+let eyeYReady = false
+
 // Multiplier over the base sensitivities, driven by the portal's
 // camera_sensitivity setting (0.1–5.0). 1 leaves the tuned feel untouched.
 let sensitivity = 1
@@ -46,9 +56,19 @@ export function update(camera, dt) {
   if (state.distance < MIN_DIST) state.distance = MIN_DIST
   if (state.distance > MAX_DIST) state.distance = MAX_DIST
 
-  // Aim at the player's upper body.
+  // Aim at the player's upper body. Y is eased (see eyeY above) rather than
+  // read straight off player.position.y, which now moves in discrete
+  // per-step jumps on stairs.
+  const t = dt > 0 ? 1 - Math.exp(-FOLLOW_LERP * dt) : 1
+  const rawEyeY = player.position.y + player.dims.height * 0.6
+  if (!eyeYReady) {
+    eyeY = rawEyeY
+    eyeYReady = true
+  } else {
+    eyeY += (rawEyeY - eyeY) * t
+  }
   target.x = player.position.x
-  target.y = player.position.y + player.dims.height * 0.6
+  target.y = eyeY
   target.z = player.position.z
 
   const cp = Math.cos(state.pitch)
@@ -57,7 +77,6 @@ export function update(camera, dt) {
   const desiredZ = target.z + Math.cos(state.yaw) * cp * state.distance
 
   // Frame-rate independent smoothing; snap on the first frame / after a pause.
-  const t = dt > 0 ? 1 - Math.exp(-FOLLOW_LERP * dt) : 1
   camera.position.x += (desiredX - camera.position.x) * t
   camera.position.y += (desiredY - camera.position.y) * t
   camera.position.z += (desiredZ - camera.position.z) * t

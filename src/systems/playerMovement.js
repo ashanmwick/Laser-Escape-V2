@@ -11,6 +11,14 @@ const GRAVITY = -22 // m/s^2
 const JUMP_SPEED = 7.5 // m/s
 const GROUND_Y = 0 // flat ground plane height
 
+// Max ledge height a walking player steps onto smoothly instead of being
+// blocked like a wall (the standard "step offset" a kinematic controller
+// needs for any staircase built from stacked AABBs, e.g. data/podiumStage.js
+// — its risers run up to ~0.367m once placed at the hub's 5.5x scale). Well
+// clear of that with margin, but still far short of anything meant to block
+// (walls, props), so it only ever smooths genuine steps.
+const STEP_HEIGHT = 0.45
+
 // The capsule is treated as an AABB for the static scan: a box of half-width
 // the live player.dims radius on X/Z, spanning [y, y + height].
 function overlaps(p, b) {
@@ -31,11 +39,25 @@ function approach(v, key, target, maxDelta) {
   else v[key] = target
 }
 
+// Instead of blocking horizontal movement into a low ledge, stand the player
+// on top of it — true for any box (a stair tread, a curb), not just
+// podium_stage's. Only the rise above the CURRENT feet position counts, so a
+// tall box already climbed above (feet now higher than its top) never
+// matches here; overlaps() already filtered those out.
+function tryStepUp(p, b) {
+  const rise = b.max.y - p.y
+  if (rise <= 0 || rise > STEP_HEIGHT) return false
+  p.y = b.max.y
+  if (player.velocity.y < 0) player.velocity.y = 0
+  return true
+}
+
 function resolveX(aabbs) {
   const p = player.position
   for (let i = 0; i < aabbs.length; i++) {
     const b = aabbs[i]
     if (!overlaps(p, b)) continue
+    if (tryStepUp(p, b)) continue
     const c = (b.min.x + b.max.x) * 0.5
     p.x = p.x < c ? b.min.x - player.dims.radius : b.max.x + player.dims.radius
     player.velocity.x = 0
@@ -47,6 +69,7 @@ function resolveZ(aabbs) {
   for (let i = 0; i < aabbs.length; i++) {
     const b = aabbs[i]
     if (!overlaps(p, b)) continue
+    if (tryStepUp(p, b)) continue
     const c = (b.min.z + b.max.z) * 0.5
     p.z = p.z < c ? b.min.z - player.dims.radius : b.max.z + player.dims.radius
     player.velocity.z = 0

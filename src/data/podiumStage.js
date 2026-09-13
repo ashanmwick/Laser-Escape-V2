@@ -160,7 +160,7 @@ export const LANDING_FACTOR = 1.5
 // topmost tier's own depth, so its flank landing step (and the flank's own
 // STAIR_DEPTH) reaches exactly as far back as the whole object does, with no
 // separate platform strip needed to make up the difference. 0.18 + 0.4 = 0.58.
-export const TIER_DEPTHS = [0.6, 1.2, 1.2, 0.9]
+export const TIER_DEPTHS = [0.4, 1.2, 1.2, 0.9]
 export const TIERS = TIER_RISES.length
 
 // Cumulative depth from the front, through the end of tier k — the per-tier
@@ -214,6 +214,17 @@ const TIER1_LANDING_WIDEN_MULT = 4
 // own.
 const TIER2_LANDING_STEP = TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1] + TIER_STEP_COUNTS[2] - 1 // = 12
 const TIER2_LANDING_WIDEN_MULT = 4
+
+// Step 18 (tier 3's own landing, and the very last step overall) — same
+// mechanism again: widening it extends ITS own front edge forward, carrying
+// every step in front of it (0 through 17 — every earlier tier and their own
+// widened landings) forward with it, each keeping its own size. Since tier 3
+// is the topmost tier, there's nothing left behind step 18 for this to
+// disturb (just the sign/back platform, which sit relative to BACK_Z, not
+// this step). All three landing widens stack the same way.
+const TIER3_LANDING_STEP =
+  TIER_STEP_COUNTS[0] + TIER_STEP_COUNTS[1] + TIER_STEP_COUNTS[2] + TIER_STEP_COUNTS[3] - 1 // = 18
+const TIER3_LANDING_WIDEN_MULT = 5
 
 // Cumulative height at the TOP of tier k (i.e. tierSpan(k).top) —
 // precompute once since every tier above the first depends on every one
@@ -356,6 +367,7 @@ function treadOf(i) {
 const STEP_DEPTH_MULT = {
   [TIER1_LANDING_STEP]: TIER1_LANDING_WIDEN_MULT,
   [TIER2_LANDING_STEP]: TIER2_LANDING_WIDEN_MULT,
+  [TIER3_LANDING_STEP]: TIER3_LANDING_WIDEN_MULT,
 }
 
 // A single multiplier applied to EVERY step at once — still without ever
@@ -373,7 +385,7 @@ const STEP_DEPTH_MULT = {
 // physically made each individual stair deeper by that ratio — while every
 // tier's own centre ledge and TOTAL_DEPTH/FRONT_Z/BACK_Z stay completely
 // untouched, same as any single-step override. 1 = no change.
-const ALL_STEPS_DEPTH_MULT = 0.7
+const ALL_STEPS_DEPTH_MULT = 0.4
 
 // Step i (0 = bottom, at the front) of a flight: solid from the ground to its
 // tread, so the box's top face IS the tread quad and its +Z face IS the riser
