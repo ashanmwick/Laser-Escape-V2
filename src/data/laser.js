@@ -11,11 +11,16 @@ export const LASER_MAX_RANGE = 200
 
 export const LASER_CORE_RADIUS = 0.028
 export const LASER_GLOW_RADIUS = 0.07
-export const LASER_CORE_COLOR = '#ffd6d6'
-export const LASER_GLOW_COLOR = '#ff2b2b'
 export const LASER_GLOW_OPACITY = 0.45
 
-export const LASER_FLASH_COLOR = '#ffb3b3'
+// The beam is tinted to the player's equipped pad's beamColor
+// (data/hexPowerPad.js HEX_POWER_PAD_TIERS, read in Laser.jsx) rather than a
+// fixed color: the glow uses beamColor as-is, while the core/flash lerp it
+// toward white by these fractions so the beam still reads as a bright core
+// inside a colored glow at every tier, same idea as a real laser.
+export const LASER_CORE_LIGHTEN = 0.75
+export const LASER_FLASH_LIGHTEN = 0.55
+
 export const LASER_FLASH_SIZE = 0.22
 export const LASER_FLASH_OPACITY = 0.85
 export const LASER_FLASH_PULSE_SPEED = 40 // rad/s

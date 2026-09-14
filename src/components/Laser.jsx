@@ -1,16 +1,17 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { laser } from '../systems/laser.js'
+import { useGameStore } from '../store/useGameStore.js'
+import { HEX_POWER_PAD_TIERS } from '../data/hexPowerPad.js'
 import {
-  LASER_CORE_COLOR,
+  LASER_CORE_LIGHTEN,
   LASER_CORE_RADIUS,
-  LASER_FLASH_COLOR,
+  LASER_FLASH_LIGHTEN,
   LASER_FLASH_OPACITY,
   LASER_FLASH_PULSE_AMOUNT,
   LASER_FLASH_PULSE_SPEED,
   LASER_FLASH_SIZE,
-  LASER_GLOW_COLOR,
   LASER_GLOW_OPACITY,
   LASER_GLOW_RADIUS,
 } from '../data/laser.js'
@@ -20,6 +21,7 @@ const UP = new THREE.Vector3(0, 1, 0)
 const dir = new THREE.Vector3()
 const mid = new THREE.Vector3()
 const quat = new THREE.Quaternion()
+const WHITE = new THREE.Color('#ffffff')
 
 // Presentation only: draws whatever systems/laser.js computed this frame.
 // Own root group is tagged laserIgnore so the beam never raycasts against
@@ -28,6 +30,20 @@ export default function Laser() {
   const coreRef = useRef()
   const glowRef = useRef()
   const flashRef = useRef()
+
+  // Beam is tinted to the equipped pad's tier color (data/hexPowerPad.js),
+  // same beamColor HexPowerPadLabel.jsx tints its laser-strip signage with —
+  // re-equipping a pad (store/useGameStore.js equipHexPad) should recolor the
+  // player's own beam to match immediately.
+  const equippedHexPad = useGameStore((s) => s.equippedHexPad)
+  const glowColor = (HEX_POWER_PAD_TIERS[equippedHexPad] ?? HEX_POWER_PAD_TIERS[0]).beamColor
+  const { coreColor, flashColor } = useMemo(() => {
+    const glow = new THREE.Color(glowColor)
+    return {
+      coreColor: glow.clone().lerp(WHITE, LASER_CORE_LIGHTEN),
+      flashColor: glow.clone().lerp(WHITE, LASER_FLASH_LIGHTEN),
+    }
+  }, [glowColor])
 
   useFrame(({ clock }) => {
     const core = coreRef.current
@@ -78,12 +94,12 @@ export default function Laser() {
     <group userData={{ laserIgnore: true }}>
       <mesh ref={coreRef} visible={false}>
         <cylinderGeometry args={[LASER_CORE_RADIUS, LASER_CORE_RADIUS, 1, 8]} />
-        <meshBasicMaterial color={LASER_CORE_COLOR} />
+        <meshBasicMaterial color={coreColor} />
       </mesh>
       <mesh ref={glowRef} visible={false}>
         <cylinderGeometry args={[LASER_GLOW_RADIUS, LASER_GLOW_RADIUS, 1, 8]} />
         <meshBasicMaterial
-          color={LASER_GLOW_COLOR}
+          color={glowColor}
           transparent
           opacity={LASER_GLOW_OPACITY}
           depthWrite={false}
@@ -92,7 +108,7 @@ export default function Laser() {
       <mesh ref={flashRef} visible={false}>
         <sphereGeometry args={[LASER_FLASH_SIZE, 8, 8]} />
         <meshBasicMaterial
-          color={LASER_FLASH_COLOR}
+          color={flashColor}
           transparent
           opacity={LASER_FLASH_OPACITY}
           depthWrite={false}
