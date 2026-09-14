@@ -10,6 +10,8 @@ import Obstacles from './components/Obstacles.jsx'
 import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
 import WoodCrateStack from './components/WoodCrateStack.jsx'
+import TreeProp from './components/TreeProp.jsx'
+import TreePineProp from './components/TreePineProp.jsx'
 import PvpWall from './components/PvpWall.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
@@ -32,6 +34,8 @@ import {
 } from './data/podiumStage.js'
 import { PVP_DIRT_INSTANCES, PVP_CUBE_INSTANCES } from './data/pvpBlocks.js'
 import { WOOD_CRATE_TRANSFORMS } from './data/woodCrate.js'
+import { TREE_TRANSFORMS } from './data/tree.js'
+import { TREE_PINE_TRANSFORMS } from './data/treePine.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
@@ -86,6 +90,12 @@ export default function App() {
         <MerchantShop />
         {WOOD_CRATE_TRANSFORMS.map((t, i) => (
           <WoodCrateStack key={i} transform={t} />
+        ))}
+        {TREE_TRANSFORMS.map((t, i) => (
+          <TreeProp key={i} transform={t} />
+        ))}
+        {TREE_PINE_TRANSFORMS.map((t, i) => (
+          <TreePineProp key={i} transform={t} />
         ))}
         <HexPowerPads />
         <Targets />

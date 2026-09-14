@@ -12,6 +12,8 @@ import { WALL_PROPS } from './wallProps.js'
 import { HEX_POWER_PAD_MODEL_URL } from './hexPowerPad.js'
 import { GLOW_FLOOR_PANEL_MODEL_URL } from './glowFloorPanel.js'
 import { GRASS_BLOCK_CUBE_MODEL_URL } from './grassBlockCubes.js'
+import { TREE_MODEL_URL } from './tree.js'
+import { TREE_PINE_MODEL_URL } from './treePine.js'
 
 // Consumed by propModel.js loadProp() — scene-graph props, cached and cloned
 // per instance. Both podiums are code-generated (components/PodiumStage.jsx)
@@ -21,6 +23,8 @@ export const PRELOAD_PROP_URLS = [
   ...WALL_PROPS.map((w) => w.url),
   HEX_POWER_PAD_MODEL_URL,
   GLOW_FLOOR_PANEL_MODEL_URL,
+  TREE_MODEL_URL,
+  TREE_PINE_MODEL_URL,
 ]
 
 // Consumed by propModel.js loadPropParts() — the InstancedMesh source parts
