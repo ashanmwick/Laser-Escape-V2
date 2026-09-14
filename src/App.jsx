@@ -1,4 +1,5 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useLoader } from '@react-three/fiber'
+import { TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace } from 'three'
 import GameLoop from './components/GameLoop.jsx'
 import BuildingBlocks from './components/BuildingBlocks.jsx'
 import GrassBlocks from './components/GrassBlocks.jsx'
@@ -34,6 +35,15 @@ import { WOOD_CRATE_TRANSFORMS } from './data/woodCrate.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
+// Equirectangular sky (CC0, Poly Haven "Syferfontein 18d Clear Pure Sky")
+// used as the scene background instead of a flat color.
+function SkyBackground() {
+  const texture = useLoader(TextureLoader, '/textures/sky.jpg')
+  texture.mapping = EquirectangularReflectionMapping
+  texture.colorSpace = SRGBColorSpace
+  return <primitive attach="background" object={texture} />
+}
+
 // <Canvas> + DOM overlay siblings (Tech.md §2, §5.4).
 export default function App() {
   // graphics_quality caps the device pixel ratio. This is a *user-elected*
@@ -50,11 +60,7 @@ export default function App() {
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         camera={{ fov: 55, near: 0.1, far: 200, position: [0, 6, 12] }}
       >
-        <color attach="background" args={['#afd3ff']} />
-        {/* Fog matches the sky color and fades out just inside the camera's
-           far plane, so distant objects dissolve into the sky instead of
-           hard-clipping/popping at the view distance edge. */}
-        <fog attach="fog" args={['#afd3ff', 40, 200]} />
+        <SkyBackground />
         {/* One hemisphere + one directional light, shadows off (Tech.md §7).
            Tuned for bright midday: strong sky fill + warm ground bounce so
            nothing reads as shadowed. */}
