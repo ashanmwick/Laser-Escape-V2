@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import {
   GRASS_BLOCK_COLORS,
+  GRASS_BLOCK_DIRT_BANDS,
+  GRASS_BLOCK_DIRT_GRID,
   GRASS_BLOCK_INSTANCES,
   GRASS_BLOCK_SHAPE,
   GRASS_BLOCK_SPECKLE,
@@ -24,6 +26,7 @@ const scratchMatrix = new THREE.Matrix4()
 const scratchPosition = new THREE.Vector3()
 const scratchQuaternion = new THREE.Quaternion()
 const scratchScale = new THREE.Vector3()
+const scratchColor = new THREE.Color()
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
 
 const X = 0
@@ -35,27 +38,31 @@ const Z = 2
 // against [-half, half] — a plain per-face unwrap, not a per-metre one
 // (see data/grassBlocks.js GRASS_BLOCK_SPECKLE's own comment on why: this
 // prop's instances vary 11x-86x in scale, so tile count is tied to the UV
-// unit square rather than world metres).
-function quad(o, corners, uvAxes, half, y0, y1) {
+// unit square rather than world metres). `color`, when given, pushes a
+// per-vertex colour (sRGB hex -> the renderer's linear working space) —
+// used by the banded dirt body, skipped by the single-tone grass cap.
+function quad(o, corners, uvAxes, half, y0, y1, color) {
   const base = o.positions.length / 3
   const [uAxis, vAxis] = uvAxes
   const norm = (axis, v) => (axis === Y ? (v - y0) / (y1 - y0) : (v / half + 1) / 2)
+  if (color) scratchColor.setStyle(color)
   for (const c of corners) {
     o.positions.push(c[0], c[1], c[2])
     o.uvs.push(norm(uAxis, c[uAxis]), norm(vAxis, c[vAxis]))
+    if (color) o.colors.push(scratchColor.r, scratchColor.g, scratchColor.b)
   }
   o.indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
 }
 
-function box(o, half, y0, y1) {
+function box(o, half, y0, y1, color) {
   const a = -half
   const b = half
-  quad(o, [[a, y1, b], [b, y1, b], [b, y1, a], [a, y1, a]], [X, Z], half, y0, y1) // +Y
-  quad(o, [[a, y0, a], [b, y0, a], [b, y0, b], [a, y0, b]], [X, Z], half, y0, y1) // -Y
-  quad(o, [[a, y0, b], [b, y0, b], [b, y1, b], [a, y1, b]], [X, Y], half, y0, y1) // +Z
-  quad(o, [[b, y0, a], [a, y0, a], [a, y1, a], [b, y1, a]], [X, Y], half, y0, y1) // -Z
-  quad(o, [[b, y0, b], [b, y0, a], [b, y1, a], [b, y1, b]], [Z, Y], half, y0, y1) // +X
-  quad(o, [[a, y0, a], [a, y0, b], [a, y1, b], [a, y1, a]], [Z, Y], half, y0, y1) // -X
+  quad(o, [[a, y1, b], [b, y1, b], [b, y1, a], [a, y1, a]], [X, Z], half, y0, y1, color) // +Y
+  quad(o, [[a, y0, a], [b, y0, a], [b, y0, b], [a, y0, b]], [X, Z], half, y0, y1, color) // -Y
+  quad(o, [[a, y0, b], [b, y0, b], [b, y1, b], [a, y1, b]], [X, Y], half, y0, y1, color) // +Z
+  quad(o, [[b, y0, a], [a, y0, a], [a, y1, a], [b, y1, a]], [X, Y], half, y0, y1, color) // -Z
+  quad(o, [[b, y0, b], [b, y0, a], [b, y1, a], [b, y1, b]], [Z, Y], half, y0, y1, color) // +X
+  quad(o, [[a, y0, a], [a, y0, b], [a, y1, b], [a, y1, a]], [Z, Y], half, y0, y1, color) // -X
 }
 
 function makeBoxGeometry(half, y0, y1) {
@@ -64,6 +71,25 @@ function makeBoxGeometry(half, y0, y1) {
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(o.positions, 3))
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(o.uvs, 2))
+  geo.setIndex(o.indices)
+  geo.computeVertexNormals()
+  return geo
+}
+
+// The dirt body: one closed box per band (data/grassBlocks.js
+// GRASS_BLOCK_DIRT_BANDS), stacked bottom-up. Shared horizontal faces sit
+// back to back inside the solid — backface-culled, never drawn — same as
+// BuildingBlocks.jsx's makeBlockGeometry. Each band's own box() call
+// normalizes its V axis to its own 0..1 height range, so the dot-grid
+// texture below tiles identically across all three regardless of band
+// height.
+function makeBandedBoxGeometry(half, bands) {
+  const o = { positions: [], uvs: [], colors: [], indices: [] }
+  for (const band of bands) box(o, half, band.y0, band.y1, band.color)
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(o.positions, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(o.uvs, 2))
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(o.colors, 3))
   geo.setIndex(o.indices)
   geo.computeVertexNormals()
   return geo
@@ -118,28 +144,52 @@ function makeSpeckleTexture(baseColor, speckleColor, tileCount, seed) {
   return tex
 }
 
-export default function GrassBlocks() {
+// The dirt body's texture: a regular grid of darker pixels multiplied over
+// whatever band colour the vertex colours supply underneath — same technique
+// as BuildingBlocks.jsx's makeSpeckleTexture, opaque so it needs no alpha
+// blending, and reused across all three bands since only the vertex colour
+// underneath changes.
+function makeGridTexture(grid) {
+  const { canvasSize, cell, dot, alpha, tileCount } = grid
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = canvasSize
+  const g = canvas.getContext('2d')
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, canvasSize, canvasSize)
+
+  g.fillStyle = `rgba(0, 0, 0, ${alpha})`
+  const inset = Math.floor((cell - dot) / 2)
+  for (let y = 0; y < canvasSize; y += cell) {
+    for (let x = 0; x < canvasSize; x += cell) {
+      g.fillRect(x + inset, y + inset, dot, dot)
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(tileCount.x, tileCount.y)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.magFilter = THREE.NearestFilter
+  return tex
+}
+
+// `instances` defaults to the main lane border (GRASS_BLOCK_INSTANCES) but
+// accepts any list shaped the same way, so a second placement of the same
+// shape/material (e.g. data/pvpBlocks.js's PVP_DIRT_INSTANCES) can mount a
+// second <GrassBlocks> without duplicating the geometry/texture-build code.
+export default function GrassBlocks({ instances = GRASS_BLOCK_INSTANCES }) {
   const dirtMeshRef = useRef(null)
   const capMeshRef = useRef(null)
 
   const dirtGeometry = useMemo(
-    () => makeBoxGeometry(GRASS_BLOCK_SHAPE.dirtHalf, GRASS_BLOCK_SHAPE.dirtY0, GRASS_BLOCK_SHAPE.dirtY1),
+    () => makeBandedBoxGeometry(GRASS_BLOCK_SHAPE.dirtHalf, GRASS_BLOCK_DIRT_BANDS),
     [],
   )
   const capGeometry = useMemo(
     () => makeBoxGeometry(GRASS_BLOCK_SHAPE.capHalf, GRASS_BLOCK_SHAPE.capY0, GRASS_BLOCK_SHAPE.capY1),
     [],
   )
-  const dirtTexture = useMemo(
-    () =>
-      makeSpeckleTexture(
-        GRASS_BLOCK_COLORS.dirtBase,
-        GRASS_BLOCK_COLORS.dirtSpeckle,
-        GRASS_BLOCK_SPECKLE.dirtTileCount,
-        1,
-      ),
-    [],
-  )
+  const dirtTexture = useMemo(() => makeGridTexture(GRASS_BLOCK_DIRT_GRID), [])
   const grassTexture = useMemo(
     () =>
       makeSpeckleTexture(
@@ -151,7 +201,7 @@ export default function GrassBlocks() {
     [],
   )
   const dirtMaterial = useMemo(
-    () => new THREE.MeshLambertMaterial({ map: dirtTexture }),
+    () => new THREE.MeshLambertMaterial({ map: dirtTexture, vertexColors: true }),
     [dirtTexture],
   )
   const grassMaterial = useMemo(
@@ -165,8 +215,8 @@ export default function GrassBlocks() {
   useLayoutEffect(() => {
     for (const mesh of [dirtMeshRef.current, capMeshRef.current]) {
       if (!mesh) continue
-      for (let i = 0; i < GRASS_BLOCK_INSTANCES.length; i++) {
-        const b = GRASS_BLOCK_INSTANCES[i]
+      for (let i = 0; i < instances.length; i++) {
+        const b = instances[i]
         scratchPosition.set(b.position[0], b.position[1], b.position[2])
         scratchQuaternion.setFromAxisAngle(Y_AXIS, b.rotationY)
         scratchScale.set(b.scale[0], b.scale[1], b.scale[2])
@@ -176,7 +226,7 @@ export default function GrassBlocks() {
       mesh.instanceMatrix.needsUpdate = true
       mesh.computeBoundingSphere()
     }
-  }, [])
+  }, [instances])
 
   // three.js does not GC GPU memory (Tech.md §7).
   useEffect(
@@ -195,12 +245,12 @@ export default function GrassBlocks() {
     <>
       <instancedMesh
         ref={dirtMeshRef}
-        args={[dirtGeometry, dirtMaterial, GRASS_BLOCK_INSTANCES.length]}
+        args={[dirtGeometry, dirtMaterial, instances.length]}
         matrixAutoUpdate={false}
       />
       <instancedMesh
         ref={capMeshRef}
-        args={[capGeometry, grassMaterial, GRASS_BLOCK_INSTANCES.length]}
+        args={[capGeometry, grassMaterial, instances.length]}
         matrixAutoUpdate={false}
       />
     </>

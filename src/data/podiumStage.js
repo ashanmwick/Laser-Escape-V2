@@ -78,8 +78,8 @@ export const PODIUM_STAGE_TRANSFORM = {
 // scale, see the step-profile section below — to clip a grass mound
 // (data/grassBlocks.js, grass_block_dirt.010) that sat comfortably clear of
 // power_podium's own, much shallower footprint. That mound has since been
-// removed from grassBlocks.js (it ended up looming right behind the bigger
-// stage regardless), so the nudge is gone too and this sits at
+// re-placed elsewhere in grassBlocks.js (it ended up looming right behind
+// the bigger stage regardless), so the nudge is gone too and this sits at
 // power_podium's exact old z. Re-check against every import in data/hub.js
 // (build PODIUM_STAGE_HUB_AABBS at the candidate z and test its boxes) after
 // changing `scale`, TIER_RISES, TIER_DEPTHS, TIER_WIDTHS, or
@@ -90,8 +90,8 @@ export const PODIUM_STAGE_TRANSFORM = {
 // ~3.7 m, and at scale 7 the object's south edge ran into that same grass
 // mound by more than the old z-nudge could clear. 5.5 is the largest scale
 // that cleared every neighbouring AABB set (target_podium, the grass blocks/
-// cubes, the walls, the merchant shop) with only that nudge; unchanged now
-// that the mound itself is gone.
+// cubes, the walls, the merchant shop) with only that nudge; unchanged since
+// the mound moved elsewhere rather than through this footprint again.
 export const PODIUM_STAGE_HUB_TRANSFORM = {
   x: 13.571624755859375,
   y: 0,
@@ -129,7 +129,7 @@ export const PODIUM_STAGE_HUB_TRANSFORM = {
 export const PODIUM_STAGE_TARGET_TRANSFORM = {
   x: 13.571624755859375,
   y: 0,
-  z: 17.854000091552734,
+  z: 25.854000091552734,
   yaw: Math.PI,
   scale: 6.5,
 }

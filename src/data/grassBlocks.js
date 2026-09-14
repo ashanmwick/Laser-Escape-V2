@@ -32,11 +32,6 @@
 // Kept as exact as-authored transforms (no zFit) per the import
 // instruction — same precedent as data/wallProps.js and data/glowFloorPanel.js.
 //
-// One exception: grass_block_dirt.010 (band one) is no longer in RAW below —
-// see the comment at its old spot — dropped because PodiumStage's hub
-// placement (data/podiumStage.js) ended up looming right behind it, not
-// because the .blend import itself changed.
-//
 // The exported glTF (`grass_block_dirt.glb`) is now retired — same move as
 // data/podiumStage.js retiring power_podium/target_podium: this prop's shape
 // is two flat boxes under one baked-texture look, cheap enough to generate at
@@ -63,27 +58,62 @@ export const GRASS_BLOCK_SHAPE = {
   capY1: 0.5,
 }
 
-// sRGB hex sampled directly off the retired glTF's two baked PNGs (base =
-// the dominant pixel, speckle = the next most common — both bakes are a flat
-// fill plus lighter irregular blobs, no gradient). Reproducing the drawing
-// procedurally instead of the pixels means these two tones are the only
-// thing tying the new look back to the old one — everything else
-// (blob shape/placement) is regenerated, not traced.
+// The grass cap keeps the flat-fill-plus-speckle look sampled off the retired
+// glTF's baked PNGs. The dirt body instead follows BuildingBlocks.jsx's
+// building_block precedent (data/blocks.js DIRT_BANDS) — three vertex-coloured
+// strata, darkest at the base and lightening toward the grass line, under one
+// shared dot-grid texture rather than a per-instance random-blob one — so a
+// 160-instance lane border reads with visible soil depth instead of a flat
+// tint.
 export const GRASS_BLOCK_COLORS = {
-  dirtBase: '#906c4b',
-  dirtSpeckle: '#b18961',
   grassBase: '#3cad30',
   grassSpeckle: '#5dce4b',
 }
 
-// The canvas-noise texture each material samples (components/GrassBlocks.jsx
-// makeSpeckleTexture). Unlike BuildingBlocks.jsx's regular dot grid, the
-// source bake was irregular soft blobs, so this draws random ellipses rather
-// than a lattice. dirtTileCount/grassTileCount are genuinely independent
-// (separate textures, one per material — no shared-canvas constraint the way
-// BuildingBlocks.jsx's dirt bands and grass cap have) and are a plain repeat
-// count over each face's own 0..1 UV, not a per-metre density: this prop's
-// 160 instances span an 11x-86x range of scale, and the retired glTF's own
+// Bottom-up, same convention as data/blocks.js DIRT_BANDS: y0/y1 in the box's
+// own local metres (see GRASS_BLOCK_SHAPE.dirtY0/dirtY1 above), colour
+// lightening toward the surface. Split the dirt body's -0.5..0.3 range into
+// three equal strata.
+const DIRT_BAND_HEIGHT = (GRASS_BLOCK_SHAPE.dirtY1 - GRASS_BLOCK_SHAPE.dirtY0) / 3
+export const GRASS_BLOCK_DIRT_BANDS = [
+  {
+    y0: GRASS_BLOCK_SHAPE.dirtY0,
+    y1: GRASS_BLOCK_SHAPE.dirtY0 + DIRT_BAND_HEIGHT,
+    color: '#5c4028', // deep soil
+  },
+  {
+    y0: GRASS_BLOCK_SHAPE.dirtY0 + DIRT_BAND_HEIGHT,
+    y1: GRASS_BLOCK_SHAPE.dirtY0 + 2 * DIRT_BAND_HEIGHT,
+    color: '#8a6244', // subsoil
+  },
+  {
+    y0: GRASS_BLOCK_SHAPE.dirtY0 + 2 * DIRT_BAND_HEIGHT,
+    y1: GRASS_BLOCK_SHAPE.dirtY1,
+    color: '#b3895f', // topsoil
+  },
+]
+
+// The dirt body's speckle: a plain multiplied pixel grid (data/blocks.js
+// SPECKLE), not random blobs, since — unlike the grass cap's traced bake —
+// it now has to tile identically across all three band boxes rather than
+// reproduce one baked bitmap. tileCount is the same per-axis repeat idea as
+// GRASS_BLOCK_SPECKLE.grassTileCount below (x = around the box, y = up each
+// band's own 0..1 height), applied via texture.repeat in
+// GrassBlocks.jsx's makeGridTexture.
+export const GRASS_BLOCK_DIRT_GRID = {
+  canvasSize: 64,
+  cell: 8,
+  dot: 3,
+  alpha: 0.18,
+  tileCount: { x: 12, y: 3 },
+}
+
+// The grass cap's canvas-noise texture (components/GrassBlocks.jsx
+// makeSpeckleTexture) — irregular soft blobs traced off the retired glTF's
+// baked PNG, kept for the cap only now that the dirt body below has moved to
+// GRASS_BLOCK_DIRT_GRID's regular lattice. grassTileCount is a plain repeat
+// count over the cap's own 0..1 UV, not a per-metre density: this prop's 160
+// instances span an 11x-86x range of scale, and the retired glTF's own
 // single non-tiling bake already stretched with instance size rather than
 // staying grain-locked, so matching that means tying the tile count to the
 // UV unit square, not world metres.
@@ -93,11 +123,6 @@ export const GRASS_BLOCK_SPECKLE = {
   blobAlpha: 0.55,
   blobMinRadius: 1,
   blobMaxRadius: 3,
-  // Independent per-axis repeat (x = around the box's horizontal faces / X-Z,
-  // y = up the box's height / Y) — texture.repeat.set(x, y) in
-  // GrassBlocks.jsx's makeSpeckleTexture, so a face's tiling can be denser
-  // one way than the other instead of always squares.
-  dirtTileCount: { x: 12, y: 8 },
   grassTileCount: { x: 8, y: 1 },
 }
 
@@ -108,22 +133,35 @@ export const GRASS_BLOCK_SPECKLE = {
 // per-instance — this border's blocks vary in both footprint and height.
 const RAW = [
   // --- band one: grass_block_dirt.001 .. .045 — inner low kerb, x≈-35..575
-  { location: [-35.214493, -25.522144, 5.336075], yaw: 1.570796, scale: [54.543262, 22.272581, 22.191719] },
-  { location: [-11.11717, -34.947086, 5.336075], yaw: 0, scale: [25.708996, 11.432119, 11.390615] },
-  { location: [-35.214493, 32.19762, 5.336075], yaw: 1.570796, scale: [54.543262, 22.272581, 22.191719] },
+  { location: [-28.213699, -34.902527, 5.9747], yaw: 1.570796, scale: [41.403702, 13.5968, 12.3805] },
+  // grass_block_dirt.002 (was here, location [-11.11717, -34.947086,
+  // 5.336075]) removed: sat only ~0.7m behind PODIUM_STAGE_TARGET_TRANSFORM's
+  // real footprint (data/podiumStage.js) — the same class of clearance issue
+  // .010's own comment further down describes for the Hub stage.
+  { location: [-28.213699, 25.976782, 5.9747], yaw: 1.570796, scale: [41.403702, 13.5968, 12.3805] },
   { location: [48.558731, 34.816277, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
   { location: [18.283009, 52.425579, 5.336075], yaw: 0, scale: [58.554039, 23.91037, 23.823561] },
   { location: [18.283009, -49.34483, 5.336075], yaw: 0, scale: [54.543262, 22.272581, 22.191719] },
   { location: [71.179611, -32.479267, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
   { location: [71.179611, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },
-  { location: [48.558731, -32.290203, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
-  // grass_block_dirt.010 (was here, location [15.991965, 28.380663, 4.706303])
-  // removed: at PodiumStage's current scale/placement (data/podiumStage.js
-  // PODIUM_STAGE_HUB_TRANSFORM) this mound sat only ~0.37m behind the
-  // stage's own back edge, looming directly over it.
+  // grass_block_dirt.009 re-synced from Blender again (was [48.558731,
+  // -44.779701]; before that y=-35.816101).
+  { location: [53.321365, -46.305443, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
+  // grass_block_dirt.010 re-placed in Blender (was [15.991965, 28.380663,
+  // 4.706303], looming right behind PodiumStage's back edge — see the
+  // history at data/podiumStage.js PODIUM_STAGE_HUB_TRANSFORM) to sit
+  // beside .002 in the low kerb instead, clear of the stage. Re-synced from
+  // Blender twice more since (was y=-40.318321, then [y=-45.849052,
+  // z=5.336075]).
+  { location: [-11.11717, -55.063805, 4.566562], yaw: 0, scale: [25.708996, 11.432119, 11.390615] },
   { location: [35.709614, 24.980011, 3.415384], yaw: 0, scale: [17.6152, 7.193115, 7.167] },
   { location: [102.927322, 33.746742, 16.882303], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
-  { location: [15.601585, -32.141685, 4.789442], yaw: 0, scale: [22.491165, 10.001233, 9.964924] },
+  // grass_block_dirt (was here, location [15.601585, -32.141685, 4.789442])
+  // removed: no longer has a source object in the .blend (nearest current
+  // object is >10m away), and at PODIUM_STAGE_TARGET_TRANSFORM's real
+  // footprint (data/podiumStage.js) it overlapped the Target stage's own
+  // back edge by ~1.4m — the same class of overlap .010's own comment above
+  // describes for the Hub stage.
   { location: [-8.728882, 37.719105, 5.336075], yaw: 0, scale: [27.996086, 11.43212, 11.390615] },
   { location: [102.927322, -42.173649, 17.121738], yaw: 0, scale: [45.756023, 14.738917, 14.685409] },
   { location: [134.643509, 25.027731, 5.336075], yaw: 1.570796, scale: [30.777733, 14.738917, 14.685409] },

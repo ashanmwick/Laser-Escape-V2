@@ -9,6 +9,7 @@ import Obstacles from './components/Obstacles.jsx'
 import PodiumStage from './components/PodiumStage.jsx'
 import MerchantShop from './components/MerchantShop.jsx'
 import WoodCrateStack from './components/WoodCrateStack.jsx'
+import PvpWall from './components/PvpWall.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
@@ -28,6 +29,7 @@ import {
   PODIUM_STAGE_TARGET_PROFILE,
   TARGET_SIGN_TEXT,
 } from './data/podiumStage.js'
+import { PVP_DIRT_INSTANCES, PVP_CUBE_INSTANCES } from './data/pvpBlocks.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
@@ -64,6 +66,9 @@ export default function App() {
         <BuildingBlocks />
         <GrassBlocks />
         <GrassBlockCubes />
+        <GrassBlocks instances={PVP_DIRT_INSTANCES} />
+        <GrassBlockCubes instances={PVP_CUBE_INSTANCES} />
+        <PvpWall />
         <Obstacles />
         <PodiumStage transform={PODIUM_STAGE_HUB_TRANSFORM} />
         <PodiumStage

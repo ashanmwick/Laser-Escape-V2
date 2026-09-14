@@ -1,6 +1,8 @@
 import { BLOCK_AABBS } from './blocks.js'
 import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_AABBS } from './grassBlockCubes.js'
+import { PVP_DIRT_AABBS, PVP_CUBE_AABBS } from './pvpBlocks.js'
+import { PVP_WALL_AABB } from './pvpWall.js'
 import { MERCHANT_SHOP_AABBS } from './merchantShop.js'
 import { PODIUM_STAGE_HUB_AABBS, PODIUM_STAGE_TARGET_AABBS } from './podiumStage.js'
 import { WOOD_CRATE_AABBS } from './woodCrate.js'
@@ -25,6 +27,9 @@ export const HUB_AABBS = [
   ...BLOCK_AABBS,
   ...GRASS_BLOCK_AABBS,
   ...GRASS_BLOCK_CUBE_AABBS,
+  ...PVP_DIRT_AABBS,
+  ...PVP_CUBE_AABBS,
+  PVP_WALL_AABB,
   ...PODIUM_STAGE_TARGET_AABBS,
   ...PODIUM_STAGE_HUB_AABBS,
   ...MERCHANT_SHOP_AABBS,

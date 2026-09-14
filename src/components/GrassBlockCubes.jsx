@@ -20,7 +20,11 @@ const scratchQuaternion = new THREE.Quaternion()
 const scratchScale = new THREE.Vector3()
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
 
-export default function GrassBlockCubes() {
+// `instances` defaults to the main lane border (GRASS_BLOCK_CUBE_INSTANCES)
+// but accepts any list shaped the same way, so a second placement of the
+// same glTF (e.g. data/pvpBlocks.js's PVP_CUBE_INSTANCES) can mount a second
+// <GrassBlockCubes> without a second load of the shared model.
+export default function GrassBlockCubes({ instances = GRASS_BLOCK_CUBE_INSTANCES }) {
   const [parts, setParts] = useState(null)
   const meshRefs = useRef([])
 
@@ -59,8 +63,8 @@ export default function GrassBlockCubes() {
     if (!parts) return
     for (const mesh of meshRefs.current) {
       if (!mesh) continue
-      for (let i = 0; i < GRASS_BLOCK_CUBE_INSTANCES.length; i++) {
-        const b = GRASS_BLOCK_CUBE_INSTANCES[i]
+      for (let i = 0; i < instances.length; i++) {
+        const b = instances[i]
         scratchPosition.set(b.position[0], b.position[1], b.position[2])
         scratchQuaternion.setFromAxisAngle(Y_AXIS, b.rotationY)
         scratchScale.set(b.scale[0], b.scale[1], b.scale[2])
@@ -70,7 +74,7 @@ export default function GrassBlockCubes() {
       mesh.instanceMatrix.needsUpdate = true
       mesh.computeBoundingSphere()
     }
-  }, [parts])
+  }, [parts, instances])
 
   if (!parts) return null
 
@@ -80,7 +84,7 @@ export default function GrassBlockCubes() {
         <instancedMesh
           key={i}
           ref={(el) => (meshRefs.current[i] = el)}
-          args={[p.geometry, p.material, GRASS_BLOCK_CUBE_INSTANCES.length]}
+          args={[p.geometry, p.material, instances.length]}
           matrixAutoUpdate={false}
         />
       ))}

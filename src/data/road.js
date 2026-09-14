@@ -12,8 +12,8 @@
 // own stair footprint (±9 x, ±7 z around it) so the road doesn't run into
 // the steps.
 export const ROAD_WAYPOINTS = [
-  { x: -40, z: 0 },
-  { x: 65, z: 5 },
+  { x: -40, z: 4 },
+  { x: 65, z: 4 },
 ]
 
 export const ROAD_WIDTH = 14 // metres, kerb to kerb
