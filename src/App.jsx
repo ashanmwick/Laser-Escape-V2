@@ -30,6 +30,7 @@ import {
   TARGET_SIGN_TEXT,
 } from './data/podiumStage.js'
 import { PVP_DIRT_INSTANCES, PVP_CUBE_INSTANCES } from './data/pvpBlocks.js'
+import { WOOD_CRATE_TRANSFORMS } from './data/woodCrate.js'
 import { settings } from './systems/settingsState.js'
 import { useSettings } from './components/hud/hooks.js'
 
@@ -77,7 +78,9 @@ export default function App() {
           profile={PODIUM_STAGE_TARGET_PROFILE}
         />
         <MerchantShop />
-        <WoodCrateStack />
+        {WOOD_CRATE_TRANSFORMS.map((t, i) => (
+          <WoodCrateStack key={i} transform={t} />
+        ))}
         <HexPowerPads />
         <Targets />
         <GlowFloorPanels />

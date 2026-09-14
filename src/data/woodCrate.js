@@ -22,8 +22,26 @@ export const WOOD_CRATE_TRANSFORM = {
   y: 0,
   z: 26,
   yaw: 0,
-  scale: 1,
+  scale: 2,
 }
+
+// Five more copies of the same stack, scattered around the two podium
+// stages (data/podiumStage.js PODIUM_STAGE_HUB_TRANSFORM at world [13.57,
+// -20] and PODIUM_STAGE_TARGET_TRANSFORM at world [13.57, 25.85]) for set
+// dressing — random-looking positions and yaws, but each one checked clear
+// (2.5 m half-extent box, well past this stack's own ~2.2 m x 3.1 m
+// footprint at scale 2) against every set in HUB_AABBS, including both
+// podiums' own stair AABBs. Re-run that same check after moving one of
+// these or either podium.
+export const WOOD_CRATE_EXTRA_TRANSFORMS = [
+  { x: -3, y: 0, z: -15, yaw: 0.6, scale: 2 }, // hub podium, west flank
+  { x: 13.5, y: 0, z: -34, yaw: 2.1, scale: 2 }, // hub podium, south end
+  { x: 31, y: 0, z: -17, yaw: 3.4, scale: 2 }, // hub podium, east flank
+  { x: -3, y: 0, z: 28, yaw: 1.4, scale: 2 }, // target podium, west flank
+  { x: 33, y: 0, z: 24, yaw: 4.2, scale: 2 }, // target podium, east flank
+]
+
+export const WOOD_CRATE_TRANSFORMS = [WOOD_CRATE_TRANSFORM, ...WOOD_CRATE_EXTRA_TRANSFORMS]
 
 // --- shape -----------------------------------------------------------------
 export const CRATE_SIZE = 1.0 // one edge of a single crate, metres
@@ -35,8 +53,11 @@ export const CRATE_GAP = 0.02 // clearance between the two front crates
 // uses. `y` is each crate's CENTRE height (its geometry is centred on its
 // own origin), so a flat crate's y is exactly CRATE_SIZE / 2.
 export const CRATE_INSTANCES = [
-  { x: -(CRATE_SIZE + CRATE_GAP) / 2, y: CRATE_SIZE / 2, z: 0, yaw: 0 },
-  { x: (CRATE_SIZE + CRATE_GAP) / 2, y: CRATE_SIZE / 2, z: 0, yaw: 0 },
+  // Turned 90deg from its neighbour purely for visual variety — a square
+  // footprint keeps the same AABB either way, so the two front crates still
+  // sit flush side by side.
+  { x: -(CRATE_SIZE + CRATE_GAP) / 2, y: CRATE_SIZE / 2, z: 0, yaw: Math.PI / 2 },
+  { x: (CRATE_SIZE + CRATE_GAP) / 2, y: CRATE_SIZE / 2, z: 0, yaw: Math.PI / 8 },
   // Yaw only turns the box about the vertical axis — its top/bottom stay
   // flat and its own height stays CRATE_SIZE regardless of yaw — so resting
   // flush on the two front crates' shared top (CRATE_SIZE) simply means this
@@ -138,6 +159,9 @@ function crateAabb(instance, transform) {
   return { min: { x: min[0], y: min[1], z: min[2] }, max: { x: max[0], y: max[1], z: max[2] } }
 }
 
-// The collider for the hub placement — data/hub.js spreads this into
-// HUB_AABBS, the same way PODIUM_STAGE_HUB_AABBS is.
-export const WOOD_CRATE_AABBS = CRATE_INSTANCES.map((c) => crateAabb(c, WOOD_CRATE_TRANSFORM))
+// The collider for every placement (the main stack plus the podium-side
+// scatter above) — data/hub.js spreads this into HUB_AABBS, the same way
+// PODIUM_STAGE_HUB_AABBS is.
+export const WOOD_CRATE_AABBS = WOOD_CRATE_TRANSFORMS.flatMap((t) =>
+  CRATE_INSTANCES.map((c) => crateAabb(c, t)),
+)
