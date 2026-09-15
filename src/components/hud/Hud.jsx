@@ -1,14 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { afkState } from '../../systems/afk.js'
 import { hexPowerPadState } from '../../systems/hexPowerPad.js'
 import { settings } from '../../systems/settingsState.js'
 import { useGameStore } from '../../store/useGameStore.js'
-import { canAcceptRebirth } from '../../data/progression.js'
+import { canAcceptRebirth, rebirthRequirement } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
 import ActionPopups from './ActionPopups.jsx'
 import TouchControls from './TouchControls.jsx'
 import RotatePrompt from './RotatePrompt.jsx'
 import LevelBar from './LevelBar.jsx'
+import RebirthLevelBar from './RebirthLevelBar.jsx'
 import LevelUpPopup from './LevelUpPopup.jsx'
 import NetStatus from './NetStatus.jsx'
 import AuthPanel from './AuthPanel.jsx'
@@ -30,14 +32,68 @@ function formatCompact(n) {
   return `${text}${suffix}`
 }
 
+// Centred modal opened by Button 4, titled "Rebirth". Confirms the trade of
+// current Power for a rebirth point rather than firing it on a single click.
+function RebirthWindow({ level, rebirth, canRebirth, onConfirm, onClose }) {
+  const requirement = rebirthRequirement(rebirth)
+  return (
+    <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-[min(940px,92vw)] overflow-hidden rounded-lg border border-amber-400/40 bg-slate-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-amber-400/30 bg-amber-600/80 px-3 py-2">
+          <span className="font-bold text-slate-100">Rebirth</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-slate-100 hover:text-slate-300"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex flex-col items-center gap-3 p-4 text-slate-100">
+          <img src="/ui/rebirth.png" alt="" className="h-14 w-14" draggable={false} />
+          <div className="text-center text-sm">
+            <div>
+              Current Rebirth: <span className="font-bold text-amber-300">{rebirth}</span>
+            </div>
+            <div>
+              Level <span className="font-bold">{level}</span> / {requirement} requirement
+            </div>
+          </div>
+
+          {/* Visual twin of the bottom-of-screen LevelBar, but plotting level
+             progress toward this rebirth's requirement instead of Power
+             toward the next character level — see RebirthLevelBar.jsx.
+             LevelBar itself stays untouched. */}
+          <div className="w-full">
+            <RebirthLevelBar />
+          </div>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canRebirth}
+            className="w-full max-w-xs rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 font-semibold text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          >
+            {canRebirth ? 'Confirm Rebirth' : `Reach level ${requirement} to rebirth`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Left-edge, vertically centred stack: win count above, rebirth action below.
 // Both are selector-driven and re-render only when their value changes, never
 // per frame (Tech.md §5.4). Wins change at human speed; rebirth eligibility is
 // a boolean flip. The rebirth button stays mounted but disabled until eligible.
 function LeftCenterControls() {
   const wins = useGameStore((s) => s.wins)
+  const level = useGameStore((s) => s.level)
+  const rebirth = useGameStore((s) => s.rebirth)
   const canRebirth = useGameStore((s) => canAcceptRebirth(s.level, s.rebirth))
   const acceptRebirth = useGameStore((s) => s.acceptRebirth)
+  const [showRebirthWindow, setShowRebirthWindow] = useState(false)
   return (
     <div
       data-hud="left-center"
@@ -62,16 +118,65 @@ function LeftCenterControls() {
           {formatCompact(wins)}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={acceptRebirth}
-        disabled={!canRebirth}
-        title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
-        className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
-      >
-        <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
-        <span className="text-xs font-semibold tracking-wide">Rebirth</span>
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={acceptRebirth}
+            disabled={!canRebirth}
+            title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+            className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          >
+            <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+            <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+          </button>
+          <button
+            type="button"
+            onClick={acceptRebirth}
+            disabled={!canRebirth}
+            title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+            className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          >
+            <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+            <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={acceptRebirth}
+          disabled={!canRebirth}
+          title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+          className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+        >
+          <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+          <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowRebirthWindow(true)}
+          title="Open Rebirth"
+          className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
+        >
+          <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+          <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+        </button>
+        </div>
+      </div>
+      {showRebirthWindow &&
+        createPortal(
+          <RebirthWindow
+            level={level}
+            rebirth={rebirth}
+            canRebirth={canRebirth}
+            onConfirm={() => {
+              acceptRebirth()
+              setShowRebirthWindow(false)
+            }}
+            onClose={() => setShowRebirthWindow(false)}
+          />,
+          document.body,
+        )}
     </div>
   )
 }

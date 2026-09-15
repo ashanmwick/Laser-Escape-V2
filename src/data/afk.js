@@ -14,7 +14,11 @@ export const AFK_INTERACT_KEY = 'KeyE'
 // where `multiplier` is the "xN" tier below (see afkPowerMultiplier: "x0" or
 // any non-positive value collapses to 1x). `rebirthRequired` is the minimum
 // player rebirth (store/useGameStore.js) for E to start AFK on that target —
-// below it the HUD shows the requirement instead of the prompt.
+// below it the HUD shows the requirement instead of the prompt. `powerColorTop`
+// / `powerColorBottom` optionally override the "xN Power" label's gradient,
+// and `rebirthColorTop` / `rebirthColorBottom` do the same independently for
+// the "Rebirth Required" label (both pairs default in
+// components/AfkTargetLabel.jsx — omit either pair to use its default).
 export const AFK_TARGET_CONFIG = {
   target_grey: { power: 'x1', rebirthRequired: 0 },
   target_yellow: { power: 'x1', rebirthRequired: 0 },

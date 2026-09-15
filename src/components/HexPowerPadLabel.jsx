@@ -186,7 +186,7 @@ function formatWinsRequired(wins) {
 export default function HexPowerPadLabel({ position, powerPerAction, winsRequired, beamColor }) {
   return (
     <Billboard position={[position[0], position[1] + LABEL_HEIGHT, position[2]]} scale={2}>
-      <mesh position={[0, 0, -0.01]}>
+      <mesh position={[0, BAR_HEIGHT / 2 + 0.2, -0.01]}>
         <planeGeometry args={[BAR_WIDTH, BAR_HEIGHT]} />
         <meshBasicMaterial
           map={BAR_GRADIENT_TEXTURE}
@@ -196,7 +196,9 @@ export default function HexPowerPadLabel({ position, powerPerAction, winsRequire
         />
       </mesh>
       <Text
-        fontSize={0.24}
+        position={[0, BAR_HEIGHT / 2 + 0.2, 0]}
+        fontSize={0.3}
+        fontWeight="bold"
         color="#ffffff"
         outlineWidth={0.02}
         outlineColor="#000000"
@@ -206,8 +208,8 @@ export default function HexPowerPadLabel({ position, powerPerAction, winsRequire
         {`+${powerPerAction} Power`}
       </Text>
       <Text
-        position={[0, BAR_HEIGHT / 2 + 0.2, 0]}
-        fontSize={0.18}
+        fontSize={0.21}
+        fontWeight="bold"
         color="#ffd21e"
         outlineWidth={0.018}
         outlineColor="#000000"

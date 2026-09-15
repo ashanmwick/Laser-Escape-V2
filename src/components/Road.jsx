@@ -2,6 +2,10 @@ import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import {
   ROAD_WAYPOINTS,
+  ROAD_SPUR_HUB_LEFT_WAYPOINTS,
+  ROAD_SPUR_HUB_RIGHT_WAYPOINTS,
+  ROAD_SPUR_TARGET_LEFT_WAYPOINTS,
+  ROAD_SPUR_TARGET_RIGHT_WAYPOINTS,
   ROAD_WIDTH,
   ROAD_Y_OFFSET,
   ROAD_BRICK_SIZE,
@@ -68,15 +72,15 @@ function tintFor(waypoint) {
 // its own waypoint's width, so the quad tapers when neighbouring waypoints
 // disagree; per-vertex color carries each waypoint's tint, lerped by the
 // GPU across the segment.
-function buildRoadGeometry() {
-  const positions = []
-  const uvs = []
-  const colors = []
-  const indices = []
-
-  for (let i = 0; i < ROAD_WAYPOINTS.length - 1; i++) {
-    const a = ROAD_WAYPOINTS[i]
-    const b = ROAD_WAYPOINTS[i + 1]
+//
+// Appends one polyline's worth of segments (ROAD_WAYPOINTS, or one of the
+// ROAD_SPUR_*_WAYPOINTS exports) into the shared buffers — kept as its own
+// path rather than concatenated with others so a spur never draws a stray
+// segment jumping back to the main road's next waypoint.
+function addPolyline(waypoints, positions, uvs, colors, indices) {
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i]
+    const b = waypoints[i + 1]
     const dx = b.x - a.x
     const dz = b.z - a.z
     const length = Math.hypot(dx, dz)
@@ -102,6 +106,19 @@ function buildRoadGeometry() {
     colors.push(...tintA, ...tintA, ...tintB, ...tintB)
     indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
   }
+}
+
+function buildRoadGeometry() {
+  const positions = []
+  const uvs = []
+  const colors = []
+  const indices = []
+
+  addPolyline(ROAD_WAYPOINTS, positions, uvs, colors, indices)
+  addPolyline(ROAD_SPUR_HUB_LEFT_WAYPOINTS, positions, uvs, colors, indices)
+  addPolyline(ROAD_SPUR_HUB_RIGHT_WAYPOINTS, positions, uvs, colors, indices)
+  addPolyline(ROAD_SPUR_TARGET_LEFT_WAYPOINTS, positions, uvs, colors, indices)
+  addPolyline(ROAD_SPUR_TARGET_RIGHT_WAYPOINTS, positions, uvs, colors, indices)
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
