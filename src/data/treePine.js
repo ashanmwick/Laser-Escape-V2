@@ -7,9 +7,8 @@
 // two leaf-clump shades — dark/bright, same "baked shading" trick as the
 // other tree) into one 204-tri mesh, comfortably under the <500 tri/prop
 // budget, at real-world scale (~4.54 m tall). Converts straight to
-// MeshLambertMaterial per material at the propModel.js load boundary, same
-// as every other Blender prop here (Tech.md §7 strips PBR at the boundary,
-// not by hand-authoring the glTF).
+// MeshStandardMaterial per material at the propModel.js load boundary, same
+// as every other Blender prop here.
 //
 // public/models/tree_pine_knot.glb (mirrored into dist/models/ for the
 // built site, same as every other prop glb).

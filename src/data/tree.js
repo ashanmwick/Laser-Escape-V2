@@ -9,9 +9,8 @@
 // is the same tree every other instance in that scene is a copy of, not a
 // from-scratch model. Its three original materials — bark, sun-lit leaf
 // clumps ("bright"), shadowed leaf clumps ("dark") — each carry a small
-// baked-shading 256x256 texture and convert straight to MeshLambertMaterial
-// at the propModel.js load boundary, same as every other Blender prop here
-// (Tech.md §7 strips PBR at the boundary, not by hand-authoring the glTF).
+// baked-shading 256x256 texture and convert straight to MeshStandardMaterial
+// at the propModel.js load boundary, same as every other Blender prop here.
 //
 // public/models/tree_lowpoly_canopy_bright.glb (mirrored into dist/models/
 // for the built site, same as every other prop glb).

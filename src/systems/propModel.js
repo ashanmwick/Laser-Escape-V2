@@ -1,18 +1,19 @@
 // Loads a Blender-authored prop glTF (Tech.md §6) and converts its materials
 // at the load boundary. Framework-free (Tech.md rule 2).
 //
-// glTF materials arrive as MeshStandardMaterial; Tech.md §7 permits only
-// MeshLambertMaterial / MeshBasicMaterial — PBR costs fragment time a phone
-// does not have. Three cases, by what the source actually carries:
+// glTF materials arrive as MeshStandardMaterial. Three cases, by what the
+// source actually carries:
 //  - emissive with no base map (a neon sign, a glow strip) becomes unlit
 //    MeshBasicMaterial, the same "glow without bloom" trick the laser beam
 //    uses.
 //  - emissive *with* a base map (hex_power_pad's albedo pattern plus a
-//    separate glow texture) becomes Lambert carrying both channels —
-//    collapsing this to Basic-on-emissive-only, as the case above does,
-//    would flatten the pad's surface pattern to a solid glow.
-//  - everything else becomes Lambert, keeping its baseColor map if it has
-//    one.
+//    separate glow texture) becomes lit MeshStandardMaterial carrying both
+//    channels — collapsing this to Basic-on-emissive-only, as the case above
+//    does, would flatten the pad's surface pattern to a solid glow.
+//  - everything else becomes lit MeshStandardMaterial, keeping its baseColor
+//    map if it has one, and passing through the source's real roughness/
+//    metalness/normalMap (defaulting to MATERIAL_PBR.PROP_DEFAULT when the
+//    source doesn't carry its own) instead of discarding them.
 // This rule is enforced here, not assumed, exactly as avatarModel.js
 // enforces it for remote avatar glTFs.
 //
@@ -25,6 +26,7 @@
 // position/rotation themselves — see loadProp below.
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 const gltfLoader = new GLTFLoader()
 
@@ -41,14 +43,21 @@ const cache = new Map()
 
 function convertMaterial(source) {
   const isEmissive = source.emissive && source.emissive.getHex() !== 0x000000
+  const roughness = source.roughness !== undefined ? source.roughness : MATERIAL_PBR.PROP_DEFAULT.roughness
+  const metalness = source.metalness !== undefined ? source.metalness : MATERIAL_PBR.PROP_DEFAULT.metalness
   if (isEmissive && source.map) {
-    return new THREE.MeshLambertMaterial({
+    return new THREE.MeshStandardMaterial({
       map: source.map,
       color: source.color ? source.color.clone() : new THREE.Color(0xffffff),
       emissive: source.emissive.clone(),
       emissiveMap: source.emissiveMap || null,
       emissiveIntensity: source.emissiveIntensity ?? 1,
       side: source.side,
+      roughness,
+      metalness,
+      normalMap: source.normalMap || null,
+      roughnessMap: source.roughnessMap || null,
+      metalnessMap: source.metalnessMap || null,
     })
   }
   if (isEmissive) {
@@ -58,10 +67,15 @@ function convertMaterial(source) {
       side: source.side,
     })
   }
-  return new THREE.MeshLambertMaterial({
+  return new THREE.MeshStandardMaterial({
     map: source.map || null,
     color: source.color ? source.color.clone() : new THREE.Color(0xffffff),
     side: source.side,
+    roughness,
+    metalness,
+    normalMap: source.normalMap || null,
+    roughnessMap: source.roughnessMap || null,
+    metalnessMap: source.metalnessMap || null,
   })
 }
 
@@ -90,8 +104,12 @@ async function loadBase(url) {
       materials.push(next)
     }
     o.material = next
-    o.castShadow = false
-    o.receiveShadow = false
+    // Shadows gated at the Canvas/light level by graphics_quality (App.jsx,
+    // ShadowSun.jsx) — when off, <Canvas shadows={false}> makes these flags a
+    // no-op, so it's safe to set them unconditionally here rather than thread
+    // the quality tier through every prop loader.
+    o.castShadow = true
+    o.receiveShadow = true
     // The map (if any) is now ours to keep; dispose only the PBR material.
     previous.dispose()
   })
@@ -149,13 +167,16 @@ export function preloadProp(url) {
 
 // Loads `url` and returns its converted mesh parts directly — `{ geometry,
 // material }` per primitive — rather than a mountable scene root. Meant for
-// callers building their own InstancedMesh (e.g. GrassBlocks.jsx) where
-// every instance shares one geometry/material pair and there is no per-call
-// clone/refCount bookkeeping to do: the caller loads once, owns the parts
-// for its own lifetime, and disposes them itself. Not routed through the
-// `cache`/loadBase pair above — that cache exists to let loadProp() hand out
-// `root.clone()`s to multiple scene-mounted instances, which an
-// InstancedMesh consumer has no use for.
+// callers building their own InstancedMesh where every instance shares one
+// geometry/material pair and there is no per-call clone/refCount bookkeeping
+// to do: the caller loads once, owns the parts for its own lifetime, and
+// disposes them itself. Not routed through the `cache`/loadBase pair above —
+// that cache exists to let loadProp() hand out `root.clone()`s to multiple
+// scene-mounted instances, which an InstancedMesh consumer has no use for.
+// No current caller: both GrassBlocks.jsx and GrassBlockCubes.jsx moved to
+// fully code-generated geometry/materials (Tech.md's amendment note), but
+// this stays as general-purpose propModel.js infrastructure for the next
+// glTF-sourced InstancedMesh prop.
 export async function loadPropParts(url) {
   const gltf = await gltfLoader.loadAsync(url)
   const converted = new Map()
@@ -178,10 +199,10 @@ export async function loadPropParts(url) {
 
 // The loadPropParts() counterpart of preloadProp(): loadPropParts consumers
 // own and dispose their own parts, so there is no module cache to fill here —
-// this just runs the fetch + parse through three's file cache. GrassBlocks'
-// own loadPropParts() call then resolves from that cache instead of the
-// network; the scene parsed here is never rendered, so it holds no GPU memory
-// and is left for GC.
+// this just runs the fetch + parse through three's file cache, so a later
+// loadPropParts() call for the same url resolves from that cache instead of
+// the network; the scene parsed here is never rendered, so it holds no GPU
+// memory and is left for GC.
 export function preloadPropParts(url) {
   return gltfLoader.loadAsync(url)
 }
@@ -203,6 +224,9 @@ export function disposeProp(built) {
   for (const m of built.materials) {
     if (m.map) m.map.dispose()
     if (m.emissiveMap) m.emissiveMap.dispose()
+    if (m.normalMap) m.normalMap.dispose()
+    if (m.roughnessMap) m.roughnessMap.dispose()
+    if (m.metalnessMap) m.metalnessMap.dispose()
     m.dispose()
   }
   cache.delete(built.url)

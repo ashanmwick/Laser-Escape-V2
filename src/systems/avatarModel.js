@@ -24,6 +24,7 @@ import {
   skinUrl,
 } from '../data/bloxity.js'
 import { PLAYER_HEIGHT, PLAYER_RADIUS } from './playerState.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // The base rig is refetched on every rebuild; let three serve it from cache.
 THREE.Cache.enabled = true
@@ -32,19 +33,26 @@ const gltfLoader = new GLTFLoader()
 const objLoader = new OBJLoader()
 const textureLoader = new THREE.TextureLoader()
 
-// Tech.md §7 permits MeshLambertMaterial / MeshBasicMaterial only. Remote
-// glTFs arrive as MeshStandardMaterial, so every loaded material is rebuilt.
-function toLambert(material, owned) {
+// Remote glTFs arrive as MeshStandardMaterial. Every loaded material is
+// rebuilt fresh (so it can be owned/disposed independently of the loader's
+// own instance), now passing the source's real PBR channels through instead
+// of discarding them — that's the whole point of avatars being lit PBR.
+function toStandard(material, owned) {
   const source = Array.isArray(material) ? material[0] : material
-  const lambert = new THREE.MeshLambertMaterial({
+  const standard = new THREE.MeshStandardMaterial({
     map: source && source.map ? source.map : null,
     color: source && source.color ? source.color.clone() : new THREE.Color(0xffffff),
     side: source && source.side !== undefined ? source.side : THREE.FrontSide,
     transparent: !!(source && source.transparent),
     alphaTest: source && source.alphaTest ? source.alphaTest : 0,
+    roughness: source && source.roughness !== undefined ? source.roughness : MATERIAL_PBR.AVATAR_DEFAULT.roughness,
+    metalness: source && source.metalness !== undefined ? source.metalness : MATERIAL_PBR.AVATAR_DEFAULT.metalness,
+    normalMap: source && source.normalMap ? source.normalMap : null,
+    roughnessMap: source && source.roughnessMap ? source.roughnessMap : null,
+    metalnessMap: source && source.metalnessMap ? source.metalnessMap : null,
   })
-  owned.materials.push(lambert)
-  return lambert
+  owned.materials.push(standard)
+  return standard
 }
 
 function convertMaterials(object3d, owned) {
@@ -56,15 +64,24 @@ function convertMaterials(object3d, owned) {
     // Meshes that shared a source material must keep sharing one after the
     // swap — the base rig's six body meshes all use the single `char`
     // material, and converting per mesh would turn 1 material into 6.
-    let lambert = owned.converted.get(key)
-    if (!lambert) {
-      lambert = toLambert(previous, owned)
-      owned.converted.set(key, lambert)
+    let standard = owned.converted.get(key)
+    if (!standard) {
+      standard = toStandard(previous, owned)
+      owned.converted.set(key, standard)
     }
-    o.material = lambert
-    o.castShadow = false
+    o.material = standard
+    // The player's own shadow is the highest-value payoff of ShadowSun.jsx —
+    // gated at the Canvas/light level by graphics_quality (App.jsx), so this
+    // is safe to set unconditionally. receiveShadow stays off: a 6-mesh
+    // skinned rig self-shadowing onto itself at this triangle count is more
+    // likely to read as acne than as depth.
+    o.castShadow = true
     o.receiveShadow = false
-    // Dispose the PBR material the loader made; its map is now ours to keep.
+    // Dispose the PBR material the loader made; its map/normalMap/
+    // roughnessMap/metalnessMap textures are now ours to keep — three's
+    // Material.dispose() only frees GPU program state, it never cascades to
+    // texture properties, so this is safe even though those textures are now
+    // referenced by `standard` above.
     for (const m of Array.isArray(previous) ? previous : [previous]) {
       if (m && m !== o.material) m.dispose()
     }
@@ -194,7 +211,7 @@ export async function buildAvatar(equipped) {
   }
 
   const root = gltf.scene
-  // `converted` maps a source material to the Lambert that replaced it, so
+  // `converted` maps a source material to the Standard material that replaced it, so
   // shared materials stay shared across the whole build.
   const owned = { materials: [], textures: [], scenes: [root], converted: new Map() }
   const nodes = {}
@@ -284,7 +301,13 @@ export function disposeAvatar(built) {
       // Textures embedded in a glTF are not in owned.textures, so catch them
       // here too; three's dispose() is safe to call twice.
       const mats = Array.isArray(o.material) ? o.material : [o.material]
-      for (const m of mats) if (m && m.map) m.map.dispose()
+      for (const m of mats) {
+        if (!m) continue
+        if (m.map) m.map.dispose()
+        if (m.normalMap) m.normalMap.dispose()
+        if (m.roughnessMap) m.roughnessMap.dispose()
+        if (m.metalnessMap) m.metalnessMap.dispose()
+      }
     })
     if (scene.parent) scene.parent.remove(scene)
   }

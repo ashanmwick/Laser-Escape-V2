@@ -2,6 +2,7 @@ import { useThree, useFrame } from '@react-three/fiber'
 import { tick } from '../systems/timeScale.js'
 import { step } from '../systems/playerMovement.js'
 import { update as updateCamera } from '../systems/cameraOrbit.js'
+import { step as stepShadowSun } from '../systems/shadowSun.js'
 import { step as stepAction } from '../systems/actionTracker.js'
 import { step as stepActionPopups } from '../systems/actionPopups.js'
 import { step as stepAfk } from '../systems/afk.js'
@@ -26,6 +27,7 @@ export default function GameLoop() {
   useFrame(() => {
     const dt = tick()
     step(dt, getAabbs())
+    stepShadowSun()
     updateCamera(camera, dt)
     // Project the player to the screen and age live popups before stepAction
     // below can spawn new ones this frame (systems/actionPopups.js).

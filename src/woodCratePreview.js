@@ -5,19 +5,22 @@
 // OrbitControls.
 //
 // What it is for: looking at the prop from any angle with the same lighting
-// the hub uses (one hemisphere + one directional light, shadows off — Tech.md
-// §7), and checking that the collider boxes data/woodCrate.js generates
-// actually sit on the geometry (toggle "collider").
+// the hub uses (hemisphere + directional key light + ACES tone mapping —
+// Tech.md §7), and checking that the collider boxes data/woodCrate.js
+// generates actually sit on the geometry (toggle "collider").
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { buildWoodCrateStack } from './systems/woodCrateModel.js'
 import { getWoodCrateAtlas } from './systems/woodCrateAtlas.js'
 import { WOOD_CRATE_AABBS, WOOD_CRATE_TRANSFORM, CRATE_SIZE } from './data/woodCrate.js'
+import { MATERIAL_PBR } from './data/materials.js'
 
 const canvas = document.getElementById('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight, false)
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#afd3ff')
@@ -30,15 +33,15 @@ controls.target.set(0, CRATE_SIZE * 0.7, 0)
 controls.enableDamping = true
 controls.maxPolarAngle = Math.PI * 0.495
 
-scene.add(new THREE.HemisphereLight('#eaf3ff', '#b7a98f', 2.2))
-const sun = new THREE.DirectionalLight(0xffffff, 2.4)
+scene.add(new THREE.HemisphereLight('#eaf3ff', '#b7a98f', 0.75))
+const sun = new THREE.DirectionalLight(0xffffff, 1.8)
 sun.position.set(8, 14, 6)
 scene.add(sun)
 
 // ground + a 1 m grid, so the real-world scale is readable at a glance
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(20, 20),
-  new THREE.MeshLambertMaterial({ color: '#9fb87f' }),
+  new THREE.MeshStandardMaterial({ color: '#9fb87f', ...MATERIAL_PBR.GROUND }),
 )
 ground.rotation.x = -Math.PI / 2
 ground.position.y = -0.001

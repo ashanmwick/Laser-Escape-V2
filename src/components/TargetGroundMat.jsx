@@ -46,12 +46,12 @@ export default function TargetGroundMat({ id, position }) {
           flat border-color fill, which is what makes them read as an
           actual raised-slab edge rather than a floating decal. Basic, not
           Lambert, on every face: unlit flat color, no shading response. */}
-      <meshBasicMaterial attach="material-0" color={colors.border} />
-      <meshBasicMaterial attach="material-1" color={colors.border} />
-      <meshBasicMaterial attach="material-2" map={texture} />
-      <meshBasicMaterial attach="material-3" color={colors.border} />
-      <meshBasicMaterial attach="material-4" color={colors.border} />
-      <meshBasicMaterial attach="material-5" color={colors.border} />
+      <meshBasicMaterial attach="material-0" color={colors.border} toneMapped={false} />
+      <meshBasicMaterial attach="material-1" color={colors.border} toneMapped={false} />
+      <meshBasicMaterial attach="material-2" map={texture} toneMapped={false} />
+      <meshBasicMaterial attach="material-3" color={colors.border} toneMapped={false} />
+      <meshBasicMaterial attach="material-4" color={colors.border} toneMapped={false} />
+      <meshBasicMaterial attach="material-5" color={colors.border} toneMapped={false} />
     </mesh>
   )
 }

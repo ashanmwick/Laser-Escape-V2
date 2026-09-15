@@ -6,7 +6,7 @@
 // The whole stall is a heap of box / cylinder / cone primitives authored in
 // the local space described in data/merchantShop.js. Primitives are bucketed
 // by (collection, colour) and each bucket is merged into ONE
-// MeshLambertMaterial mesh — Tech.md §7's "static and unique is merged into
+// MeshStandardMaterial mesh — Tech.md §7's "static and unique is merged into
 // one geometry per material". That lands the prop at ~18 draw calls; the
 // four named sub-groups (Structure, Roof_Sign, Props, Character) are the
 // scene-graph stand-in for the brief's "hierarchical collections". If
@@ -14,6 +14,7 @@
 // and merge each colour once across the model.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 import {
   SHOP_COLORS,
   CRYSTAL_OPACITY,
@@ -479,16 +480,18 @@ export function buildMerchantShop() {
     const merged = mergeGeometries(geoms, false)
     for (const g of geoms) g.dispose()
     const isCrystal = CRYSTAL_NAMES.has(colorName)
-    const material = new THREE.MeshLambertMaterial({
+    const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(SHOP_COLORS[colorName]),
       ...(isCrystal
-        ? { transparent: true, opacity: CRYSTAL_OPACITY, depthWrite: false }
-        : {}),
+        ? { transparent: true, opacity: CRYSTAL_OPACITY, depthWrite: false, ...MATERIAL_PBR.CRYSTAL }
+        : MATERIAL_PBR.FLAT_PLACEHOLDER),
     })
     const mesh = new THREE.Mesh(merged, material)
     mesh.name = `${groupName}_${colorName}`
-    mesh.castShadow = false
-    mesh.receiveShadow = false
+    // Gated at the Canvas/light level by graphics_quality — static and
+    // merged (cheap), so safe to set unconditionally.
+    mesh.castShadow = true
+    mesh.receiveShadow = true
     groups[groupName].add(mesh)
   }
 

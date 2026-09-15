@@ -10,11 +10,10 @@
 //    canvas atlas (systems/podiumStageAtlas.js). Boxes are bucketed by
 //    MATERIAL, not by region, and each bucket is merged into a single
 //    geometry — so the whole prop is TWO meshes / two draw calls:
-//      podium_stage_wood  MeshLambertMaterial(map: atlas)  — lit
-//      podium_stage_sign  MeshBasicMaterial(map: atlas)    — unlit "neon"
+//      podium_stage_wood  MeshStandardMaterial(map: atlas)  — lit, PBR
+//      podium_stage_sign  MeshBasicMaterial(map: atlas)     — unlit "neon"
 //    (Tech.md §7: static and unique is merged into one geometry per material;
-//    materials are Lambert or Basic only, and glow is an unlit surface rather
-//    than bloom.)
+//    glow is an unlit surface rather than bloom.)
 //  - Each stair step is its own solid box from the ground to its tread, so the
 //    top face IS a tread quad and the front face IS a riser quad. That is what
 //    makes the flights real, walkable geometry for a collider or a navmesh
@@ -27,6 +26,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { getPodiumStageAtlas, regionUv } from './podiumStageAtlas.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 import {
   ATLAS,
   FOOTPRINT,
@@ -320,7 +320,7 @@ export function buildPodiumStage(signText = SIGN_TEXT, profile = PODIUM_STAGE_PR
   for (const g of wood) g.dispose()
   const woodMesh = new THREE.Mesh(
     woodGeo,
-    new THREE.MeshLambertMaterial({ map: atlas, color: 0xffffff }),
+    new THREE.MeshStandardMaterial({ map: atlas, color: 0xffffff, ...MATERIAL_PBR.WOOD }),
   )
   woodMesh.name = 'podium_stage_wood'
 
@@ -330,11 +330,16 @@ export function buildPodiumStage(signText = SIGN_TEXT, profile = PODIUM_STAGE_PR
   )
   signMesh.name = 'podium_stage_sign'
 
-  for (const mesh of [woodMesh, signMesh]) {
-    mesh.castShadow = false
-    mesh.receiveShadow = false
-    root.add(mesh)
-  }
+  // Gated at the Canvas/light level by graphics_quality — the wood mesh both
+  // casts (its own silhouette) and receives (the player's shadow when
+  // standing on/near it); the unlit neon sign face doesn't participate in a
+  // lit shadow pass.
+  woodMesh.castShadow = true
+  woodMesh.receiveShadow = true
+  signMesh.castShadow = false
+  signMesh.receiveShadow = false
+  root.add(woodMesh)
+  root.add(signMesh)
 
   return {
     root,

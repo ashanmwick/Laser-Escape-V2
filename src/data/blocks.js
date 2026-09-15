@@ -32,13 +32,15 @@ export const GRASS_CAP = {
   bottom: '#249612',
 }
 
-// The pixel speckle across every face. Drawn to a small CanvasTexture and
-// multiplied over the vertex colours, so one texture serves every band.
+// The stud-bump grid across every face (a soft contact-shadow disc plus a
+// dark rim, the same bevel look Ground.jsx's/Road.jsx's studs use). Drawn to
+// a small CanvasTexture and multiplied over the vertex colours, so one
+// texture serves every band.
 export const SPECKLE = {
   size: 64, // px, power-of-two, mipmapped (Tech.md §7)
-  cell: 8, // px per dot cell
-  dot: 3, // px per dot
-  alpha: 0.16, // dot darkness over the band colour
+  cell: 8, // px per bump cell (its pitch)
+  dot: 3, // px per bump (its diameter)
+  alpha: 0.16, // bump darkness over the band colour
   // 8 dots per tile, so this is dots per metre / 8. Finer than ~16 dots per
   // metre and minification just averages the speckle back into flat colour at
   // the distance the third-person camera actually sits. Dirt and the grass cap

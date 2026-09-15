@@ -166,13 +166,13 @@ export const ROAD_SPUR_TARGET_RIGHT_WAYPOINTS = [
 export const ROAD_WIDTH = 14 // metres, kerb to kerb — default; see ROAD_WAYPOINTS[].width
 export const ROAD_Y_OFFSET = 0.02 // above Ground.jsx's plane, avoids z-fighting
 
-// World-unit size of one brick tile, independent of segment length — the
-// same role Ground.jsx's CELL plays for its checker.
+// World-unit size of one checker cell, independent of segment length — the
+// same role Ground.jsx's CELL plays for its own stud checker.
 export const ROAD_BRICK_SIZE = 1
 
-// Default brick tint — see ROAD_WAYPOINTS[].color. A waypoint's color
-// re-tints the baked texture by its ratio to this default (both brick and
-// grout shift together), so a waypoint that doesn't set `color` renders
-// identically to today regardless of how this constant changes.
+// Default stud-checker tint — see ROAD_WAYPOINTS[].color. A waypoint's color
+// re-tints the baked texture by its ratio to this default (both tones shift
+// together), so a waypoint that doesn't set `color` renders identically to
+// today regardless of how this constant changes.
 export const ROAD_COLOR = '#f3c520'
 export const ROAD_GROUT_COLOR = '#c99a12'

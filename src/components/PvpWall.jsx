@@ -10,6 +10,7 @@ import {
   PVP_WALL_SIGN,
   PVP_WALL_SIGN_GAP,
 } from '../data/pvpWall.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Mounts the code-generated `pvp_wall` prop: a single flat glass panel in the
 // Pvp area (data/pvpBlocks.js). Same shape as PodiumStage.jsx/MerchantShop.jsx
@@ -18,11 +19,11 @@ import {
 // on unmount (three.js does not GC GPU memory).
 //
 // Every tunable number — placement, size, colour, opacity — lives in
-// data/pvpWall.js. The look is an alpha-blended MeshLambertMaterial (Tech.md
-// §7 permits only Lambert/Basic, so this is the honest stand-in for glass:
-// no transmission/refraction, just transparency), unlike wallProps.js's own
-// "Glass" wall type, whose baked Alpha never actually reached the game (see
-// that file's header) — this one really is see-through.
+// data/pvpWall.js. The look is an alpha-blended, low-roughness dielectric
+// MeshStandardMaterial (still no transmission/refraction, just transparency
+// plus a specular response now), unlike wallProps.js's own "Glass" wall type,
+// whose baked Alpha never actually reached the game (see that file's header)
+// — this one really is see-through.
 //
 // Unlike wallProps.js's 63 panels, pvp_wall has no health and never breaks —
 // no WallHealthBars entry, no wallHealth.js tracking. It carries a static
@@ -40,17 +41,22 @@ export default function PvpWall() {
       PVP_WALL_SIZE.height,
       PVP_WALL_SIZE.depth,
     )
-    const material = new THREE.MeshLambertMaterial({
+    const material = new THREE.MeshStandardMaterial({
       color: PVP_WALL_MATERIAL.color,
       transparent: true,
       opacity: PVP_WALL_MATERIAL.opacity,
       side: THREE.DoubleSide,
       depthWrite: false,
+      ...MATERIAL_PBR.GLASS,
     })
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.set(0, PVP_WALL_CENTER_Y, 0)
+    // No castShadow: a depthWrite:false transparent panel casting a hard
+    // shadow would read as an opaque silhouette from something meant to be
+    // see-through. receiveShadow stays on so the player's own shadow can
+    // still fall across it.
     mesh.castShadow = false
-    mesh.receiveShadow = false
+    mesh.receiveShadow = true
     mount.add(mesh)
 
     mount.traverse((o) => {

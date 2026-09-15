@@ -84,7 +84,12 @@ export default function VortexRingEffect({ opacityRef }) {
     <Billboard position={VORTEX_RING_POSITION}>
       <mesh ref={voidRef} position={[0, 0, VORTEX_BLACK_HOLE_DEPTH_OFFSET]}>
         <circleGeometry args={[VORTEX_BLACK_HOLE_RADIUS, 48]} />
-        <meshBasicMaterial color={VORTEX_BLACK_HOLE_COLOR} transparent depthWrite={false} />
+        <meshBasicMaterial
+          color={VORTEX_BLACK_HOLE_COLOR}
+          transparent
+          depthWrite={false}
+          toneMapped={false}
+        />
       </mesh>
       <mesh ref={photonRef}>
         <torusGeometry
@@ -102,6 +107,7 @@ export default function VortexRingEffect({ opacityRef }) {
           opacity={VORTEX_PHOTON_RING_OPACITY}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
       {VORTEX_RING_LAYERS.map((layer, i) => (
@@ -127,6 +133,7 @@ export default function VortexRingEffect({ opacityRef }) {
             opacity={layer.opacity}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
+            toneMapped={false}
           />
         </mesh>
       ))}

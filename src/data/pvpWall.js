@@ -19,10 +19,10 @@
 // wallProps.js's header). The .blend is the visual reference only, same
 // precedent as data/grassBlocks.js / data/podiumStage.js: this prop is cheap
 // enough to generate at boot (Tech.md §7) instead of exporting a glTF for a
-// single flat box, and PvpWall.jsx builds an honest alpha-blended
-// MeshLambertMaterial from PVP_WALL_MATERIAL below (Tech.md §7 permits only
-// Lambert/Basic — no MeshStandardMaterial/transmission, so this is the
-// closest an unlit-shadow engine gets to real glass).
+// single flat box, and PvpWall.jsx builds an honest alpha-blended, low-
+// roughness MeshStandardMaterial from PVP_WALL_MATERIAL below (still no
+// transmission/refraction, so it's a stand-in for real glass, not the thing
+// itself).
 //
 // Raw transform read directly off pvp_wall in the .blend: location, yaw
 // (rotation_euler.x/y is 0, only Z rotates, matching every other wall panel),
@@ -72,7 +72,7 @@ export const PVP_WALL_ROTATION_Y = RAW.yaw
 // local extent * scale, along the object's own pre-rotation axes) — verified
 // against the .blend (29.0177 x 4.1014 x 11.5519). PvpWall.jsx builds its
 // BoxGeometry directly at this size (no non-uniform scale on the mesh, which
-// would otherwise skew MeshLambertMaterial's lighting normals), remapped the
+// would otherwise skew MeshStandardMaterial's lighting normals), remapped the
 // same way as position: three width = blender x-extent, three height =
 // blender z-extent, three depth = blender y-extent.
 export const PVP_WALL_SIZE = {
@@ -87,9 +87,10 @@ export const PVP_WALL_SIZE = {
 export const PVP_WALL_CENTER_Y = PVP_WALL_SIZE.height / 2
 
 // Honest glass, not the fake opaque "Glass" wall type in wallProps.js: a
-// pale-blue alpha-blended MeshLambertMaterial (Tech.md §7 — no
-// MeshStandardMaterial/transmission). Matches pvp_wall_glass_mat's node
-// values in the .blend (Base Color, Alpha).
+// pale-blue alpha-blended, low-roughness MeshStandardMaterial (still no
+// transmission/refraction). Matches pvp_wall_glass_mat's node values in the
+// .blend (Base Color, Alpha); roughness/metalness live in
+// data/materials.js's MATERIAL_PBR.GLASS.
 export const PVP_WALL_MATERIAL = {
   color: '#bfe9ff',
   opacity: 0.35,

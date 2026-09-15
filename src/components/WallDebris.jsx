@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { debrisPool } from '../systems/wallDebris.js'
 import { DEBRIS_POOL_SIZE, DEBRIS_COLOR, DEBRIS_FADE_PORTION } from '../data/wallDebris.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Scratch, hoisted to module scope — zero allocation per frame (Tech.md §7).
 const quat = new THREE.Quaternion()
@@ -14,15 +15,15 @@ const matrix = new THREE.Matrix4()
 // Presentation only: draws whatever systems/wallDebris.js simulated this frame.
 // One InstancedMesh at fixed DEBRIS_POOL_SIZE capacity — dead slots are scaled
 // to zero rather than added/removed, so the draw call count and pool never
-// change (Tech.md §7). Same shape as LaserParticles.jsx; a Lambert material so
-// the chunks pick up the scene's hemisphere + directional light like the walls
-// they came from, and fade by shrinking (no per-instance opacity needed).
+// change (Tech.md §7). Same shape as LaserParticles.jsx; a Standard material so
+// the chunks pick up the scene's key light + fake env map like the walls they
+// came from, and fade by shrinking (no per-instance opacity needed).
 export default function WallDebris() {
   const meshRef = useRef(null)
 
   const geometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), [])
   const material = useMemo(
-    () => new THREE.MeshLambertMaterial({ color: DEBRIS_COLOR }),
+    () => new THREE.MeshStandardMaterial({ color: DEBRIS_COLOR, ...MATERIAL_PBR.FLAT_PLACEHOLDER }),
     [],
   )
 

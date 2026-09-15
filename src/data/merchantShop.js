@@ -3,7 +3,7 @@
 //
 // Unlike the Blender-authored props (Tech.md §6) this one is generated in
 // code: systems/merchantShopModel.js reads the tables below and merges a
-// pile of box / cylinder / cone primitives into ONE MeshLambertMaterial mesh
+// pile of box / cylinder / cone primitives into ONE MeshStandardMaterial mesh
 // per colour, matrixAutoUpdate off (Tech.md §7 — "static and unique is
 // merged into one geometry per material"). components/MerchantShop.jsx just
 // mounts that root next to the target podium.
@@ -28,10 +28,10 @@ export const SHOP_TRANSFORM = {
   scale: 1,
 }
 
-// --- palette (sRGB hex; one MeshLambertMaterial each) ---------------------
-// "basic diffuse/roughness" from the brief collapses to flat Lambert here:
-// Tech.md §7 permits only Lambert/Basic (no MeshStandardMaterial), and against
-// this scene's baked, shadowless lighting a roughness channel buys nothing.
+// --- palette (sRGB hex; one MeshStandardMaterial each) ---------------------
+// Roughness/metalness per bucket lives in systems/merchantShopModel.js
+// (data/materials.js's MATERIAL_PBR table), keyed off isCrystal rather than
+// per named colour here.
 export const SHOP_COLORS = {
   baseGray: '#8b9199', // modular baseplate + its studs
   wood: '#8a5a2b', // pillars, roof frame, gable planks, crate, chest

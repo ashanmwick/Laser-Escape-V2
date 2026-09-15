@@ -1,9 +1,13 @@
 import * as THREE from 'three'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Recreates hex_power_pad.glb's material — a MeshStandardMaterial carrying
 // two baked PNGs (hexpad_albedo / hexpad_emissive, see propModel.js's
 // convertMaterial) — as GLSL instead of sampled bitmaps, via
-// MeshLambertMaterial.onBeforeCompile (Tech.md §7: Lambert only). Colors and
+// MeshStandardMaterial.onBeforeCompile. `#include <map_fragment>` and
+// `#include <emissivemap_fragment>` are shared shader-chunk names across
+// three's Lambert/Standard/Physical fragment templates, so this patch ports
+// unchanged from the material's previous Lambert base. Colors and
 // geometry below were hand-measured off the source PNGs by decoding their
 // pixels directly (no image library in this project):
 //  - a nested-hexagon "target" ring: background #b8bad1, two #db656f rings
@@ -78,11 +82,12 @@ export function createHexPowerPadMaterial() {
     uTargetColor: { value: new THREE.Color(0xffffff) },
   }
 
-  const material = new THREE.MeshLambertMaterial({
+  const material = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     emissive: 0xffffff,
     emissiveIntensity: 3.5, // KHR_materials_emissive_strength on the source glTF material
     map: DUMMY_MAP,
+    ...MATERIAL_PBR.HEX_POWER_PAD,
   })
 
   material.onBeforeCompile = (shader) => {

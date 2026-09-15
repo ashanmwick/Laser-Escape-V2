@@ -10,6 +10,13 @@ every subsystem is built to be affordable on a phone at 60fps in its worst case.
 is deliberate and is what makes the rest of the document coherent. §7 lists the
 runtime-adaptive techniques deliberately left out, and where you would add them.
 
+**Amendment (2026-09-15):** §7's lighting and materials rules were revised to add PBR
+materials (`MeshStandardMaterial`), a `graphics_quality`-gated shadow-casting player-following
+light, a locally-baked fake environment map, and ACES tone mapping — modeled on a reference
+project's approach. This is a deliberate, approved departure from the "cheap by construction"
+stance for this one subsystem; the rest of this preamble (no LOD, no dynamic/runtime-adaptive
+quality scaling, no demand rendering) still holds.
+
 ---
 
 ## 1. Stack
@@ -18,7 +25,7 @@ runtime-adaptive techniques deliberately left out, and where you would add them.
 | --- | --- | --- |
 | `three` | The renderer. Everything else wraps it. | — |
 | `@react-three/fiber` | React reconciler for three.js: `useFrame`, a declarative scene graph, automatic disposal of declaratively-created objects. | Raw three.js — you lose component-scoped lifecycle and end up hand-rolling a scene-graph differ. |
-| `@react-three/drei` | Used for **exactly two things**: SDF `<Text>` and `<Billboard>`, for in-world signage. | `<Html>` — never used; all HUD is DOM siblings of the canvas (§5.4). `<Environment>` — it streams HDRIs from a CDN and stalls the scene offline. `<OrbitControls>` — the game needs left-click for its action verb (§5.2). |
+| `@react-three/drei` | Used for **three things**: SDF `<Text>` and `<Billboard>` for in-world signage, plus `<Environment>`/`<Lightformer>` for a locally-baked, zero-network fake environment map (§7) — `resolution=64 frames={1}`, no `.hdr` file, no CDN fetch. | `<Html>` — never used; all HUD is DOM siblings of the canvas (§5.4). A real HDRI-file `<Environment>` (`files=`/`preset=`) — still rejected, it streams from a CDN and would stall the scene offline. `<OrbitControls>` — the game needs left-click for its action verb (§5.2). |
 | `zustand` | The one durable-state store. **No middleware at all** — no `immer`, no `persist`, no `subscribeWithSelector`. | Redux/Context — a Context value change re-renders every consumer, which a clicker cannot afford. The `persist` middleware — it writes on every `set`; §5.3 needs a debounce and an explicit whitelist. |
 | `tailwindcss` | The HUD: utility classes plus a small hand-written component layer. | A component library — every one of them fights a full-bleed canvas overlay. |
 | `vite` | Dev server and build. Fast HMR matters enormously when tuning feel. | — |
@@ -163,8 +170,8 @@ generates hits far faster than an ear can resolve them.
 `systems/bloxity.js` is the **only** module that touches `window.Legion.SDK`. It holds the
 single `onUserChanged` subscription — the source of truth for auth UI and for (re)loading
 friends, avatar and balance — and every method no-ops when the SDK is absent. That guard is
-load-bearing, not defensive polish: §1 rejected drei `<Environment>` because a CDN stall
-breaks the scene, and the same standard applies here. A blocked `sdk.bloxity.io` must leave
+load-bearing, not defensive polish: §1 rejects a real HDRI-file drei `<Environment>` because a
+CDN stall breaks the scene, and the same standard applies here. A blocked `sdk.bloxity.io` must leave
 the game fully playable on the capsule fallback.
 
 | Concern | Where it lands |
@@ -192,7 +199,10 @@ Authoring rules, all enforced at export:
 - **One shared material for the entire prop set**, UVs unwrapped into a single 512² atlas.
 - Colour variation comes from **vertex colours**, not extra materials or textures. This is
   what lets the whole set instance down to one draw call.
-- Occlusion is baked into vertex colours — there are no runtime shadows (§7).
+- Occlusion is baked into vertex colours, on top of (not instead of) the runtime shadow-casting
+  key light §7 now describes — the bake covers contact/crevice shading a single directional
+  light's shadow map can't reach; the light covers the player's own cast shadow and larger-scale
+  occlusion between separate props.
 
 Export → `bpy.ops.export_scene.gltf` with Draco → `gltf-transform prune dedup weld ktx2` →
 one `public/models/props.glb`. Loaded once with `GLTFLoader` + `DRACOLoader` + `KTX2Loader`;
@@ -215,30 +225,44 @@ Hard numbers, each checkable from `renderer.info` behind the stats toggle:
 
 | Rule | Budget |
 | --- | --- |
-| Draw calls, busiest view | **< 60** |
-| Triangles | < 150k |
+| Draw calls, busiest view | **< 60** (re-measure after the PBR/shadow migration — see amendment above; shadow-pass draw calls are separate from the main pass) |
+| Triangles | < 150k (re-measure after the PBR/shadow migration) |
 | Total download | < 5 MB |
 | Device pixel ratio | clamped to `[1, 1.5]` |
 
 - Everything repeated is an `InstancedMesh`. Everything static and unique is merged by
   `mergeBoxes.js` into one geometry per material, with `matrixAutoUpdate = false`.
-- **Materials are `MeshLambertMaterial` or `MeshBasicMaterial` only.** No
-  `MeshStandardMaterial` — PBR costs fragment time a phone does not have, and against baked
-  occlusion it buys nothing. Remote avatar glTFs arrive as `MeshStandardMaterial`, so
-  `avatarModel.js` rebuilds every loaded material as Lambert on the way in; this rule is
-  enforced at the boundary, not assumed.
+- **Materials are `MeshStandardMaterial` for lit/surface geometry, `MeshBasicMaterial` for
+  unlit glow/HUD/decal elements.** Roughness/metalness-by-surface-type lives in
+  `data/materials.js`'s `MATERIAL_PBR` table. Remote avatar glTFs and Blender-authored props
+  arrive as `MeshStandardMaterial`; `avatarModel.js`/`propModel.js` now pass their real
+  roughness/metalness/normalMap through instead of discarding them (falling back to
+  `MATERIAL_PBR`'s defaults when the source carries none) — this rule is enforced at the
+  loader boundary, not assumed.
 - One 512² KTX2/Basis atlas: power-of-two, mipmapped, `SRGBColorSpace`, anisotropy 1.
-- Lighting is one hemisphere + one directional light. **Shadows off.**
+- Lighting is a hemisphere light plus a **shadow-casting, player-following directional key
+  light** (`systems/shadowSun.js` + `components/ShadowSun.jsx`), gated behind the
+  `graphics_quality` setting (`data/bloxity.js`'s `QUALITY_SHADOWS`: off on Low, on for
+  Medium/High/Ultra). The shadow camera is a tight ±45-unit orthographic frustum, 2048²
+  map, PCFSoft, that recenters on the player every frame instead of covering the whole
+  level — the ground alone is ~1820m wide, far bigger than any single shadow map could cover
+  crisply, so cost is bounded by "whatever's near the player right now", not level size. Plus
+  a locally-baked fake environment map (`<Environment resolution={64} frames={1}>` +
+  `<Lightformer>` panels, App.jsx) for soft specular/reflection fill, and explicit ACES
+  filmic tone mapping (`gl.toneMapping` in App.jsx's Canvas config).
 - **No postprocessing.** The laser glow is an additive cylinder plus a sprite core, not
-  bloom — bloom is the single most expensive thing that could be added here.
+  bloom — bloom is the single most expensive thing that could be added here. (ACES tone
+  mapping and the Environment/Lightformer PMREM bake are renderer-level/one-time, not a
+  postprocessing pass — no `EffectComposer`, no extra full-screen render target per frame.)
 - Zero allocation inside `useFrame`: scratch `Vector3`/`Quaternion` hoisted to module scope;
   particles and floating texts drawn from fixed-size pools.
 - Dispose geometries, materials and textures on teardown. three.js does not GC GPU memory.
 
-`graphics_quality` (Low/Medium/High/Ultra) caps `dpr` through `<Canvas dpr>` and is **not** a
-violation of the stance in the preamble. It is a *user-elected* tier applied on change; what
+`graphics_quality` (Low/Medium/High/Ultra) caps `dpr` through `<Canvas dpr>` and now also gates
+the shadow-casting light (`QUALITY_SHADOWS`, both in `data/bloxity.js`) — neither is a
+violation of the stance in the preamble. Both are *user-elected* tiers applied on change; what
 this engine rejects is runtime-*adaptive* scaling — a `dpr` setter driven by a frame-time
-average, which still does not exist. The cap stays inside the `[1, 1.5]` clamp above.
+average, which still does not exist. The `dpr` cap stays inside the `[1, 1.5]` clamp above.
 
 **Deliberately left out**, and where they would go if the budget ever changed: LOD (per-prop,
 in the loader), dynamic resolution scaling (a `dpr` setter driven by a frame-time average in

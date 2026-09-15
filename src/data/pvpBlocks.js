@@ -6,12 +6,13 @@
 // 24 verts/18 polys, same as every object in data/grassBlocks.js), and the 6
 // cube objects against grass_block_cube (±0.5 unit cube, 12 polys, same as
 // data/grassBlockCubes.js). Per the import instruction, this collection is
-// transforms only — no new mesh or material, so this file imports the shared
-// shape/colour constants (dirt) and the shared glTF url (cube) from those two
-// files rather than re-deriving them; components/GrassBlocks.jsx and
-// components/GrassBlockCubes.jsx both take an `instances` prop precisely so
-// this second placement list can reuse their geometry/material-build code
-// unchanged.
+// transforms only — no new mesh or material, so this file holds nothing but
+// placements; components/GrassBlocks.jsx and components/GrassBlockCubes.jsx
+// both take an `instances` prop precisely so this second placement list can
+// reuse their geometry/material-build code unchanged (both are fully
+// code-generated now — see Tech.md's amendment note — so there's no shared
+// glTF url to reuse either, only the shape/colour constants each component
+// already owns).
 //
 // Same as grass_block_dirt/.cube elsewhere: rotation_euler.x/y is 0 on every
 // object, only Z (yaw) ever rotates, to one of 0 / -π/2. Kept as

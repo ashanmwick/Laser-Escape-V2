@@ -10,6 +10,7 @@ import {
   REMOTE_BEAM_EYE_RATIO,
   REMOTE_BEAM_FORWARD_RATIO,
 } from '../data/net.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Other players in the same arena room (systems/net.js). Presentation only
 // (Tech.md rule 3): the socket, interpolation, roster and avatar payloads all
@@ -162,13 +163,21 @@ function RemoteBody({ id, name, avatarRev }) {
       <group ref={bodyRef} userData={{ laserIgnore: true }}>
         {/* Fallback capsule — visible until the rig is mounted (Tech.md §6). */}
         <group visible={!hasAvatar}>
-          <mesh position-y={H / 2}>
+          <mesh position-y={H / 2} castShadow>
             <capsuleGeometry args={[R, CYL, 4, 10]} />
-            <meshLambertMaterial ref={bodyMatRef} color={REMOTE_BODY.COLOR} />
+            <meshStandardMaterial
+              ref={bodyMatRef}
+              color={REMOTE_BODY.COLOR}
+              {...MATERIAL_PBR.FLAT_PLACEHOLDER}
+            />
           </mesh>
-          <mesh position={[0, H * 0.62, R]}>
+          <mesh position={[0, H * 0.62, R]} castShadow>
             <boxGeometry args={[0.14, 0.14, 0.28]} />
-            <meshLambertMaterial ref={nubMatRef} color={REMOTE_BODY.NUB_COLOR} />
+            <meshStandardMaterial
+              ref={nubMatRef}
+              color={REMOTE_BODY.NUB_COLOR}
+              {...MATERIAL_PBR.FLAT_PLACEHOLDER}
+            />
           </mesh>
         </group>
 

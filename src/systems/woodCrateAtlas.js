@@ -7,7 +7,7 @@
 // Generated, not downloaded — the same trick podiumStageAtlas.js /
 // merchantShopModel.js use: procedural detail costs nothing to ship and
 // stays one texture in GPU memory (Tech.md §7). One texture, one
-// MeshLambertMaterial, so the whole 3-crate stack is a single draw call.
+// MeshStandardMaterial, so the whole 3-crate stack is a single draw call.
 //
 // Layout and the palette are data (data/woodCrate.js CRATE_ATLAS_SIZE /
 // CRATE_COLORS / FRAME / BRACE / RIVETS).

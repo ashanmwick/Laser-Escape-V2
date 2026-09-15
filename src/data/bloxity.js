@@ -130,6 +130,12 @@ export const SETTINGS = {
 // sits at the ceiling rather than exceeding it.
 export const QUALITY_DPR = { Low: 1, Medium: 1.25, High: 1.5, Ultra: 1.5 }
 
+// Shadow-casting light per quality tier (Tech.md §7). Low keeps the original
+// shadow-free behaviour; Medium and up get the player-following shadow-sun.
+// A user-elected tier gate, not runtime-adaptive scaling — same category as
+// QUALITY_DPR above.
+export const QUALITY_SHADOWS = { Low: false, Medium: true, High: true, Ultra: true }
+
 export function clamp(n, min, max) {
   return n < min ? min : n > max ? max : n
 }

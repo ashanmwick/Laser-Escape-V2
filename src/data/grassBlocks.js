@@ -58,72 +58,63 @@ export const GRASS_BLOCK_SHAPE = {
   capY1: 0.5,
 }
 
-// The grass cap keeps the flat-fill-plus-speckle look sampled off the retired
-// glTF's baked PNGs. The dirt body instead follows BuildingBlocks.jsx's
-// building_block precedent (data/blocks.js DIRT_BANDS) — three vertex-coloured
-// strata, darkest at the base and lightening toward the grass line, under one
-// shared dot-grid texture rather than a per-instance random-blob one — so a
-// 160-instance lane border reads with visible soil depth instead of a flat
-// tint.
+// The grass cap and every dirt band below now use the exact material shape
+// a reference project's world uses for its own NAMED block materials — a
+// bevelled two-tone stud checker owning its colour outright (e.g. that
+// project's `dirt: { stud: ['#80502d', '#704426'] }`) — not a single shared
+// texture *multiplied* over a vertex colour (Ground.jsx's floor / Road.jsx's
+// road already made this switch; see Tech.md's amendment note). grassBase/
+// grassSpeckle are the cap's own two-tone pair.
 export const GRASS_BLOCK_COLORS = {
   grassBase: '#3cad30',
   grassSpeckle: '#5dce4b',
 }
 
 // Bottom-up, same convention as data/blocks.js DIRT_BANDS: y0/y1 in the box's
-// own local metres (see GRASS_BLOCK_SHAPE.dirtY0/dirtY1 above), colour
-// lightening toward the surface. Split the dirt body's -0.5..0.3 range into
-// three equal strata.
+// own local metres (see GRASS_BLOCK_SHAPE.dirtY0/dirtY1 above). Each band is
+// now its own separate box/material/InstancedMesh (components/GrassBlocks.jsx)
+// rather than one vertex-coloured mesh — a true stud-checker owns its colour
+// outright, so three bands sharing one texture via a vertex tint is no
+// longer how this works; keeping the banding means three checkers instead of
+// one. `stud` is [base, alt], each pair a hand-picked ~12% darker second
+// tone off the old single band colour, the same "one logical colour becomes
+// a light/dark stud pair" idea as the reference project's own NAMED table —
+// lightening toward the surface across the three bands, same as before.
 const DIRT_BAND_HEIGHT = (GRASS_BLOCK_SHAPE.dirtY1 - GRASS_BLOCK_SHAPE.dirtY0) / 3
 export const GRASS_BLOCK_DIRT_BANDS = [
   {
     y0: GRASS_BLOCK_SHAPE.dirtY0,
     y1: GRASS_BLOCK_SHAPE.dirtY0 + DIRT_BAND_HEIGHT,
-    color: '#5c4028', // deep soil
+    stud: ['#5c4028', '#513823'], // deep soil
   },
   {
     y0: GRASS_BLOCK_SHAPE.dirtY0 + DIRT_BAND_HEIGHT,
     y1: GRASS_BLOCK_SHAPE.dirtY0 + 2 * DIRT_BAND_HEIGHT,
-    color: '#8a6244', // subsoil
+    stud: ['#8a6244', '#79563c'], // subsoil
   },
   {
     y0: GRASS_BLOCK_SHAPE.dirtY0 + 2 * DIRT_BAND_HEIGHT,
     y1: GRASS_BLOCK_SHAPE.dirtY1,
-    color: '#b3895f', // topsoil
+    stud: ['#b3895f', '#9e7954'], // topsoil
   },
 ]
 
-// The dirt body's speckle: a plain multiplied pixel grid (data/blocks.js
-// SPECKLE), not random blobs, since — unlike the grass cap's traced bake —
-// it now has to tile identically across all three band boxes rather than
-// reproduce one baked bitmap. tileCount is the same per-axis repeat idea as
-// GRASS_BLOCK_SPECKLE.grassTileCount below (x = around the box, y = up each
-// band's own 0..1 height), applied via texture.repeat in
-// GrassBlocks.jsx's makeGridTexture.
-export const GRASS_BLOCK_DIRT_GRID = {
-  canvasSize: 64,
-  cell: 8,
-  dot: 3,
-  alpha: 0.18,
-  tileCount: { x: 12, y: 3 },
-}
-
-// The grass cap's canvas-noise texture (components/GrassBlocks.jsx
-// makeSpeckleTexture) — irregular soft blobs traced off the retired glTF's
-// baked PNG, kept for the cap only now that the dirt body below has moved to
-// GRASS_BLOCK_DIRT_GRID's regular lattice. grassTileCount is a plain repeat
-// count over the cap's own 0..1 UV, not a per-metre density: this prop's 160
-// instances span an 11x-86x range of scale, and the retired glTF's own
-// single non-tiling bake already stretched with instance size rather than
-// staying grain-locked, so matching that means tying the tile count to the
-// UV unit square, not world metres.
-export const GRASS_BLOCK_SPECKLE = {
-  canvasSize: 64,
-  blobCount: 25,
-  blobAlpha: 0.55,
-  blobMinRadius: 1,
-  blobMaxRadius: 3,
+// Shared stud-checker resolution/density for the grass cap and every dirt
+// band (components/GrassBlocks.jsx makeStudTexture) — same bevelled
+// two-tone technique throughout, just a different colour pair and tile
+// count per surface. cellsPerTile x studsPerCell studs are drawn per
+// checker tile at canvasSize resolution. Each *TileCount is a plain repeat
+// count over that surface's own 0..1 UV, not a per-metre density: this
+// prop's 160 instances span an 11x-86x range of scale, and the retired
+// glTF's own single non-tiling bake already stretched with instance size
+// rather than staying grain-locked, so matching that means tying the tile
+// count to the UV unit square, not world metres.
+export const GRASS_BLOCK_STUD = {
+  canvasSize: 128,
+  cellsPerTile: 2,
+  studsPerCell: 2,
   grassTileCount: { x: 8, y: 1 },
+  dirtTileCount: { x: 12, y: 2 },
 }
 
 // Raw Blender transform per object, read directly off grass_block_dirt.001

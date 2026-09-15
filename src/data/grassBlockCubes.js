@@ -4,25 +4,42 @@
 //
 // Every object in the collection is a duplicate of `grass_block_cube` and
 // differs only in its own transform (verified against the .blend: all 51
-// object bound boxes are the identical unit cube, -0.5..0.5 on every axis).
-// So all 51 share one exported mesh — `grass_block_cube.glb`, written from
-// `grass_block_cube` with location/rotation zeroed and scale reset to 1, so
-// the glTF holds only the ~1m local block (two primitives: a dirt body for
-// the lower 80% and a grass cap for the top 20%) and nothing else. Same
-// pipeline as grass_block_dirt.glb.
+// object bound boxes are the identical unit cube, -0.5..0.5 on every axis) —
+// two primitives, a dirt body for the lower 80% and a grass cap for the top
+// 20%.
 //
-// The two source materials (`grass_block_cube_dirt_mat`,
-// `grass_block_cube_grass_mat`) arrive per-instance-duplicated in the .blend
-// (102 datablocks, all identical to those two). Exporting from one donor
-// collapses that to the 2 the glTF carries, and propModel.js's
-// convertMaterial() does the PBR -> Lambert conversion at load (Tech.md §7),
-// same as every other imported prop — that pair is the whole "optimize the
-// material" step. No Blender render/bake was run; this is an import only.
+// The exported glTF (`grass_block_cube.glb`) is now retired — same move as
+// data/grassBlocks.js retiring `grass_block_dirt.glb`: this prop's shape is
+// two flat boxes under a two-tone stud-checker look (a reference project's
+// own NAMED block-material shape — see Tech.md's amendment note), cheap
+// enough to generate at boot (Tech.md §7) instead of downloading.
+// GRASS_BLOCK_CUBE_SHAPE/DIRT_STUD below replace the glTF; components/
+// GrassBlockCubes.jsx builds the geometry and canvas textures from them and
+// from data/grassBlocks.js's own GRASS_BLOCK_COLORS/GRASS_BLOCK_STUD for the
+// cap, so both lane borders' grass reads as the same material. The .blend
+// stays the visual reference, same as every other code-generated prop.
 //
-// Kept as exact as-authored transforms (no zFit) per the import instruction
-// — same precedent as data/grassBlocks.js, data/wallProps.js and
-// data/glowFloorPanel.js.
-export const GRASS_BLOCK_CUBE_MODEL_URL = '/models/grass_block_cube.glb'
+// Local space is unchanged from the retired glTF: the unit cube spans
+// -0.5..0.5 on every local axis; the dirt body is the bottom 80% (y -0.5 to
+// 0.3), the grass cap the top 20% (y 0.3 to 0.5) — no overhang, unlike
+// grass_block_dirt's cap.
+export const GRASS_BLOCK_CUBE_SHAPE = {
+  half: 0.5,
+  dirtY0: -0.5,
+  dirtY1: 0.3,
+  capY0: 0.3,
+  capY1: 0.5,
+}
+
+// The dirt body's own two-tone stud pair — not banded like grass_block_dirt
+// (this prop's glTF only ever carried one dirt material), so it gets a
+// single flat tone pair rather than three. Lifted verbatim from a reference
+// project's own generic `dirt` NAMED material (materials.js:
+// `dirt: { stud: ['#80502d', '#704426'] }`) rather than derived from this
+// project's own soil palette, since this is the one surface in the game
+// meant to read as a literal copy of that material rather than a tuned
+// variant of it.
+export const GRASS_BLOCK_CUBE_DIRT_STUD = ['#80502d', '#704426']
 
 // Raw Blender transform per object, read directly off grass_block_cube and
 // grass_block_cube.001 .. .050: location, yaw (rotation around Blender's Z

@@ -12,36 +12,83 @@ import {
   ROAD_COLOR,
   ROAD_GROUT_COLOR,
 } from '../data/road.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
-// Yellow brick/tile road over the spawn hub (Tech.md §3: level layout is
-// code, not a Blender file). Mirrors Ground.jsx's technique: a canvas-
-// generated tile texture on a MeshLambertMaterial, one draw call — the whole
-// route is a single merged BufferGeometry rather than one mesh per segment
-// (Tech.md §7: "everything static and unique is merged into one geometry
-// per material").
+// Yellow studded (LEGO/Bloxity-style) road over the spawn hub (Tech.md §3:
+// level layout is code, not a Blender file). Same technique as Ground.jsx's
+// floor — a bevelled stud grid baked into a two-tone checker, the pattern a
+// reference project's world uses uniformly for grass/dirt/path/floor
+// materials (see Tech.md's amendment note) — reused here for the road with
+// its own ROAD_COLOR/ROAD_GROUT_COLOR tones standing in for that project's
+// tan "path" palette, at half the stud density of Ground.jsx's (the road's
+// cell is half the size, so studs stay the same ~0.5m world pitch on both):
+// a canvas-generated tile texture on a MeshStandardMaterial, one draw call —
+// the whole route is a single merged BufferGeometry rather than one mesh per
+// segment (Tech.md §7: "everything static and unique is merged into one
+// geometry per material").
 
-const BRICKS_PER_TILE = 2 // canvas covers a 2x2-brick running-bond repeat
-const TILE_WORLD_SIZE = BRICKS_PER_TILE * ROAD_BRICK_SIZE
+const CELLS_PER_TILE = 2 // canvas covers a 2x2-cell checker repeat
+const STUDS_PER_CELL = 2 // studs per cell, each stud on a ROAD_BRICK_SIZE/2 = 0.5m pitch
+const TILE_WORLD_SIZE = CELLS_PER_TILE * ROAD_BRICK_SIZE
 
-function makeBrickTexture() {
-  const pxPerBrick = 64
+// Lighten (amount > 0) or darken (amount < 0) a hex colour; returns a CSS colour.
+function shade(hex, amount) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const gComponent = (n >> 8) & 255
+  const b = n & 255
+  const f = (c) => Math.round(amount >= 0 ? c + (255 - c) * amount : c * (1 + amount))
+  return `rgb(${f(r)},${f(gComponent)},${f(b)})`
+}
+
+function disc(ctx, x, y, r, fill) {
+  ctx.fillStyle = fill
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+function makeStudTexture() {
+  const cellPx = 64 // px per cell in the source bitmap
   const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = pxPerBrick * BRICKS_PER_TILE
+  canvas.width = canvas.height = cellPx * CELLS_PER_TILE
   const g = canvas.getContext('2d')
+  const pitch = cellPx / STUDS_PER_CELL
+  const bevel = Math.max(2, cellPx / 40)
 
-  g.fillStyle = ROAD_GROUT_COLOR
-  g.fillRect(0, 0, canvas.width, canvas.height)
+  for (const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+    const base = (cx + cy) % 2 === 0 ? ROAD_COLOR : ROAD_GROUT_COLOR
+    const x0 = cx * cellPx
+    const y0 = cy * cellPx
 
-  // Running-bond brick rows, alternate rows offset by half a brick so the
-  // pattern reads as bricks rather than a plain grid.
-  g.fillStyle = ROAD_COLOR
-  const inset = 3
-  for (let row = 0; row < BRICKS_PER_TILE; row++) {
-    const y = row * pxPerBrick
-    const offset = row % 2 === 0 ? 0 : pxPerBrick / 2
-    for (let col = -1; col < BRICKS_PER_TILE; col++) {
-      const x = col * pxPerBrick + offset
-      g.fillRect(x + inset, y + inset, pxPerBrick - inset * 2, pxPerBrick - inset * 2)
+    g.fillStyle = base
+    g.fillRect(x0, y0, cellPx, cellPx)
+    // Plate bevel: lit top-left, shaded bottom-right — same trick as the
+    // studs themselves, so the cell reads as a raised plate.
+    g.fillStyle = shade(base, 0.1)
+    g.fillRect(x0, y0, cellPx, bevel)
+    g.fillRect(x0, y0, bevel, cellPx)
+    g.fillStyle = shade(base, -0.14)
+    g.fillRect(x0, y0 + cellPx - bevel, cellPx, bevel)
+    g.fillRect(x0 + cellPx - bevel, y0, bevel, cellPx)
+
+    for (let sy = 0; sy < STUDS_PER_CELL; sy++) {
+      for (let sx = 0; sx < STUDS_PER_CELL; sx++) {
+        const x = x0 + (sx + 0.5) * pitch
+        const y = y0 + (sy + 0.5) * pitch
+        const r = pitch * 0.3
+        disc(g, x + pitch * 0.05, y + pitch * 0.08, r * 1.05, 'rgba(0,0,0,0.28)')
+        disc(g, x, y, r, shade(base, 0.05))
+        g.lineWidth = pitch * 0.07
+        g.strokeStyle = 'rgba(255,255,255,0.45)'
+        g.beginPath()
+        g.arc(x, y, r * 0.78, Math.PI, Math.PI * 1.55)
+        g.stroke()
+        g.strokeStyle = 'rgba(0,0,0,0.18)'
+        g.beginPath()
+        g.arc(x, y, r * 0.85, Math.PI * 0.05, Math.PI * 0.6)
+        g.stroke()
+      }
     }
   }
 
@@ -130,7 +177,7 @@ function buildRoadGeometry() {
 }
 
 export default function Road() {
-  const texture = useMemo(makeBrickTexture, [])
+  const texture = useMemo(makeStudTexture, [])
   const geometry = useMemo(buildRoadGeometry, [])
 
   // three.js does not GC GPU memory (Tech.md §7).
@@ -138,10 +185,15 @@ export default function Road() {
   useEffect(() => () => geometry.dispose(), [geometry])
 
   return (
-    <mesh position={[0, ROAD_Y_OFFSET, 0]} geometry={geometry}>
+    <mesh position={[0, ROAD_Y_OFFSET, 0]} geometry={geometry} receiveShadow>
       {/* DoubleSide: the road is only ever seen from above, but this frees the
          segment winding from having to be hand-verified per direction. */}
-      <meshLambertMaterial map={texture} vertexColors side={THREE.DoubleSide} />
+      <meshStandardMaterial
+        map={texture}
+        vertexColors
+        side={THREE.DoubleSide}
+        {...MATERIAL_PBR.GROUND}
+      />
     </mesh>
   )
 }

@@ -8,13 +8,14 @@ import {
   GRASS_CAP,
   SPECKLE,
 } from '../data/blocks.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // The building block (Tech.md §6 prop set). Presentation only: every number it
 // draws comes from src/data/blocks.js, and the collider reads the same table.
 //
-// One geometry, one MeshLambertMaterial, one InstancedMesh — the whole field of
-// blocks is a single draw call (Tech.md §7). Bands are vertex colours rather
-// than materials, which is exactly what makes that possible.
+// One geometry, one MeshStandardMaterial, one InstancedMesh — the whole field
+// of blocks is a single draw call (Tech.md §7). Bands are vertex colours
+// rather than materials, which is exactly what makes that possible.
 
 // --- geometry ---------------------------------------------------------------
 // Quads are wound CCW seen from outside. UVs are laid out in metres and the
@@ -92,6 +93,15 @@ function makeBlockGeometry() {
 }
 
 // --- speckle ----------------------------------------------------------------
+// A grid of small stud-shaped bumps (a soft contact-shadow disc plus a dark
+// rim on the shadowed side), multiplied over whatever band colour the vertex
+// colours supply underneath — the same bevel trick Ground.jsx's/Road.jsx's
+// studs use, but shading-only: this texture *multiplies* over the dirt/grass
+// bands' own vertex colour rather than owning it outright (one texture
+// serves every band, dirt and grass cap alike, at their own independent
+// uvScale), so it can only darken — white is the ceiling, there is no
+// brighter-than-white highlight stroke to fake the lit side of the bump.
+// Same shading-only adaptation as GrassBlocks.jsx's own dirt-body texture.
 function makeSpeckleTexture() {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = SPECKLE.size
@@ -99,13 +109,20 @@ function makeSpeckleTexture() {
   g.fillStyle = '#ffffff'
   g.fillRect(0, 0, SPECKLE.size, SPECKLE.size)
 
-  // A grid of slightly darker pixels, multiplied over whatever band colour the
-  // vertex colours supply underneath.
-  g.fillStyle = `rgba(0, 0, 0, ${SPECKLE.alpha})`
-  const inset = Math.floor((SPECKLE.cell - SPECKLE.dot) / 2)
+  const r = SPECKLE.dot / 2
   for (let y = 0; y < SPECKLE.size; y += SPECKLE.cell) {
     for (let x = 0; x < SPECKLE.size; x += SPECKLE.cell) {
-      g.fillRect(x + inset, y + inset, SPECKLE.dot, SPECKLE.dot)
+      const cx = x + SPECKLE.cell / 2
+      const cy = y + SPECKLE.cell / 2
+      g.fillStyle = `rgba(0, 0, 0, ${SPECKLE.alpha * 0.5})`
+      g.beginPath()
+      g.arc(cx, cy, r, 0, Math.PI * 2)
+      g.fill()
+      g.strokeStyle = `rgba(0, 0, 0, ${SPECKLE.alpha})`
+      g.lineWidth = Math.max(1, r * 0.35)
+      g.beginPath()
+      g.arc(cx, cy, r * 0.85, Math.PI * 0.05, Math.PI * 0.6)
+      g.stroke()
     }
   }
 
@@ -115,9 +132,10 @@ function makeSpeckleTexture() {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 1 // Tech.md §7
-  // Crisp texels up close, mipmapped on the way out — the pixel grid is the
-  // look, so magnifying it must not blur it.
-  tex.magFilter = THREE.NearestFilter
+  // Smooth (not nearest) filtering: the old flat dot wanted crisp pixel
+  // edges, but these are soft circular bumps, and nearest-filtering a 64px
+  // canvas shared across dirt (5 tiles/m) and grass (2 tiles/m) at whatever
+  // distance the third-person camera sits would alias badly.
   return tex
 }
 
@@ -132,7 +150,12 @@ export default function BuildingBlocks() {
   const geometry = useMemo(makeBlockGeometry, [])
   const texture = useMemo(makeSpeckleTexture, [])
   const material = useMemo(
-    () => new THREE.MeshLambertMaterial({ map: texture, vertexColors: true }),
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: texture,
+        vertexColors: true,
+        ...MATERIAL_PBR.GROUND,
+      }),
     [texture],
   )
 
@@ -166,6 +189,7 @@ export default function BuildingBlocks() {
       ref={meshRef}
       args={[geometry, material, BLOCK_PLACEMENTS.length]}
       matrixAutoUpdate={false}
+      receiveShadow
     />
   )
 }

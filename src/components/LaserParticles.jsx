@@ -31,6 +31,7 @@ export default function LaserParticles() {
         transparent: true,
         opacity: 0.9,
         depthWrite: false,
+        toneMapped: false,
       }),
     [],
   )

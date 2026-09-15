@@ -63,6 +63,7 @@ export default function VortexEffect({ opacityRef }) {
           opacity={VORTEX_EFFECT_CORE_OPACITY}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
       <mesh ref={innerRef} position={[0, 0, VORTEX_EFFECT_DEPTH_OFFSET_INNER]}>
@@ -74,6 +75,7 @@ export default function VortexEffect({ opacityRef }) {
           opacity={VORTEX_EFFECT_OPACITY_INNER}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
       <mesh
@@ -89,6 +91,7 @@ export default function VortexEffect({ opacityRef }) {
           opacity={VORTEX_EFFECT_OPACITY_OUTER}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
     </Billboard>

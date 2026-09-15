@@ -94,7 +94,7 @@ export default function Laser() {
     <group userData={{ laserIgnore: true }}>
       <mesh ref={coreRef} visible={false}>
         <cylinderGeometry args={[LASER_CORE_RADIUS, LASER_CORE_RADIUS, 1, 8]} />
-        <meshBasicMaterial color={coreColor} />
+        <meshBasicMaterial color={coreColor} toneMapped={false} />
       </mesh>
       <mesh ref={glowRef} visible={false}>
         <cylinderGeometry args={[LASER_GLOW_RADIUS, LASER_GLOW_RADIUS, 1, 8]} />
@@ -103,6 +103,7 @@ export default function Laser() {
           transparent
           opacity={LASER_GLOW_OPACITY}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
       <mesh ref={flashRef} visible={false}>
@@ -112,6 +113,7 @@ export default function Laser() {
           transparent
           opacity={LASER_FLASH_OPACITY}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
     </group>

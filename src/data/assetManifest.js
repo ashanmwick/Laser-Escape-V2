@@ -11,7 +11,6 @@ import { TARGET_PROPS } from './targets.js'
 import { WALL_PROPS } from './wallProps.js'
 import { HEX_POWER_PAD_MODEL_URL } from './hexPowerPad.js'
 import { GLOW_FLOOR_PANEL_MODEL_URL } from './glowFloorPanel.js'
-import { GRASS_BLOCK_CUBE_MODEL_URL } from './grassBlockCubes.js'
 import { TREE_MODEL_URL } from './tree.js'
 import { TREE_PINE_MODEL_URL } from './treePine.js'
 
@@ -27,11 +26,14 @@ export const PRELOAD_PROP_URLS = [
   TREE_PINE_MODEL_URL,
 ]
 
-// Consumed by propModel.js loadPropParts() — the InstancedMesh source parts
-// GrassBlockCubes.jsx builds its lane border from. GrassBlocks.jsx is
-// code-generated (data/grassBlocks.js) and no longer downloads anything, so
-// it doesn't appear here any more — same as both PodiumStage instances.
-export const PRELOAD_PARTS_URLS = [GRASS_BLOCK_CUBE_MODEL_URL]
+// Consumed by propModel.js loadPropParts() — currently empty. Both
+// GrassBlocks.jsx and GrassBlockCubes.jsx are code-generated (data/
+// grassBlocks.js / data/grassBlockCubes.js) and no longer download
+// anything, so neither appears here any more — same as both PodiumStage
+// instances. Kept as a named export (rather than removed outright) since
+// loadPropParts() is still a live propModel.js entry point another prop
+// could use.
+export const PRELOAD_PARTS_URLS = []
 
 // What the loading bar counts up to.
 export const PRELOAD_TOTAL = PRELOAD_PROP_URLS.length + PRELOAD_PARTS_URLS.length

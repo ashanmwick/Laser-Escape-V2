@@ -1,4 +1,5 @@
 import { HUB_BOXES } from '../data/hub.js'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Visual boxes for the hub's placeholder walls. Presentation only — the data
 // lives in src/data/hub.js. This draws HUB_BOXES, not the full collider list:
@@ -15,9 +16,11 @@ export default function Obstacles() {
           <mesh
             key={i}
             position={[b.min.x + sx / 2, b.min.y + sy / 2, b.min.z + sz / 2]}
+            castShadow
+            receiveShadow
           >
             <boxGeometry args={[sx, sy, sz]} />
-            <meshLambertMaterial color="#4a5165" />
+            <meshStandardMaterial color="#4a5165" {...MATERIAL_PBR.FLAT_PLACEHOLDER} />
           </mesh>
         )
       })}

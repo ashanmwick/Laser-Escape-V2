@@ -10,7 +10,7 @@
 //
 // What it is for:
 //  - looking at the prop from any angle with the same lighting the hub uses
-//    (one hemisphere + one directional light, shadows off — Tech.md §7),
+//    (hemisphere + directional key light + ACES tone mapping — Tech.md §7),
 //  - reading its real triangle / draw-call cost against the 5k budget,
 //  - checking that the collider boxes data/podiumStage.js generates actually
 //    sit on the geometry (toggle "collider"), and
@@ -26,11 +26,14 @@ import {
   TOTAL_DEPTH,
   TOTAL_WIDTH,
 } from './data/podiumStage.js'
+import { MATERIAL_PBR } from './data/materials.js'
 
 const canvas = document.getElementById('view')
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight, false)
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#afd3ff')
@@ -43,15 +46,15 @@ controls.target.set(0, TOP_Y * 0.7, 0)
 controls.enableDamping = true
 controls.maxPolarAngle = Math.PI * 0.495
 
-scene.add(new THREE.HemisphereLight('#eaf3ff', '#b7a98f', 2.2))
-const sun = new THREE.DirectionalLight(0xffffff, 2.4)
+scene.add(new THREE.HemisphereLight('#eaf3ff', '#b7a98f', 0.75))
+const sun = new THREE.DirectionalLight(0xffffff, 1.8)
 sun.position.set(8, 14, 6)
 scene.add(sun)
 
 // ground + a 1 m grid, so the real-world scale is readable at a glance
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(40, 40),
-  new THREE.MeshLambertMaterial({ color: '#9fb87f' }),
+  new THREE.MeshStandardMaterial({ color: '#9fb87f', ...MATERIAL_PBR.GROUND }),
 )
 ground.rotation.x = -Math.PI / 2
 ground.position.y = -0.001
@@ -72,7 +75,7 @@ scene.add(mount)
 // is that a player can walk up, and that only reads next to a body
 const human = new THREE.Mesh(
   new THREE.BoxGeometry(0.42, 1.7, 0.28),
-  new THREE.MeshLambertMaterial({ color: '#3f6fbf' }),
+  new THREE.MeshStandardMaterial({ color: '#3f6fbf', ...MATERIAL_PBR.FLAT_PLACEHOLDER }),
 )
 human.position.set(TOTAL_WIDTH / 2 + 0.95, 0.85, TOTAL_DEPTH / 2 + 0.45)
 scene.add(human)

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { player } from '../systems/playerState.js'
 import PlayerAvatar from './PlayerAvatar.jsx'
+import { MATERIAL_PBR } from '../data/materials.js'
 
 // Presentation only: read the player singleton, draw the character. The group
 // origin sits at the capsule base (feet), matching playerState's convention —
@@ -28,14 +29,14 @@ export default function Player() {
   return (
     <group ref={ref} userData={{ laserIgnore: true }}>
       <group visible={!hasAvatar}>
-        <mesh position-y={height / 2}>
+        <mesh position-y={height / 2} castShadow>
           <capsuleGeometry args={[radius, cylinder, 4, 12]} />
-          <meshLambertMaterial color="#d9564b" />
+          <meshStandardMaterial color="#d9564b" {...MATERIAL_PBR.FLAT_PLACEHOLDER} />
         </mesh>
         {/* nub marking the facing direction */}
-        <mesh position={[0, height * 0.62, radius]}>
+        <mesh position={[0, height * 0.62, radius]} castShadow>
           <boxGeometry args={[0.14, 0.14, 0.28]} />
-          <meshLambertMaterial color="#ffd36b" />
+          <meshStandardMaterial color="#ffd36b" {...MATERIAL_PBR.FLAT_PLACEHOLDER} />
         </mesh>
       </group>
       <PlayerAvatar onReady={onAvatarReady} />

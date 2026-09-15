@@ -81,6 +81,7 @@ function makeCrackMaterial() {
     transparent: true,
     opacity: 0,
     depthWrite: false,
+    toneMapped: false,
     // Pull the overlay a hair toward the camera in the depth buffer so it wins
     // against the wall surface it sits exactly on, without writing depth itself.
     polygonOffset: true,

@@ -1,6 +1,14 @@
 import { Canvas, useLoader } from '@react-three/fiber'
-import { TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace } from 'three'
+import {
+  TextureLoader,
+  EquirectangularReflectionMapping,
+  SRGBColorSpace,
+  ACESFilmicToneMapping,
+  PCFSoftShadowMap,
+} from 'three'
+import { Environment, Lightformer } from '@react-three/drei'
 import GameLoop from './components/GameLoop.jsx'
+import ShadowSun from './components/ShadowSun.jsx'
 import BuildingBlocks from './components/BuildingBlocks.jsx'
 import GrassBlocks from './components/GrassBlocks.jsx'
 import GrassBlockCubes from './components/GrassBlockCubes.jsx'
@@ -25,7 +33,7 @@ import Laser from './components/Laser.jsx'
 import LaserParticles from './components/LaserParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
 import LoadingScreen from './components/LoadingScreen.jsx'
-import { QUALITY_DPR } from './data/bloxity.js'
+import { QUALITY_DPR, QUALITY_SHADOWS } from './data/bloxity.js'
 import {
   PODIUM_STAGE_HUB_TRANSFORM,
   PODIUM_STAGE_TARGET_TRANSFORM,
@@ -55,21 +63,64 @@ export default function App() {
   // Tech.md §7 rejects — and it stays inside the [1, 1.5] clamp.
   useSettings()
   const dprCap = QUALITY_DPR[settings.graphics_quality] ?? QUALITY_DPR.High
+  // Shadows are gated by the same user-elected quality tier, not adaptive at
+  // runtime (Tech.md §7): Low keeps the original shadow-free look, Medium+
+  // get the player-following shadow-sun (ShadowSun.jsx).
+  const shadowsEnabled = QUALITY_SHADOWS[settings.graphics_quality] ?? QUALITY_SHADOWS.High
 
   return (
     <>
       <Canvas
         dpr={[1, dprCap]}
-        shadows={false}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        shadows={shadowsEnabled ? { type: PCFSoftShadowMap } : false}
+        gl={{
+          antialias: true,
+          powerPreference: 'high-performance',
+          toneMapping: ACESFilmicToneMapping,
+          outputColorSpace: SRGBColorSpace,
+        }}
         camera={{ fov: 55, near: 0.1, far: 200, position: [0, 6, 12] }}
       >
         <SkyBackground />
-        {/* One hemisphere + one directional light, shadows off (Tech.md §7).
-           Tuned for bright midday: strong sky fill + warm ground bounce so
-           nothing reads as shadowed. */}
-        <hemisphereLight args={['#eaf3ff', '#b7a98f', 2.2]} />
-        <directionalLight position={[8, 14, 6]} intensity={2.4} />
+        {/* Hemisphere + directional key light (Tech.md §7). Retuned down from
+           the old shadow-free flat-lighting values now that ACES tone mapping
+           and PBR specular response are in play — the old 2.2/2.4 intensities
+           blow out highlights once materials actually have a specular curve.
+           The directional light is ShadowSun: a tight, player-following
+           shadow frustum, cast-shadow gated by graphics_quality above. */}
+        <hemisphereLight args={['#eaf3ff', '#b7a98f', 0.75]} />
+        <ShadowSun castShadow={shadowsEnabled} />
+        {/* Locally-baked, zero-network fake environment map (Tech.md §7) — a
+           64px PMREM cubemap baked once (frames=1) from three static
+           Lightformer panels, not an HDR file. Purely soft specular/reflection
+           fill; art-directed to bias toward the sky's cool-blue/warm-ground
+           palette so reflections don't read as neutral gray. */}
+        <Environment resolution={64} frames={1} environmentIntensity={0.35}>
+          <Lightformer
+            form="rect"
+            intensity={2}
+            color="#eaf3ff"
+            position={[0, 10, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            scale={[20, 20, 1]}
+          />
+          <Lightformer
+            form="rect"
+            intensity={1}
+            color="#ffe9c4"
+            position={[10, 3, 0]}
+            rotation={[0, -Math.PI / 2, 0]}
+            scale={[20, 5, 1]}
+          />
+          <Lightformer
+            form="rect"
+            intensity={0.6}
+            color="#b7a98f"
+            position={[-10, 3, 0]}
+            rotation={[0, Math.PI / 2, 0]}
+            scale={[20, 5, 1]}
+          />
+        </Environment>
 
         <GameLoop />
         <Ground />
