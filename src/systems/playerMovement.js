@@ -100,7 +100,90 @@ function resolveY(aabbs) {
   }
 }
 
-export function step(dt, aabbs = []) {
+// Convex-polygon colliders (data/hub.js's HUB_POLYGONS, currently just
+// data/pvpCenterPentagon.js's pentagon stack — Tech.md §5.2's box scan above
+// only fits rectangular/0-90°-rotated footprints). Each poly is
+// { center:{x,z}, minY, maxY, apothem, normals:[{x,z}, ...] } — a regular
+// N-gon, so every face sits the same `apothem` distance from centre, just
+// along a different outward unit normal. The player is still treated as a
+// circle of radius player.dims.radius on X/Z, same as the box code above;
+// `nearestFace` finds which of the polygon's faces that circle is closest
+// to (or furthest past, if outside), by the same "signed distance beyond
+// this face's line" used for every face — the largest one is both the
+// overlap test and, if there IS overlap, the shallowest (and therefore
+// correct) push-out direction, the polygon generalization of the box
+// resolvers' "push out along whichever axis is shallower".
+function nearestFace(p, poly) {
+  let d = -Infinity
+  let normal = poly.normals[0]
+  for (const n of poly.normals) {
+    const nd = (p.x - poly.center.x) * n.x + (p.z - poly.center.z) * n.z - poly.apothem
+    if (nd > d) {
+      d = nd
+      normal = n
+    }
+  }
+  return { d, normal }
+}
+
+function overlapsPoly(p, poly) {
+  if (p.y + player.dims.height <= poly.minY || p.y >= poly.maxY) return false
+  return nearestFace(p, poly).d < player.dims.radius
+}
+
+// Same idea as tryStepUp above, just keyed off a polygon instead of a box.
+function tryStepUpPoly(p, poly) {
+  const rise = poly.maxY - p.y
+  if (rise <= 0 || rise > STEP_HEIGHT) return false
+  p.y = poly.maxY
+  if (player.velocity.y < 0) player.velocity.y = 0
+  return true
+}
+
+// One unified push per polygon (not axis-split like resolveX/resolveZ,
+// since a face normal is rarely purely-X or purely-Z) — zeroing only the
+// velocity component along the push direction lets the player keep sliding
+// along the face instead of stopping dead, the same "slide along a wall"
+// feel the box resolvers get for free from resolving X and Z separately.
+function resolvePolys(polys) {
+  const p = player.position
+  for (let i = 0; i < polys.length; i++) {
+    const poly = polys[i]
+    if (!overlapsPoly(p, poly)) continue
+    if (tryStepUpPoly(p, poly)) continue
+    const { d, normal } = nearestFace(p, poly)
+    const push = player.dims.radius - d
+    p.x += normal.x * push
+    p.z += normal.z * push
+    const vDotN = player.velocity.x * normal.x + player.velocity.z * normal.z
+    if (vDotN < 0) {
+      player.velocity.x -= vDotN * normal.x
+      player.velocity.z -= vDotN * normal.z
+    }
+  }
+}
+
+// Polygon equivalent of resolveY: land on top or clip the underside,
+// whichever face (lid or floor) is shallower.
+function resolvePolysY(polys) {
+  const p = player.position
+  for (let i = 0; i < polys.length; i++) {
+    const poly = polys[i]
+    if (!overlapsPoly(p, poly)) continue
+    const upOut = poly.maxY - p.y
+    const downOut = p.y + player.dims.height - poly.minY
+    if (upOut <= downOut) {
+      p.y = poly.maxY
+      if (player.velocity.y < 0) player.velocity.y = 0
+      player.grounded = true
+    } else {
+      p.y = poly.minY - player.dims.height
+      if (player.velocity.y > 0) player.velocity.y = 0
+    }
+  }
+}
+
+export function step(dt, aabbs = [], polys = []) {
   if (dt <= 0) return
 
   // Camera-relative ground basis (Tech.md §5.2: input is camera-relative).
@@ -132,8 +215,10 @@ export function step(dt, aabbs = []) {
   resolveX(aabbs)
   p.z += player.velocity.z * dt
   resolveZ(aabbs)
+  resolvePolys(polys)
   p.y += player.velocity.y * dt
   resolveY(aabbs)
+  resolvePolysY(polys)
 
   // Flat ground plane.
   if (p.y <= GROUND_Y) {

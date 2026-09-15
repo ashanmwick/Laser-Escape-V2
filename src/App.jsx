@@ -21,6 +21,7 @@ import WoodCrateStack from './components/WoodCrateStack.jsx'
 import TreeProp from './components/TreeProp.jsx'
 import TreePineProp from './components/TreePineProp.jsx'
 import PvpWall from './components/PvpWall.jsx'
+import PvpCenterPentagon from './components/PvpCenterPentagon.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
@@ -77,6 +78,7 @@ export default function App() {
           antialias: true,
           powerPreference: 'high-performance',
           toneMapping: ACESFilmicToneMapping,
+          toneMappingExposure: 1.2,
           outputColorSpace: SRGBColorSpace,
         }}
         camera={{ fov: 55, near: 0.1, far: 200, position: [0, 6, 12] }}
@@ -85,17 +87,21 @@ export default function App() {
         {/* Hemisphere + directional key light (Tech.md §7). Retuned down from
            the old shadow-free flat-lighting values now that ACES tone mapping
            and PBR specular response are in play — the old 2.2/2.4 intensities
-           blow out highlights once materials actually have a specular curve.
-           The directional light is ShadowSun: a tight, player-following
-           shadow frustum, cast-shadow gated by graphics_quality above. */}
-        <hemisphereLight args={['#eaf3ff', '#b7a98f', 0.75]} />
+           blow out highlights once materials actually have a specular curve —
+           then retuned back up slightly (plus gl.toneMappingExposure above)
+           once the Tharindu-style stud-checker materials (naturally darker,
+           earthy tones at roughness 0.9) made the first-pass values read too
+           dim overall. The directional light is ShadowSun: a tight,
+           player-following shadow frustum, cast-shadow gated by
+           graphics_quality above. */}
+        <hemisphereLight args={['#eaf3ff', '#b7a98f', 1.1]} />
         <ShadowSun castShadow={shadowsEnabled} />
         {/* Locally-baked, zero-network fake environment map (Tech.md §7) — a
            64px PMREM cubemap baked once (frames=1) from three static
            Lightformer panels, not an HDR file. Purely soft specular/reflection
            fill; art-directed to bias toward the sky's cool-blue/warm-ground
            palette so reflections don't read as neutral gray. */}
-        <Environment resolution={64} frames={1} environmentIntensity={0.35}>
+        <Environment resolution={64} frames={1} environmentIntensity={0.55}>
           <Lightformer
             form="rect"
             intensity={2}
@@ -131,6 +137,7 @@ export default function App() {
         <GrassBlocks instances={PVP_DIRT_INSTANCES} />
         <GrassBlockCubes instances={PVP_CUBE_INSTANCES} />
         <PvpWall />
+        <PvpCenterPentagon />
         <Obstacles />
         <PodiumStage transform={PODIUM_STAGE_HUB_TRANSFORM} />
         <PodiumStage

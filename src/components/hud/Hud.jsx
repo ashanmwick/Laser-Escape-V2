@@ -34,7 +34,7 @@ function formatCompact(n) {
 
 // Centred modal opened by Button 4, titled "Rebirth". Confirms the trade of
 // current Power for a rebirth point rather than firing it on a single click.
-function RebirthWindow({ level, rebirth, canRebirth, onConfirm, onClose }) {
+function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose }) {
   const requirement = rebirthRequirement(rebirth)
   return (
     <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -51,14 +51,24 @@ function RebirthWindow({ level, rebirth, canRebirth, onConfirm, onClose }) {
           </button>
         </div>
         <div className="flex flex-col items-center gap-3 p-4 text-slate-100">
-          <img src="/ui/rebirth.png" alt="" className="h-14 w-14" draggable={false} />
-          <div className="text-center text-sm">
-            <div>
-              Current Rebirth: <span className="font-bold text-amber-300">{rebirth}</span>
-            </div>
-            <div>
-              Level <span className="font-bold">{level}</span> / {requirement} requirement
-            </div>
+          <div className="flex items-center justify-center gap-6 text-[3.625rem]">
+            <img src="/ui/action_popup.png" alt="" className="h-[5.5rem] w-[5.5rem]" draggable={false} />
+            <span className="font-bold text-amber-300">X{rebirth}</span>
+            <span
+              className="inline-block text-white text-[5.5rem] font-black leading-none"
+              style={{ WebkitTextStroke: '20px white', paintOrder: 'stroke fill' }}
+            >
+              →
+            </span>
+            <img src="/ui/action_popup.png" alt="" className="h-[5.5rem] w-[5.5rem]" draggable={false} />
+            <span className="font-bold text-amber-300">X{rebirth + 1}</span>
+          </div>
+
+          <div
+            className="text-center text-[1.625rem] font-bold text-red-500"
+            style={{ WebkitTextStroke: '3px black', paintOrder: 'stroke fill' }}
+          >
+            Rebirth resets your Strength and Level!
           </div>
 
           {/* Visual twin of the bottom-of-screen LevelBar, but plotting level
@@ -73,7 +83,7 @@ function RebirthWindow({ level, rebirth, canRebirth, onConfirm, onClose }) {
             type="button"
             onClick={onConfirm}
             disabled={!canRebirth}
-            className="w-full max-w-xs rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 font-semibold text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+            className="mt-2 w-full max-w-xs rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 font-semibold text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
           >
             {canRebirth ? 'Confirm Rebirth' : `Reach level ${requirement} to rebirth`}
           </button>
@@ -166,7 +176,6 @@ function LeftCenterControls() {
       {showRebirthWindow &&
         createPortal(
           <RebirthWindow
-            level={level}
             rebirth={rebirth}
             canRebirth={canRebirth}
             onConfirm={() => {

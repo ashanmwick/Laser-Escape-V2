@@ -45,7 +45,7 @@ export default function ShadowSun({ castShadow }) {
     <>
       <directionalLight
         ref={lightRef}
-        intensity={1.8}
+        intensity={2.3}
         castShadow={castShadow}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-45}

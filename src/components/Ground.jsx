@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import * as THREE from 'three'
 import { MATERIAL_PBR } from '../data/materials.js'
+import { makeStudTexture } from '../systems/studTexture.js'
 
 // Ground plane — a green studded (LEGO/Bloxity-style) floor authored in code
 // (Tech.md §3: level layout is code, not a Blender file). Look and transform
@@ -20,80 +20,32 @@ const GROUND_DEPTH = 137.60633850097656 // Blender world Y (dimensions.y)
 const GROUND_POSITION = [727.3260498046875, 0, 0] // Blender Z-up -> three Y-up
 const CELL = 2 // metres per checker cell (matches the old grid pitch)
 const STUDS_PER_CELL = 4 // studs per cell, each stud on a CELL/STUDS_PER_CELL = 0.5m pitch
-const DARK = '#54a739'
-const LIGHT = '#84ce54'
+// Darkened off the originally-authored '#54a739'/'#84ce54' (first pass
+// '#45892f'/'#6ca945' at -18% still read too bright, so this is a second,
+// steeper cut — roughly -39% off the original): the ground is a large,
+// nearly-horizontal plane facing almost straight up into both the
+// hemisphere light's sky term and ShadowSun's elevated key light, so it
+// catches far more direct light (high N·L) than a vertical wall face at the
+// same roughness/metalness ever does — walls read fine at MATERIAL_PBR.
+// GROUND's shared tuning, but the ground plane alone was clipping toward
+// white. Fixed here (this file's own albedo), not in the shared PBR preset,
+// since every other MATERIAL_PBR.GROUND surface (Road.jsx, BuildingBlocks,
+// GrassBlocks) is unaffected and shouldn't be darkened along with it.
+const DARK = '#346723'
+const LIGHT = '#517f34'
 
-// Lighten (amount > 0) or darken (amount < 0) a hex colour; returns a CSS colour.
-function shade(hex, amount) {
-  const n = parseInt(hex.slice(1), 16)
-  const r = (n >> 16) & 255
-  const gComponent = (n >> 8) & 255
-  const b = n & 255
-  const f = (c) => Math.round(amount >= 0 ? c + (255 - c) * amount : c * (1 + amount))
-  return `rgb(${f(r)},${f(gComponent)},${f(b)})`
-}
-
-function disc(ctx, x, y, r, fill) {
-  ctx.fillStyle = fill
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function makeStudTexture() {
-  const cellPx = 128 // px per checker cell in the source bitmap
-  const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = cellPx * 2
-  const g = canvas.getContext('2d')
-  const pitch = cellPx / STUDS_PER_CELL
-  const bevel = Math.max(2, cellPx / 40)
-
-  for (const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-    const base = (cx + cy) % 2 === 0 ? LIGHT : DARK
-    const x0 = cx * cellPx
-    const y0 = cy * cellPx
-
-    g.fillStyle = base
-    g.fillRect(x0, y0, cellPx, cellPx)
-    // Plate bevel: lit top-left, shaded bottom-right — same trick as the
-    // studs themselves, so the cell reads as a raised plate.
-    g.fillStyle = shade(base, 0.1)
-    g.fillRect(x0, y0, cellPx, bevel)
-    g.fillRect(x0, y0, bevel, cellPx)
-    g.fillStyle = shade(base, -0.14)
-    g.fillRect(x0, y0 + cellPx - bevel, cellPx, bevel)
-    g.fillRect(x0 + cellPx - bevel, y0, bevel, cellPx)
-
-    for (let sy = 0; sy < STUDS_PER_CELL; sy++) {
-      for (let sx = 0; sx < STUDS_PER_CELL; sx++) {
-        const x = x0 + (sx + 0.5) * pitch
-        const y = y0 + (sy + 0.5) * pitch
-        const r = pitch * 0.3
-        disc(g, x + pitch * 0.05, y + pitch * 0.08, r * 1.05, 'rgba(0,0,0,0.28)')
-        disc(g, x, y, r, shade(base, 0.05))
-        g.lineWidth = pitch * 0.07
-        g.strokeStyle = 'rgba(255,255,255,0.45)'
-        g.beginPath()
-        g.arc(x, y, r * 0.78, Math.PI, Math.PI * 1.55)
-        g.stroke()
-        g.strokeStyle = 'rgba(0,0,0,0.18)'
-        g.beginPath()
-        g.arc(x, y, r * 0.85, Math.PI * 0.05, Math.PI * 0.6)
-        g.stroke()
-      }
-    }
-  }
-
-  const tex = new THREE.CanvasTexture(canvas)
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(GROUND_WIDTH / (CELL * 2), GROUND_DEPTH / (CELL * 2))
-  tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 4
-  return tex
+function makeGroundTexture() {
+  return makeStudTexture({
+    light: LIGHT,
+    dark: DARK,
+    studsPerCell: STUDS_PER_CELL,
+    repeatX: GROUND_WIDTH / (CELL * 2),
+    repeatY: GROUND_DEPTH / (CELL * 2),
+  })
 }
 
 export default function Ground() {
-  const texture = useMemo(makeStudTexture, [])
+  const texture = useMemo(makeGroundTexture, [])
   // three.js does not GC GPU memory (Tech.md §7).
   useEffect(() => () => texture.dispose(), [texture])
 

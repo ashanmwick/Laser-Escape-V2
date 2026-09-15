@@ -47,21 +47,7 @@ export default function RebirthLevelBar() {
         margin: '0 auto',
       }}
     >
-      <div style={{ textAlign: 'center', marginBottom: 10 }}>
-        <span
-          style={{
-            display: 'inline-block',
-            padding: `${LEVEL_BAR_CAPTION_BAND_PAD_Y}px ${LEVEL_BAR_CAPTION_BAND_PAD_X}px`,
-            font: `800 ${LEVEL_BAR_CAPTION_FONT_PX}px/1 ui-rounded, 'Nunito', system-ui, sans-serif`,
-            letterSpacing: 0.5,
-            color: '#fff',
-            textShadow: TEXT_OUTLINE,
-            background: LEVEL_BAR_CAPTION_BAND,
-          }}
-        >
-          Rebirth Progress
-        </span>
-      </div>
+
 
       <div style={{ position: 'relative' }}>
         <div

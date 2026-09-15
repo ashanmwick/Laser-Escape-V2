@@ -2,7 +2,7 @@ import { BLOCK_AABBS } from './blocks.js'
 import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_AABBS } from './grassBlockCubes.js'
 import { PVP_DIRT_AABBS, PVP_CUBE_AABBS } from './pvpBlocks.js'
-import { PVP_WALL_AABB } from './pvpWall.js'
+import { PVP_CENTER_PENTAGON_POLYGONS } from './pvpCenterPentagon.js'
 import { MERCHANT_SHOP_AABBS } from './merchantShop.js'
 import { PODIUM_STAGE_HUB_AABBS, PODIUM_STAGE_TARGET_AABBS } from './podiumStage.js'
 import { WOOD_CRATE_AABBS } from './woodCrate.js'
@@ -29,10 +29,23 @@ export const HUB_AABBS = [
   ...GRASS_BLOCK_CUBE_AABBS,
   ...PVP_DIRT_AABBS,
   ...PVP_CUBE_AABBS,
-  PVP_WALL_AABB,
+  // pvp_wall is intentionally left out of the collider scan (Tech.md §5.2):
+  // it's the "UNLOCKABLE ON REBIRTH 1" sign wall (data/pvpWall.js), and for
+  // now the PVP zone stays walk-through so players can enter before that
+  // gate is wired up. The glass panel + sign still render (PvpWall.jsx);
+  // only the kinematic collider ignores it.
   ...PODIUM_STAGE_TARGET_AABBS,
   ...PODIUM_STAGE_HUB_AABBS,
   ...MERCHANT_SHOP_AABBS,
   ...WOOD_CRATE_AABBS,
   ...WALL_AABBS,
 ]
+
+// A second, parallel collider list for props an axis-aligned box can't
+// decently approximate (Tech.md §5.2's AABB scan above assumes rectangular
+// or 0/90°-rotated footprints — true of every other prop in this file, but
+// not data/pvpCenterPentagon.js's 60°-rotated pentagon stack). systems/
+// collision.js's getPolys() exposes this; systems/playerMovement.js's
+// step() scans it the same way as HUB_AABBS, just against convex-polygon
+// faces instead of box faces.
+export const HUB_POLYGONS = [...PVP_CENTER_PENTAGON_POLYGONS]

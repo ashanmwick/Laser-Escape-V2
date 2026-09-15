@@ -13,7 +13,7 @@ import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
 import { step as stepWallDebris } from '../systems/wallDebris.js'
 import { step as stepNet, reportLocal } from '../systems/net.js'
-import { getAabbs } from '../systems/collision.js'
+import { getAabbs, getPolys } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
 import { inputState } from '../systems/input.js'
 
@@ -26,7 +26,7 @@ export default function GameLoop() {
 
   useFrame(() => {
     const dt = tick()
-    step(dt, getAabbs())
+    step(dt, getAabbs(), getPolys())
     stepShadowSun()
     updateCamera(camera, dt)
     // Project the player to the screen and age live popups before stepAction

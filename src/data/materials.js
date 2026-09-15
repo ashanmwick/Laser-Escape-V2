@@ -10,7 +10,7 @@
 // visually against the scene's new key light + fake env map, not derived
 // from any measured reference.
 export const MATERIAL_PBR = {
-  GROUND: { roughness: 0.9, metalness: 0 }, // ground, road, dirt, grass, building blocks
+  GROUND: { roughness: 0.9, metalness: 0 }, // ground, road, dirt, grass, building blocks, Pvp zone centre pentagon (own color)
   WOOD: { roughness: 0.75, metalness: 0 }, // podium stage, wood crates
   FLAT_PLACEHOLDER: { roughness: 0.8, metalness: 0 }, // obstacles, player/remote-player fallback capsules, wall debris
   GLASS: { roughness: 0.1, metalness: 0 }, // PvpWall panel
