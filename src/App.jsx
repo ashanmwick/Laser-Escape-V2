@@ -25,6 +25,7 @@ import PvpCenterPentagon from './components/PvpCenterPentagon.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
 import LeaderboardBoard from './components/LeaderboardBoard.jsx'
+import { LEADERBOARD_TRANSFORMS } from './data/leaderboardBoard.js'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
 import WallProps from './components/WallProps.jsx'
 import WallDebris from './components/WallDebris.jsx'
@@ -158,7 +159,9 @@ export default function App() {
         ))}
         <HexPowerPads />
         <Targets />
-        <LeaderboardBoard />
+        {LEADERBOARD_TRANSFORMS.map((t, i) => (
+          <LeaderboardBoard key={i} transform={t} title={t.title} stat={t.stat} />
+        ))}
         <GlowFloorPanels />
         <WallProps />
         <WallDebris />

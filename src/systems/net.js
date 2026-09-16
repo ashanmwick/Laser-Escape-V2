@@ -14,12 +14,15 @@ import { laser } from './laser.js'
 import { SPEED } from './playerMovement.js'
 import { authState, subscribeAuth } from './bloxity.js'
 import { avatarState, subscribe as subscribeAvatar } from './avatarState.js'
+import { useGameStore } from '../store/useGameStore.js'
 import {
   subscribeWallNet,
   applyRemoteWallHealth,
   resetWallsFromNetwork,
 } from './wallHealth.js'
+import { subscribeHealthNet, applyRemoteHealth } from './playerHealth.js'
 import { PROPORTIONS, clamp } from '../data/bloxity.js'
+import { PLAYER_MAX_HP } from '../data/playerHealth.js'
 import {
   SERVER_URL,
   ROOM_NAME,
@@ -36,6 +39,7 @@ import {
   USERNAME_WAIT_MS,
   AVATAR_MAX_LEN,
   AVATAR_RESEND_DEBOUNCE_MS,
+  STATS_RESEND_DEBOUNCE_MS,
   REMOTE_BODY,
 } from '../data/net.js'
 
@@ -53,12 +57,19 @@ export const netState = {
   error: null, // last error string, for diagnostics
 }
 
-// id -> live remote body. Mutated in place; the frame loop (step) and
-// components/RemotePlayers.jsx read it directly.
+// id -> live remote body. Mutated in place; the frame loop (step),
+// components/RemotePlayers.jsx and getLeaderboard() below read it directly.
 //   x/y/z/yaw/speed   last values the server reported
 //   rx/ry/rz/ryaw/rspeed  eased render values (smooth the MOVE_SEND_HZ packets)
 //   firing            beam on?          beam {x,y,z}  world-space beam endpoint
 //   username          name-tag text
+//   power/rebirth/wins  last-reported store/useGameStore.js stats (0 until
+//                     their first `stats` packet, or forever on a server that
+//                     predates that field — a leaderboard reads a stale-but-
+//                     harmless 0 rather than throwing)
+//   hp/maxHp/dead     PVP health (systems/playerCombat.js, components/
+//                     RemotePlayers.jsx's floating bar) — server-authoritative,
+//                     written by whichever OTHER client last hit this one
 //   alpha             0..1 fade (spawn-in / leave-out)
 //   present           seen in room.state this frame
 //   lastAt            performance.now() of the last time it was seen present
@@ -209,6 +220,59 @@ function scheduleAvatarResend() {
   }, AVATAR_RESEND_DEBOUNCE_MS)
 }
 
+// --- Stats sync ---------------------------------------------------------
+// Our own live power/rebirth/wins (store/useGameStore.js), pushed to the room
+// so components/LeaderboardBoard.jsx can rank currently-connected players.
+// useGameStore is zustand's plain store object — .getState()/.subscribe() are
+// framework-free (no React import here, same constraint as the rest of this
+// file); only a React component would call it as a hook.
+function statsPayload() {
+  const s = useGameStore.getState()
+  return { power: s.power, rebirth: s.rebirth, wins: s.wins }
+}
+
+let statsResendTimer = 0
+
+function sendStatsNow() {
+  if (!room) return
+  try {
+    room.send('stats', statsPayload())
+  } catch {
+    // Socket mid-close — the next attach re-seeds via attachRoom() anyway.
+  }
+}
+
+// Same "schedule once, ride out further triggers until it fires" shape as
+// scheduleAvatarResend, just a longer window (STATS_RESEND_DEBOUNCE_MS):
+// an actively-grinding AFK player can gain Power many times a second
+// (systems/actionTracker.js), and a per-gain packet would be needless
+// chatter for a leaderboard that only needs a roughly-current rank.
+function scheduleStatsResend() {
+  if (statsResendTimer) return
+  statsResendTimer = setTimeout(() => {
+    statsResendTimer = 0
+    sendStatsNow()
+  }, STATS_RESEND_DEBOUNCE_MS)
+}
+
+// Last power/rebirth/wins we scheduled a resend for — useGameStore.subscribe
+// fires on ANY store change (no subscribeWithSelector middleware, store/
+// useGameStore.js's own header comment), so this filters out the unrelated
+// ones (buying a hex pad, a wall being marked destroyed, ...) rather than
+// scheduling a pointless resend for every one of them.
+let lastScheduledStats = { power: undefined, rebirth: undefined, wins: undefined }
+
+function onLocalStoreChange(state) {
+  if (
+    state.power !== lastScheduledStats.power ||
+    state.rebirth !== lastScheduledStats.rebirth ||
+    state.wins !== lastScheduledStats.wins
+  ) {
+    lastScheduledStats = { power: state.power, rebirth: state.rebirth, wins: state.wins }
+    scheduleStatsResend()
+  }
+}
+
 // --- Wall health sync -------------------------------------------------
 // Local wall events from systems/wallHealth.js -> the room. Strikes land every
 // ACTION_HOLD_INTERVAL (2 s) at most, so a send per event is not chatty; the
@@ -227,6 +291,33 @@ function onLocalWallEvent(ev) {
     }
   } catch {
     // Socket mid-close — handleLeave() will pick it up; local state already moved.
+  }
+}
+
+// --- PVP health sync ----------------------------------------------------
+// Our own respawn (systems/playerHealth.js) -> the room. Damage itself is
+// sent from the ATTACKER's client (see sendPlayerDamage below), not from
+// here — this module only ever reports that WE came back to life.
+function onLocalHealthEvent(ev) {
+  if (!room) return
+  try {
+    if (ev.type === 'respawn') room.send('playerRespawn', {})
+  } catch {
+    // Socket mid-close — handleLeave() will pick it up; local state already moved.
+  }
+}
+
+// Called from systems/playerCombat.js's strikeTarget() when the beam is on
+// another player in the PVP zone. Same client-authoritative trust model as
+// onLocalWallEvent's wallDamage: the attacker computes the target's next hp,
+// the server clamps + stores it, every client (including the target) adopts
+// it back from room.state.players on a later frame.
+export function sendPlayerDamage(targetId, hp) {
+  if (!room) return
+  try {
+    room.send('playerDamage', { targetId, hp })
+  } catch {
+    // Socket mid-close — the hit is simply lost, same as a dropped wallDamage.
   }
 }
 
@@ -343,6 +434,10 @@ function attachRoom(joined) {
   // it, but a fresh joinOrCreate after a drop needs it re-stated on the new
   // session, and a server that predates the `avatar` field just ignores this.
   sendAvatarNow()
+  // Same reasoning for stats: a fresh session starts every field at its
+  // schema default (0), so a rejoin needs its current power/rebirth/wins
+  // re-stated immediately rather than waiting for the next store change.
+  sendStatsNow()
 
   recount()
   setStatus('online')
@@ -375,6 +470,8 @@ function recount() {
 // --- Public lifecycle -------------------------------------------------
 let offAvatar = null
 let offWallNet = null
+let offStats = null
+let offHealthNet = null
 
 export function init() {
   if (started) return
@@ -387,6 +484,12 @@ export function init() {
   // Local wall damage / destroy / round-reset -> the room. onLocalWallEvent
   // no-ops while offline, so single-player wall breaking is unaffected.
   if (!offWallNet) offWallNet = subscribeWallNet(onLocalWallEvent)
+  // Our own power/rebirth/wins -> the room, debounced (see scheduleStatsResend).
+  // A no-op while offline; the next attach re-seeds via sendStatsNow().
+  if (!offStats) offStats = useGameStore.subscribe(onLocalStoreChange)
+  // Our own PVP respawn -> the room. A no-op while offline; harmless if it
+  // never sends (there's no server hp to reconcile against without a room).
+  if (!offHealthNet) offHealthNet = subscribeHealthNet(onLocalHealthEvent)
   waitForAuth(USERNAME_WAIT_MS).then(() => {
     if (!stopped) connect()
   })
@@ -399,6 +502,8 @@ export function teardown() {
   retryTimer = 0
   clearTimeout(avatarResendTimer)
   avatarResendTimer = 0
+  clearTimeout(statsResendTimer)
+  statsResendTimer = 0
   if (offAvatar) {
     offAvatar()
     offAvatar = null
@@ -406,6 +511,14 @@ export function teardown() {
   if (offWallNet) {
     offWallNet()
     offWallNet = null
+  }
+  if (offStats) {
+    offStats()
+    offStats = null
+  }
+  if (offHealthNet) {
+    offHealthNet()
+    offHealthNet = null
   }
   if (room) {
     try {
@@ -499,6 +612,11 @@ function shortestAngleTo(from, to) {
 function ingestRemote(id, s, now) {
   let e = remotePlayers.get(id)
   if (!e) {
+    // MAX_REMOTE_BODIES bounds the avatar-rig draw-call cost (data/net.js's
+    // own comment); getLeaderboard() below reuses this same tracked set
+    // rather than a separate channel, so with more than that many other
+    // players connected the leaderboard only ranks whichever ones got
+    // tracked first, not necessarily the true top scorers room-wide.
     if (remotePlayers.size >= MAX_REMOTE_BODIES) return
     const parsed = parseAvatar(s.avatar)
     e = {
@@ -513,6 +631,16 @@ function ingestRemote(id, s, now) {
       equipped: parsed.equipped,
       proportions: parsed.proportions,
       avatarRev: 0,
+      // 0 until their first `stats` packet (client systems/net.js
+      // sendStatsNow), or forever against a server predating that field —
+      // getLeaderboard() below just reads whatever's here, no special-casing.
+      power: s.power || 0, rebirth: s.rebirth || 0, wins: s.wins || 0,
+      // PVP health (systems/playerCombat.js / components/RemotePlayers.jsx).
+      // Continuous, read straight off the map every frame like x/y/z — never
+      // gated behind emit(), same reasoning as those.
+      hp: typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP,
+      maxHp: typeof s.maxHp === 'number' ? s.maxHp : PLAYER_MAX_HP,
+      dead: !!s.dead,
       alpha: 0, present: true, lastAt: now,
     }
     remotePlayers.set(id, e)
@@ -527,6 +655,18 @@ function ingestRemote(id, s, now) {
   e.beam.x = s.beamToX
   e.beam.y = s.beamToY
   e.beam.z = s.beamToZ
+  e.hp = typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP
+  e.maxHp = typeof s.maxHp === 'number' ? s.maxHp : PLAYER_MAX_HP
+  e.dead = !!s.dead
+  const power = s.power || 0
+  const rebirth = s.rebirth || 0
+  const wins = s.wins || 0
+  if (power !== e.power || rebirth !== e.rebirth || wins !== e.wins) {
+    e.power = power
+    e.rebirth = rebirth
+    e.wins = wins
+    emit() // a tracked stat changed — a leaderboard's rank may need updating
+  }
   if (s.username && s.username !== e.username) {
     e.username = s.username
     emit()
@@ -568,6 +708,12 @@ export function step(dt) {
       if (!live.get(id)) e.present = false
     }
     recount()
+
+    // Our own PVP hp/dead, as some OTHER client's strikeTarget() last wrote
+    // it to the room — same "adopt the server's echo" pattern as the wall
+    // pool below, just keyed to our own sessionId instead of a wallId.
+    const self = live.get(selfId)
+    if (self) applyRemoteHealth(self.hp, !!self.dead)
   }
 
   // Shared wall health: a room-wide round reset first (someone reached a win
@@ -618,4 +764,26 @@ export function step(dt) {
       emit() // the body left the render roster
     }
   }
+}
+
+// --- Leaderboard --------------------------------------------------------
+// Top `limit` players by `stat` ('power' | 'rebirth' | 'wins' — any
+// store/useGameStore.js field), local player included, highest first —
+// components/LeaderboardBoard.jsx's own data source. Always includes us,
+// straight off the live store (no round trip needed for our own numbers)
+// rather than waiting on the room to echo back what we just sent; every
+// other row comes from remotePlayers (see its own comment on the
+// MAX_REMOTE_BODIES cap this inherits). Offline/solo, this is just our own
+// single row — the same "degrades to solo, never blocks" stance as the rest
+// of this file (file header comment).
+export function getLeaderboard(stat, limit) {
+  const rows = [
+    { id: selfId || 'self', name: currentUsername(), value: Number(useGameStore.getState()[stat]) || 0 },
+  ]
+  for (const [id, e] of remotePlayers) {
+    if (!e.present) continue
+    rows.push({ id, name: e.username || 'Player', value: Number(e[stat]) || 0 })
+  }
+  rows.sort((a, b) => b.value - a.value)
+  return rows.slice(0, limit)
 }

@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react'
 import { useGameStore } from '../../store/useGameStore.js'
 import { levelProgress, canAcceptRebirth } from '../../data/progression.js'
 import { formatShort } from '../../data/format.js'
+import { player } from '../../systems/playerState.js'
+import { isInPvpZone } from '../../data/pvpZone.js'
+import { healthFraction } from '../../systems/playerHealth.js'
+import { HUD_HEALTH_BAR } from '../../data/playerHealth.js'
 import {
   LEVEL_BAR_POLL_MS,
   LEVEL_BAR_WIDTH,
@@ -45,6 +49,8 @@ export default function LevelBar() {
   const levelRef = useRef(null)
   const countRef = useRef(null)
   const fillRef = useRef(null)
+  const hpWrapRef = useRef(null)
+  const hpFillRef = useRef(null)
 
   useEffect(() => {
     let last = 0
@@ -65,6 +71,14 @@ export default function LevelBar() {
         countRef.current.textContent = `${formatShort(total)} / ${formatShort(needed)}`
       if (fillRef.current)
         fillRef.current.style.width = `${(frac * 100).toFixed(2)}%`
+      // PVP health (systems/playerHealth.js): tiny bar, shown only in the PVP
+      // zone. Position/hp aren't store fields, so this needs its own poll
+      // (below) rather than riding the store-subscribe schedule() below.
+      if (hpWrapRef.current)
+        hpWrapRef.current.style.display = isInPvpZone(player.position.x, player.position.z)
+          ? 'block'
+          : 'none'
+      if (hpFillRef.current) hpFillRef.current.style.width = `${(healthFraction() * 100).toFixed(1)}%`
     }
 
     // Leading + trailing throttle at ~10Hz: the first change paints at once, a
@@ -88,8 +102,12 @@ export default function LevelBar() {
 
     paint()
     const unsub = useGameStore.subscribe(schedule)
+    // The health bar's inputs (position, hp) never touch the store, so it
+    // needs its own steady poll rather than only riding store changes.
+    const poll = setInterval(paint, LEVEL_BAR_POLL_MS)
     return () => {
       if (trailing) clearTimeout(trailing)
+      clearInterval(poll)
       unsub()
     }
   }, [])
@@ -122,6 +140,36 @@ export default function LevelBar() {
         >
           Rebirth Available
         </span>
+      </div>
+
+      {/* Tiny PVP health sliver, just above the "N Power" caption. Hidden
+         outside the PVP zone (data/pvpZone.js) — toggled from paint() above,
+         never a React render. */}
+      <div
+        ref={hpWrapRef}
+        style={{ display: 'none', margin: `0 auto ${LEVEL_BAR_CAPTION_BAND_PAD_Y}px`, width: HUD_HEALTH_BAR.WIDTH }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            height: HUD_HEALTH_BAR.HEIGHT,
+            background: HUD_HEALTH_BAR.BG_COLOR,
+            border: `${HUD_HEALTH_BAR.BORDER}px solid #000`,
+            borderRadius: 9999,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            ref={hpFillRef}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              background: HUD_HEALTH_BAR.FILL_COLOR,
+              transition: 'width 150ms ease-out',
+            }}
+          />
+        </div>
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: 10 }}>

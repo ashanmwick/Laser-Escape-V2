@@ -33,7 +33,7 @@ import {
 // color switch instantly rather than lerp, so each zone reads as one flat
 // tint.
 export const ROAD_WAYPOINTS = [
-  { x: -40, z: 4, width: 8, color: '#f3c520'  },
+  { x: -90, z: 4, width: 8, color: '#f3c520'  },
   { x: 65, z: 4, width: 8, color: '#f3c520' },
   { x: 65, z: 4, width: 45, color: '#fefdf8' }, // stage 1 paper
   { x: 135, z: 4, width: 45, color: '#fefdf8' },

@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { inputState } from './input.js'
 import { player } from './playerState.js'
 import { afkState } from './afk.js'
+import { health as playerHealth } from './playerHealth.js'
 import { LASER_EYE_HEIGHT_RATIO, LASER_FORWARD_RATIO, LASER_MAX_RANGE } from '../data/laser.js'
 import { TARGET_AIM_POINT } from '../data/targets.js'
 
@@ -43,6 +44,15 @@ function isIgnored(object) {
 }
 
 export function step(camera, scene) {
+  // Dead (systems/playerHealth.js, PVP only) — frozen, can't aim or fire.
+  if (playerHealth.dead) {
+    laser.active = false
+    laser.hit = false
+    laser.hitObject = null
+    laser.hitInstanceId = -1
+    return
+  }
+
   // AFK lock (systems/afk.js) fires the beam exactly like a held mouse
   // button, just aimed at the locked target's top area instead of the
   // cursor — so it reads as "firing" too, not only a real mouse hold.

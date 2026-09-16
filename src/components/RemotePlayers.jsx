@@ -5,11 +5,14 @@ import { Billboard, Text } from '@react-three/drei'
 import { remotePlayers, subscribe } from '../systems/net.js'
 import { buildAvatar, applyProportions, disposeAvatar } from '../systems/avatarModel.js'
 import { makeGait, updateGait, disposeGait } from '../systems/avatarAnim.js'
+import { player } from '../systems/playerState.js'
+import { isInPvpZone } from '../data/pvpZone.js'
 import {
   REMOTE_BODY,
   REMOTE_BEAM_EYE_RATIO,
   REMOTE_BEAM_FORWARD_RATIO,
 } from '../data/net.js'
+import { REMOTE_HEALTH_BAR } from '../data/playerHealth.js'
 import { MATERIAL_PBR } from '../data/materials.js'
 
 // Other players in the same arena room (systems/net.js). Presentation only
@@ -106,6 +109,9 @@ function RemoteBody({ id, name, avatarRev }) {
   const nubMatRef = useRef()
   const glowMatRef = useRef()
   const coreMatRef = useRef()
+  const healthBarRef = useRef()
+  const healthFillRef = useRef()
+  const healthFillMatRef = useRef()
 
   const [hasAvatar, setHasAvatar] = useState(false)
   const onAvatarReady = useCallback((ready) => setHasAvatar(ready), [])
@@ -131,6 +137,23 @@ function RemoteBody({ id, name, avatarRev }) {
     if (nubMatRef.current) {
       nubMatRef.current.transparent = transparent
       nubMatRef.current.opacity = a
+    }
+
+    // --- Health bar: shown only while WE are in the PVP zone (data/
+    // pvpZone.js) — outside it, hp never moves anyway (systems/
+    // playerCombat.js only fires while the attacker is inside too). ---
+    if (healthBarRef.current) {
+      const show = a > 0.05 && isInPvpZone(player.position.x, player.position.z)
+      healthBarRef.current.visible = show
+      if (show) {
+        const frac = e.maxHp > 0 ? Math.max(0, Math.min(1, e.hp / e.maxHp)) : 0
+        const w = REMOTE_HEALTH_BAR.WIDTH
+        if (healthFillRef.current) {
+          healthFillRef.current.scale.x = Math.max(0.0001, w * frac)
+          healthFillRef.current.position.x = -w / 2 + (w * frac) / 2
+        }
+        if (healthFillMatRef.current) healthFillMatRef.current.opacity = a
+      }
     }
 
     // --- Beam: world-space, drawn only while firing ---
@@ -195,6 +218,24 @@ function RemoteBody({ id, name, avatarRev }) {
           >
             {name}
           </Text>
+
+          {/* PVP health bar, just above the name — visible only while we're
+             in the PVP zone (see the visibility check in useFrame above). */}
+          <group ref={healthBarRef} position-y={REMOTE_HEALTH_BAR.Y_OFFSET} visible={false}>
+            <mesh>
+              <planeGeometry args={[REMOTE_HEALTH_BAR.WIDTH, REMOTE_HEALTH_BAR.HEIGHT]} />
+              <meshBasicMaterial color={REMOTE_HEALTH_BAR.BG_COLOR} transparent depthWrite={false} />
+            </mesh>
+            <mesh ref={healthFillRef} position={[0, 0, 0.001]}>
+              <planeGeometry args={[1, REMOTE_HEALTH_BAR.HEIGHT]} />
+              <meshBasicMaterial
+                ref={healthFillMatRef}
+                color={REMOTE_HEALTH_BAR.FILL_COLOR}
+                transparent
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
         </Billboard>
       </group>
 

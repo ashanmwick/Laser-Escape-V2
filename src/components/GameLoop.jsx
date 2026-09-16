@@ -11,6 +11,8 @@ import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
+import { step as stepPlayerHealth, health as playerHealthState } from '../systems/playerHealth.js'
+import { step as stepPlayerCombat } from '../systems/playerCombat.js'
 import { step as stepWallDebris } from '../systems/wallDebris.js'
 import { step as stepNet, reportLocal } from '../systems/net.js'
 import { getAabbs, getPolys, getRings } from '../systems/collision.js'
@@ -26,7 +28,10 @@ export default function GameLoop() {
 
   useFrame(() => {
     const dt = tick()
-    step(dt, getAabbs(), getPolys(), getRings())
+    stepPlayerHealth()
+    // Frozen while dead (PVP only) — position/velocity hold where they died
+    // until systems/playerHealth.js's respawn timer teleports them back out.
+    if (!playerHealthState.dead) step(dt, getAabbs(), getPolys(), getRings())
     stepShadowSun()
     updateCamera(camera, dt)
     // Project the player to the screen and age live popups before stepAction
@@ -40,9 +45,12 @@ export default function GameLoop() {
     // what it handles) — reset it here so a press near nothing never lingers
     // into a later frame and fires something the player didn't aim at.
     inputState.interact = false
-    // Laser aim first: stepAction below reads this frame's beam hit to apply a
-    // discrete wall strike on each Action event (systems/wallHealth.js).
+    // Laser aim first, then PVP hit-testing (which may clip the beam onto a
+    // player it found), then stepAction — which reads this frame's result to
+    // apply a discrete strike on each Action event (systems/playerCombat.js,
+    // falling back to systems/wallHealth.js off the PVP zone).
     stepLaser(camera, scene)
+    stepPlayerCombat()
     stepAction(dt)
     stepWallHealth(dt)
     // After stepAction/stepWallHealth so a wall broken this frame has already

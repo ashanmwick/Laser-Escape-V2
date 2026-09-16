@@ -77,6 +77,13 @@ export const AVATAR_MAX_LEN = 4096
 // (customizer edits fire a burst of proportion updates).
 export const AVATAR_RESEND_DEBOUNCE_MS = 600
 
+// Debounce on re-sending our own power/rebirth/wins after any of them
+// change. Longer than the avatar's: an actively-grinding AFK player can gain
+// Power many times a second (systems/actionTracker.js), and the in-world
+// leaderboard (components/LeaderboardBoard.jsx) only needs a roughly-current
+// rank, not a per-gain packet.
+export const STATS_RESEND_DEBOUNCE_MS = 1_000
+
 // Wait up to this long for the Bloxity auth state to settle before the first
 // connect, so a signed-in player joins under their real name rather than the
 // "Player" fallback. Not waited on reconnects.

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { afkState } from '../../systems/afk.js'
 import { hexPowerPadState } from '../../systems/hexPowerPad.js'
 import { settings } from '../../systems/settingsState.js'
+import { health as playerHealth } from '../../systems/playerHealth.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth, rebirthRequirement } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
@@ -135,20 +136,20 @@ function LeftCenterControls() {
             onClick={acceptRebirth}
             disabled
             title="Coming soon"
-            className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
           >
             <img src="/ui/aura.png" alt="" className="h-10 w-10" draggable={false} />
-            <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+            <span className="text-xs font-semibold tracking-wide">Aura</span>
           </button>
           <button
             type="button"
             onClick={acceptRebirth}
             disabled
             title="Coming soon"
-            className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
           >
             <img src="/ui/shop.png" alt="" className="h-10 w-10" draggable={false} />
-            <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+            <span className="text-xs font-semibold tracking-wide">Shop</span>
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -157,16 +158,20 @@ function LeftCenterControls() {
           onClick={acceptRebirth}
           disabled
           title="Coming soon"
-          className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
         >
           <img src="/ui/invite_friends.png" alt="" className="h-10 w-10" draggable={false} />
-          <span className="text-xs font-semibold tracking-wide">Rebirth</span>
+          <span className="text-xs font-semibold leading-tight tracking-wide text-center">
+            Invite
+            <br />
+            Friends
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setShowRebirthWindow(true)}
           title="Open Rebirth"
-          className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
+          className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
           <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
           <span className="text-xs font-semibold tracking-wide">Rebirth</span>
@@ -198,6 +203,25 @@ export default function Hud() {
   useSettings()
   const afkPromptRef = useRef(null)
   const hexPadPromptRef = useRef(null)
+  const deathPromptRef = useRef(null)
+
+  // Dead in the PVP zone (systems/playerHealth.js) — a countdown to the
+  // respawn that system's own step() runs, same throttled-poll pattern as
+  // the prompts below (this value changes at human speed, not per frame).
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = deathPromptRef.current
+      if (!el) return
+      if (playerHealth.dead) {
+        const secs = Math.max(0, Math.ceil((playerHealth.respawnAt - performance.now()) / 1000))
+        el.textContent = `You Died — Respawning in ${secs}s`
+        el.style.display = ''
+      } else {
+        el.style.display = 'none'
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
 
   // afkState (systems/afk.js) changes at human speed — near a target, locked
   // on, or neither — so a throttled textContent poll keeps this out of
@@ -278,6 +302,12 @@ export default function Hud() {
         ref={hexPadPromptRef}
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
         style={{ display: 'none' }}
+      />
+
+      <div
+        ref={deathPromptRef}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-black/70 px-6 py-3 text-2xl font-bold text-red-500"
+        style={{ display: 'none', WebkitTextStroke: '2px black', paintOrder: 'stroke fill' }}
       />
 
       <LeftCenterControls />

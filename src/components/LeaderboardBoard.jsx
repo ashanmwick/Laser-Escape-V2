@@ -1,7 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { Text } from '@react-three/drei'
 import { MATERIAL_PBR } from '../data/materials.js'
 import { makeStudTexture } from '../systems/studTexture.js'
+import { useGameStore } from '../store/useGameStore.js'
+import { getLeaderboard, subscribe as subscribeNet } from '../systems/net.js'
+import { formatShort } from '../data/format.js'
 import {
   LEADERBOARD_TRANSFORM,
   BOARD_WIDTH,
@@ -29,7 +32,9 @@ import {
   LEADERBOARD_TITLE,
   TITLE_FONT_SIZE,
   TITLE_Y,
-  LEADERBOARD_ROWS,
+  FIXED_ROW_SLOTS,
+  rankColorFor,
+  PLAYER_ROW_SCORE_COLOR,
   ENTRY_NAME_COLOR,
   ROW_FONT_SIZE,
   ROW_HEIGHT,
@@ -37,6 +42,7 @@ import {
   RANK_TEXT_X,
   NAME_TEXT_X,
   SCORE_TEXT_X,
+  getRowLayout,
   LEADERBOARD_TIMER_TEXT,
   TIMER_FONT_SIZE,
   TIMER_Y,
@@ -46,8 +52,7 @@ import {
 // origin at ground level, centred on X, +Z the readable front face — same
 // convention data/leaderboardBoard.js documents. Every size/position number
 // (BOARD_HEIGHT, PANEL_CENTER_Y, TITLE_Y, ROW_YS, TIMER_Y, ...) is computed
-// there, not here, so editing LEADERBOARD_ENTRIES never needs a matching
-// change in this file.
+// there, not here.
 const FRAME_FRONT_Z = BOARD_THICKNESS / 2
 const PANEL_FRONT_Z = FRAME_FRONT_Z + PANEL_THICKNESS / 2
 const TEXT_Z = PANEL_FRONT_Z + PANEL_THICKNESS / 2 + 0.01
@@ -128,10 +133,10 @@ function Trim() {
 }
 
 // The dark readable panel, proud of the frame's front face, plus faint
-// alternating row-banding stripes behind the text (the reference image's
-// subtle scroll shading) — one thin plane per row, positioned at data/
-// leaderboardBoard.js's own ROW_YS, so it tracks LEADERBOARD_ENTRIES' length
-// automatically.
+// alternating row-banding stripes behind every fixed slot (the reference
+// image's own scroll shading) — drawn for all FIXED_ROW_SLOTS regardless of
+// how many are actually filled, so an empty slot still reads as "a row",
+// just blank, rather than the banding jumping around as players join/leave.
 function Panel() {
   return (
     <>
@@ -152,30 +157,38 @@ function Panel() {
   )
 }
 
-// One row: rank (left, its own color), name (centre-left, white), score
-// (right, its own color) — same three-text-elements-per-row idea as
-// GlowFloorPanelLabel.jsx's title/caption pair, just three columns instead
-// of one stacked pair. Not billboarded: this is a physical board mounted at
-// a fixed yaw (data/leaderboardBoard.js LEADERBOARD_TRANSFORM), same
-// static-signage convention as data/podiumStage.js's own board.
-function Row({ entry }) {
+// One row: rank (left, gold/purple/orange for the top 3 — data/
+// leaderboardBoard.js's rankColorFor), name (centre-left, white), score
+// (right) — same three-text-elements-per-row idea as GlowFloorPanelLabel.jsx's
+// title/caption pair, just three columns instead of one stacked pair. Not
+// billboarded: this is a physical board mounted at a fixed yaw (data/
+// leaderboardBoard.js LEADERBOARD_TRANSFORM), same static-signage convention
+// as data/podiumStage.js's own board.
+//
+// `rank`/`name`/`score` are live (systems/net.js's getLeaderboard(), fed by
+// the room's shared player state), read by this file's default export below
+// and passed down already formatted/ranked — this component just lays them
+// out, same "component just mounts what data/ computed" split as the rest of
+// the file.
+function Row({ rank, name, score }) {
+  const { y, nameFontSize } = getRowLayout(rank, name, score)
   return (
-    <group position={[0, entry.y, TEXT_Z]}>
+    <group position={[0, y, TEXT_Z]}>
       <Text
         position={[RANK_TEXT_X, 0, 0]}
         fontSize={ROW_FONT_SIZE}
         fontWeight="bold"
-        color={entry.rankColor}
+        color={rankColorFor(rank)}
         outlineWidth={0.02}
         outlineColor="#000000"
         anchorX="left"
         anchorY="middle"
       >
-        {`#${entry.rank}`}
+        {`#${rank}`}
       </Text>
       <Text
         position={[NAME_TEXT_X, 0, 0]}
-        fontSize={entry.nameFontSize}
+        fontSize={nameFontSize}
         fontWeight="bold"
         color={ENTRY_NAME_COLOR}
         outlineWidth={0.02}
@@ -184,19 +197,19 @@ function Row({ entry }) {
         anchorY="middle"
         whiteSpace="nowrap"
       >
-        {entry.name}
+        {name}
       </Text>
       <Text
         position={[SCORE_TEXT_X, 0, 0]}
         fontSize={ROW_FONT_SIZE}
         fontWeight="bold"
-        color={entry.scoreColor}
+        color={PLAYER_ROW_SCORE_COLOR}
         outlineWidth={0.02}
         outlineColor="#000000"
         anchorX="right"
         anchorY="middle"
       >
-        {entry.score}
+        {score}
       </Text>
     </group>
   )
@@ -236,21 +249,58 @@ function TimerChip() {
   )
 }
 
+// Re-renders on any roster/roster-field change systems/net.js's emit() fires
+// for (a player joining/leaving, a username, avatar, or REMOTE stat change —
+// see net.js's own subscribe() doc comment). Not per frame (Tech.md §5.4):
+// emit() only fires on those human-speed events, never per move packet.
+function useNetRoster() {
+  const [, bump] = useReducer((n) => n + 1, 0)
+  useEffect(() => subscribeNet(() => bump()), [])
+}
+
 // A freestanding Lego-brick-styled scoreboard: a stud-textured brown frame
 // (FrameBoard) on two support posts (Legs), decorative corner studs/side
-// tabs (Trim), a dark inset panel with faint row banding (Panel), a
-// customizable title + ranked player/score list (Row, one per data/
-// leaderboardBoard.js LEADERBOARD_ENTRIES entry), and a static footer timer
-// chip (TimerChip). Everything text/score-related is data-driven from
-// data/leaderboardBoard.js — LEADERBOARD_TITLE and LEADERBOARD_ENTRIES are
-// the two knobs meant to be edited without touching this file, and every
-// size below them (BOARD_HEIGHT down to ROW_YS/TIMER_Y) recomputes to fit.
-export default function LeaderboardBoard() {
+// tabs (Trim), a dark inset panel with row banding (Panel), a customizable
+// title + a live, real leaderboard (Row, one per systems/net.js
+// getLeaderboard() entry), and a static footer timer chip (TimerChip). The
+// title is data-driven from data/leaderboardBoard.js (each
+// LEADERBOARD_TRANSFORMS entry's own `title`); the rows are live — read
+// here, not from a data table, since which players are connected and what
+// they've earned only exists at runtime.
+//
+// `transform` picks where/how this instance is placed — same shape as
+// data/podiumStage.js's own transform objects, `{ x, y, z, yaw }` — so
+// App.jsx can mount several boards (one per entry in data/leaderboardBoard.js's
+// LEADERBOARD_TRANSFORMS) the same way it mounts two PodiumStage instances
+// off PODIUM_STAGE_HUB_TRANSFORM/PODIUM_STAGE_TARGET_TRANSFORM. `title` is
+// each board's own heading; `stat` is which store/useGameStore.js field
+// (mirrored onto the Colyseus room's shared PlayerState — Server/src/rooms/
+// schema/ArenaState.ts) it ranks by (`'power'` | `'rebirth'` | `'wins'`,
+// ...) — App.jsx passes each transform entry's own `title`/`stat` fields
+// alongside it, so the three boards rank differently while sharing this one
+// component. All three default to LEADERBOARD_TRANSFORM/LEADERBOARD_TITLE/
+// `'power'` so a bare <LeaderboardBoard /> still works unchanged.
+//
+// Rows come from systems/net.js's getLeaderboard(stat, limit): our own row
+// always from the live store (no network round trip needed for our own
+// numbers), every other row from remotePlayers, both formatted with data/
+// format.js's formatShort — the one place number presentation is decided
+// (Tech.md §4), same formatter the HUD's own Power caption uses (components/
+// hud/LevelBar.jsx). `useGameStore((s) => s[stat])` below re-renders this
+// instantly on our OWN stat changing (getLeaderboard() reads it fresh either
+// way, this just triggers the re-render) rather than waiting on the
+// debounced network round trip that updates everyone else's copy of us.
+export default function LeaderboardBoard({
+  transform = LEADERBOARD_TRANSFORM,
+  title = LEADERBOARD_TITLE,
+  stat = 'power',
+}) {
+  useNetRoster()
+  useGameStore((s) => s[stat])
+  const rows = getLeaderboard(stat, FIXED_ROW_SLOTS)
+
   return (
-    <group
-      position={[LEADERBOARD_TRANSFORM.x, LEADERBOARD_TRANSFORM.y, LEADERBOARD_TRANSFORM.z]}
-      rotation={[0, LEADERBOARD_TRANSFORM.yaw, 0]}
-    >
+    <group position={[transform.x, transform.y, transform.z]} rotation={[0, transform.yaw, 0]}>
       <FrameBoard />
       <Legs />
       <Trim />
@@ -268,10 +318,10 @@ export default function LeaderboardBoard() {
         maxWidth={PANEL_WIDTH - 0.4}
         whiteSpace="normal"
       >
-        {LEADERBOARD_TITLE}
+        {title}
       </Text>
-      {LEADERBOARD_ROWS.map((entry) => (
-        <Row key={entry.rank} entry={entry} />
+      {rows.map((row, i) => (
+        <Row key={row.id} rank={i + 1} name={row.name} score={formatShort(row.value)} />
       ))}
       <TimerChip />
     </group>
