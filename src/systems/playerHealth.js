@@ -9,6 +9,9 @@ import { PLAYER_MAX_HP, PVP_RESPAWN_DELAY_MS } from '../data/playerHealth.js'
 import { SPAWN } from '../data/hub.js'
 import { player, resetPlayer } from './playerState.js'
 import { spawnRagdoll } from './ragdoll.js'
+import { useGameStore } from '../store/useGameStore.js'
+import { resetWalls as resetWallHealth } from './wallHealth.js'
+import { resetAabbs } from './collision.js'
 
 export const health = { hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, dead: false, respawnAt: 0 }
 
@@ -69,6 +72,12 @@ function respawn() {
   // player starts at (main.jsx) and comes back to off a win panel
   // (systems/glowFloorPanel.js), not a PVP-specific location.
   resetPlayer(SPAWN)
+  // Coming back from death is a fresh run at the walls too, same reset
+  // triple as the win-panel path (systems/glowFloorPanel.js): destroyed set
+  // + health snapshot + colliders.
+  useGameStore.getState().resetWalls()
+  resetWallHealth()
+  resetAabbs()
   emitHealthNet({ type: 'respawn' })
 }
 

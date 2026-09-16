@@ -163,17 +163,18 @@ function LensFlareStarburst({ position, color }) {
   )
 }
 
-// Abbreviates large winsRequired values (1000 -> "1K", 2500000 -> "2.5M") so
-// the top-tier pads' labels stay a single short token instead of a long run
-// of digits. Values under 1000 render as-is.
-function formatWinsRequired(wins) {
-  if (wins >= 1_000_000) {
-    return `${parseFloat((wins / 1_000_000).toFixed(1))}M`
+// Abbreviates large values (1000 -> "1K", 2500000 -> "2.5M") so the top-tier
+// pads' labels stay a single short token instead of a long run of digits.
+// Values under 1000 render as-is. Shared by both the Power-per-Action line
+// and the Wins Required line below it.
+function formatCount(n) {
+  if (n >= 1_000_000) {
+    return `${parseFloat((n / 1_000_000).toFixed(1))}M`
   }
-  if (wins >= 1_000) {
-    return `${parseFloat((wins / 1_000).toFixed(1))}K`
+  if (n >= 1_000) {
+    return `${parseFloat((n / 1_000).toFixed(1))}K`
   }
-  return `${wins}`
+  return `${n}`
 }
 
 // In-world signage (Tech.md §1: drei is used for exactly this — SDF <Text>
@@ -205,7 +206,7 @@ export default function HexPowerPadLabel({ position, powerPerAction, winsRequire
         anchorX="center"
         anchorY="middle"
       >
-        {`+${powerPerAction} Power`}
+        {`+${formatCount(powerPerAction)} Power`}
       </Text>
       <Text
         fontSize={0.21}
@@ -216,7 +217,7 @@ export default function HexPowerPadLabel({ position, powerPerAction, winsRequire
         anchorX="center"
         anchorY="middle"
       >
-        {`${formatWinsRequired(winsRequired)} Wins Required`}
+        {`${formatCount(winsRequired)} Wins Required`}
       </Text>
       <mesh
         position={[0, -(BAR_HEIGHT / 2 + 0.15 + STRIP_SIZE / 2), -0.01]}

@@ -14,7 +14,7 @@ import {
   clamp,
 } from '../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../data/hexPowerPad.js'
-import { AURA_TIERS } from '../data/aura.js'
+import { AURA_TIERS, auraStrengthMultiplier } from '../data/aura.js'
 
 // Tech.md §2/§5: THE store — durable state + derive() + all actions. No
 // middleware (no persist, no immer, no subscribeWithSelector).
@@ -38,18 +38,22 @@ export const useGameStore = create((set, get) => ({
   // the free starter tier, owned and equipped from the start.
   ownedHexPads: new Set([0]), // indices into data/hexPowerPad.js's HEX_POWER_PAD_TIERS
   equippedHexPad: 0, // index of the currently equipped pad, or null
+  ownedAuras: new Set(), // indices into data/aura.js's AURA_TIERS bought with wins
+  equippedAura: null, // index into data/aura.js's AURA_TIERS, or null (1x, no aura equipped)
 
   // One Action's worth of Power. Called only from systems/actionTracker.js,
   // never directly from a component. `multiplier` is the AFK target's "xN"
   // tier (systems/afk.js afkState.multiplier) while AFK-locked, else 1 — the
-  // spec's override: powerPerAction * (rebirth + 1) * multiplier. Returns the
-  // Power actually added after the POWER_MAX clamp (0 once maxed), which
-  // systems/actionTracker.js turns into a "+N" popup.
+  // spec's override: powerPerAction * (rebirth + 1) * multiplier * aura
+  // strength (auraStrengthMultiplier(equippedAura), 1x while nothing's
+  // equipped). Returns the Power actually added after the POWER_MAX clamp (0
+  // once maxed), which systems/actionTracker.js turns into a "+N" popup.
   gainPower(multiplier = 1) {
     let applied = 0
     set((state) => {
       const mult = multiplier > 0 ? multiplier : 1
-      const gain = state.powerPerAction * (state.rebirth + 1) * mult
+      const auraMult = auraStrengthMultiplier(state.equippedAura)
+      const gain = state.powerPerAction * (state.rebirth + 1) * mult * auraMult
       const power = clamp(state.power + gain, POWER_MIN, POWER_MAX)
       applied = power - state.power
       return derive({ ...state, power })
@@ -117,15 +121,28 @@ export const useGameStore = create((set, get) => ({
   },
 
   // Called from components/hud/Hud.jsx's AuraEntry wins button. Unlike
-  // buyHexPad, wins here are spent, not a threshold — re-checks affordability
-  // itself so a duplicate/stale caller (or a wins value that has since
-  // dropped) can never drive wins negative. Nothing else is wired up yet
-  // (no owned/equipped tracking, no strength buff) until the Aura system
-  // itself is designed.
+  // buyHexPad, wins here are spent, not a threshold — re-checks ownership and
+  // affordability itself so a duplicate/stale caller (or a wins value that
+  // has since dropped) can never double-charge or drive wins negative.
+  // Buying doesn't equip it — the tier just becomes available to equip via
+  // equipAuraTier below (Hud.jsx swaps the wins button for an Equip button
+  // once owned).
   buyAuraTier(index) {
     const state = get()
+    if (state.ownedAuras.has(index)) return
     const tier = AURA_TIERS[index]
     if (!tier || state.wins < tier.winsRequired) return
-    set((s) => ({ wins: s.wins - tier.winsRequired }))
+    set((s) => ({ wins: s.wins - tier.winsRequired, ownedAuras: new Set(s.ownedAuras).add(index) }))
+  },
+
+  // Re-checks ownership itself, same reasoning as equipHexPad above. Only one
+  // aura can be equipped at a time — setting equippedAura to a new index is
+  // itself what un-equips whichever tier held it before (Hud.jsx's AuraEntry
+  // just compares its own index against equippedAura to render Equip vs
+  // Equipped, so the previous tier's button flips back automatically).
+  equipAuraTier(index) {
+    const state = get()
+    if (!state.ownedAuras.has(index)) return
+    set({ equippedAura: index })
   },
 }))

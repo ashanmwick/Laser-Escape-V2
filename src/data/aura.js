@@ -24,3 +24,11 @@ export const AURA_TIERS = [
   { name: 'Omega Aura', strengthMult: 4.8, winsRequired: 50000000, gemCost: 300, iconUrl: '/ui/aura/aura-12.png' },
   { name: 'Transcendent Aura', strengthMult: 5, winsRequired: 100000000, gemCost: 400, iconUrl: '/ui/aura/aura-13.png' },
 ]
+
+// store/useGameStore.js's gainPower() factor for the currently equipped aura
+// — same shape as data/afk.js's afkPowerMultiplier. `equippedAura` is an
+// index into AURA_TIERS, or null while nothing is equipped (1x, i.e. no-op).
+export function auraStrengthMultiplier(equippedAura) {
+  const tier = AURA_TIERS[equippedAura]
+  return tier ? tier.strengthMult : 1
+}

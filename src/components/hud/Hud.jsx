@@ -177,13 +177,20 @@ function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose, isTouch }) {
 }
 
 // One row of the Aura popup's tier list: icon on the left, name + strength
-// multiplier in the middle, the wins button on the right — mirrors the
-// reference mock the list was built from. Clicking the wins button spends
-// that many wins (store's buyAuraTier); it's disabled whenever the player's
-// current wins fall short of the tier's requirement.
+// multiplier in the middle, one action button on the right that walks
+// through three states — mirrors the reference mock the list was built from.
+//   1. Not owned: the wins button (buyAuraTier), disabled until affordable.
+//   2. Owned, not equipped: an "Equip" button (equipAuraTier).
+//   3. Owned and equipped: a non-interactive "Equipped" pill.
+// equippedAura is a single store field, so equipping tier N is itself what
+// flips every other tier's button back to "Equip" — each row just compares
+// its own index against the shared equippedAura.
 function AuraEntry({ tier, index, isTouch }) {
   const wins = useGameStore((s) => s.wins)
+  const owned = useGameStore((s) => s.ownedAuras.has(index))
+  const equipped = useGameStore((s) => s.equippedAura === index)
   const buyAuraTier = useGameStore((s) => s.buyAuraTier)
+  const equipAuraTier = useGameStore((s) => s.equipAuraTier)
   const canAfford = wins >= tier.winsRequired
   const textOutline = { WebkitTextStroke: isTouch ? '1px black' : '1.5px black', paintOrder: 'stroke fill' }
   return (
@@ -206,16 +213,39 @@ function AuraEntry({ tier, index, isTouch }) {
       </div>
 
       <div className={`flex shrink-0 flex-col ${isTouch ? 'gap-0.5' : 'gap-1'}`}>
-        <button
-          type="button"
-          onClick={() => buyAuraTier(index)}
-          disabled={!canAfford}
-          className={`flex items-center justify-center gap-1 rounded-md border-2 border-black bg-gradient-to-b from-amber-300 to-amber-500 font-black text-white transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-1.5 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
-          style={textOutline}
-        >
-          <span>🏆</span>
-          <span>{formatCompact(tier.winsRequired)}</span>
-        </button>
+        {!owned && (
+          <button
+            type="button"
+            onClick={() => buyAuraTier(index)}
+            disabled={!canAfford}
+            className={`flex items-center justify-center gap-1 rounded-md border-2 border-black bg-gradient-to-b from-amber-300 to-amber-500 font-black text-white transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-1.5 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
+            style={textOutline}
+          >
+            <span>🏆</span>
+            <span>{formatCompact(tier.winsRequired)}</span>
+          </button>
+        )}
+        {owned && !equipped && (
+          <button
+            type="button"
+            onClick={() => equipAuraTier(index)}
+            className={`flex items-center justify-center rounded-md border-2 border-black bg-gradient-to-b from-lime-400 to-green-600 font-black text-white transition hover:brightness-110 active:brightness-95 ${isTouch ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
+            style={textOutline}
+          >
+            Equip
+          </button>
+        )}
+        {owned && equipped && (
+          <button
+            type="button"
+            disabled
+            className={`flex cursor-default items-center gap-1 rounded-md border-2 border-black bg-gradient-to-b from-sky-400 to-blue-600 font-black text-white ${isTouch ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
+            style={textOutline}
+          >
+            <span>✓</span>
+            <span>Equipped</span>
+          </button>
+        )}
         {/* Gem-cost purchase path isn't live yet — hidden until it is
            (data/aura.js still carries gemCost per tier for when it lands). */}
       </div>
