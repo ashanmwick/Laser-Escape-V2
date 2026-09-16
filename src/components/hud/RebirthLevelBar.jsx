@@ -15,6 +15,7 @@ import {
   LEVEL_BAR_CAPTION_BAND_PAD_X,
   LEVEL_BAR_CAPTION_BAND_PAD_Y,
   LEVEL_BAR_ICON_URL,
+  REBIRTH_LEVEL_BAR_TOUCH_SCALE,
 } from '../../data/levelBar.js'
 
 const S = LEVEL_BAR_TEXT_STROKE
@@ -23,8 +24,6 @@ const TEXT_OUTLINE =
   `0 -${S}px 0 #000, 0 ${S}px 0 #000, -${S}px 0 0 #000, ${S}px 0 0 #000,` +
   `0 4px 8px rgba(0,0,0,0.45)`
 
-const LABEL_FONT = `800 ${LEVEL_BAR_LABEL_FONT_PX}px/1 ui-rounded, 'Nunito', system-ui, -apple-system, sans-serif`
-
 // Visual twin of components/hud/LevelBar.jsx's track (same data/levelBar.js
 // constants), but plots progress toward the *next rebirth* — level against
 // rebirthRequirement(rebirth) — instead of Power toward the next character
@@ -32,11 +31,22 @@ const LABEL_FONT = `800 ${LEVEL_BAR_LABEL_FONT_PX}px/1 ui-rounded, 'Nunito', sys
 // off a selector rather than LevelBar's per-frame ref-write pattern; that bar
 // stays untouched since it's still the bottom-of-screen singleton shared by
 // every other screen.
-export default function RebirthLevelBar() {
+//
+// `compact` (Hud.jsx passes isTouch) shrinks height/border/icon/label further,
+// on top of the 0.5 width scale below — the modal's other rows already eat
+// most of a short mobile-landscape viewport (RotatePrompt.jsx forces
+// landscape), so this bar needs to give some of that height back.
+export default function RebirthLevelBar({ compact = false }) {
   const level = useGameStore((s) => s.level)
   const rebirth = useGameStore((s) => s.rebirth)
   const requirement = rebirthRequirement(rebirth)
   const frac = clamp(level / requirement, 0, 1)
+
+  const scale = compact ? REBIRTH_LEVEL_BAR_TOUCH_SCALE : 1
+  const height = LEVEL_BAR_HEIGHT * scale
+  const border = LEVEL_BAR_BORDER * scale
+  const iconSize = LEVEL_BAR_ICON_SIZE * scale
+  const labelFont = `800 ${LEVEL_BAR_LABEL_FONT_PX * scale}px/1 ui-rounded, 'Nunito', system-ui, -apple-system, sans-serif`
 
   return (
     <div
@@ -47,15 +57,13 @@ export default function RebirthLevelBar() {
         margin: '0 auto',
       }}
     >
-
-
       <div style={{ position: 'relative' }}>
         <div
           style={{
             position: 'relative',
-            height: LEVEL_BAR_HEIGHT,
+            height,
             background: '#f4f4f4',
-            border: `${LEVEL_BAR_BORDER}px solid #000`,
+            border: `${border}px solid #000`,
             borderRadius: 9999,
             overflow: 'hidden',
             boxShadow: '0 5px 0 rgba(0,0,0,0.28), inset 0 3px 5px rgba(0,0,0,0.12)',
@@ -77,15 +85,12 @@ export default function RebirthLevelBar() {
               inset: 0,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: `0 28px 0 ${Math.round(LEVEL_BAR_ICON_SIZE * 0.5)}px`,
+              justifyContent: 'center',
+              padding: `0 ${Math.round(28 * scale)}px 0 ${Math.round(iconSize * 0.5)}px`,
             }}
           >
-            <span style={{ font: LABEL_FONT, color: '#fff', textShadow: TEXT_OUTLINE }}>
-              Level {level}
-            </span>
-            <span style={{ font: LABEL_FONT, color: '#fff', textShadow: TEXT_OUTLINE }}>
-              {level} / {requirement}
+            <span style={{ font: labelFont, color: '#fff', textShadow: TEXT_OUTLINE }}>
+              Level {level}/{requirement}
             </span>
           </div>
         </div>
@@ -96,10 +101,10 @@ export default function RebirthLevelBar() {
           draggable={false}
           style={{
             position: 'absolute',
-            left: -LEVEL_BAR_ICON_SIZE * LEVEL_BAR_ICON_OVERHANG,
+            left: -iconSize * LEVEL_BAR_ICON_OVERHANG,
             top: '50%',
-            width: LEVEL_BAR_ICON_SIZE,
-            height: LEVEL_BAR_ICON_SIZE,
+            width: iconSize,
+            height: iconSize,
             transform: 'translateY(-50%)',
             filter: 'drop-shadow(0 4px 5px rgba(0,0,0,0.4))',
           }}

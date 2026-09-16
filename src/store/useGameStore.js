@@ -14,6 +14,7 @@ import {
   clamp,
 } from '../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../data/hexPowerPad.js'
+import { AURA_TIERS } from '../data/aura.js'
 
 // Tech.md §2/§5: THE store — durable state + derive() + all actions. No
 // middleware (no persist, no immer, no subscribeWithSelector).
@@ -113,5 +114,18 @@ export const useGameStore = create((set, get) => ({
     const tier = HEX_POWER_PAD_TIERS[index]
     if (!tier) return
     set({ equippedHexPad: index, powerPerAction: tier.powerPerAction })
+  },
+
+  // Called from components/hud/Hud.jsx's AuraEntry wins button. Unlike
+  // buyHexPad, wins here are spent, not a threshold — re-checks affordability
+  // itself so a duplicate/stale caller (or a wins value that has since
+  // dropped) can never drive wins negative. Nothing else is wired up yet
+  // (no owned/equipped tracking, no strength buff) until the Aura system
+  // itself is designed.
+  buyAuraTier(index) {
+    const state = get()
+    const tier = AURA_TIERS[index]
+    if (!tier || state.wins < tier.winsRequired) return
+    set((s) => ({ wins: s.wins - tier.winsRequired }))
   },
 }))

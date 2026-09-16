@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { afkState } from '../../systems/afk.js'
 import { hexPowerPadState } from '../../systems/hexPowerPad.js'
+import { merchantState } from '../../systems/merchant.js'
 import { settings } from '../../systems/settingsState.js'
 import { health as playerHealth } from '../../systems/playerHealth.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth, rebirthRequirement } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
+import { AURA_TIERS } from '../../data/aura.js'
 import ActionPopups from './ActionPopups.jsx'
 import TouchControls from './TouchControls.jsx'
 import RotatePrompt from './RotatePrompt.jsx'
@@ -33,41 +35,90 @@ function formatCompact(n) {
   return `${text}${suffix}`
 }
 
-// Centred modal opened by Button 4, titled "Rebirth". Confirms the trade of
-// current Power for a rebirth point rather than firing it on a single click.
-function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose }) {
+// Shared chrome for every left-center HUD popup (Rebirth, Aura, ...): a
+// transparent panel with the title floating (no fill/border box) above its
+// top-left corner and the close button overhanging its top-right corner, so
+// every popup reads as one consistent "poking out of the panel" style.
+//
+// `isTouch` shrinks the body's padding — RotatePrompt.jsx forces landscape on
+// touch, and phones in landscape there can be as short as ~320px, too little
+// for the desktop sizing to fit alongside a bottom-anchored TouchControls
+// layer. The panel also caps itself to the viewport height and scrolls
+// internally (`max-h-[92vh] overflow-y-auto`) as a hard backstop so a
+// shorter device than anticipated still reaches the bottom of the content
+// instead of clipping it.
+function HudModal({ title, onClose, isTouch, children }) {
+  return (
+    <div
+      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2"
+      // systems/input.js listens for wheel on window to drive camera zoom
+      // (cameraOrbit.js) regardless of what's under the cursor. Stop it here
+      // so scrolling a popup's content (e.g. AuraWindow's tier list) doesn't
+      // also zoom the camera behind it.
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div className="relative w-[min(800px,78vw)]">
+        <span
+          className="pointer-events-none absolute -top-5 left-6 z-10 text-4xl font-black text-white"
+          style={{ WebkitTextStroke: '1.5px black', paintOrder: 'stroke fill' }}
+        >
+          {title}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute -top-4 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-md border-2 border-black bg-red-600 font-black text-white shadow-[0_3px_0_rgba(0,0,0,0.4)] transition hover:bg-red-500"
+        >
+          X
+        </button>
+        <div className="flex max-h-[92vh] flex-col overflow-hidden rounded-lg border-2 border-black bg-slate-900/60 shadow-2xl">
+          <div className="h-6 shrink-0 border-b-2 border-black bg-slate-900/60" />
+          <div
+            className={`flex flex-col items-center overflow-y-auto text-slate-100 ${isTouch ? 'gap-2 p-2' : 'gap-3 p-4'}`}
+          >
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Opened by Button 4, titled "Rebirth". Confirms the trade of current Power
+// for a rebirth point rather than firing it on a single click.
+function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose, isTouch }) {
   const requirement = rebirthRequirement(rebirth)
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-[min(940px,92vw)] overflow-hidden rounded-lg border border-amber-400/40 bg-slate-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-amber-400/30 bg-amber-600/80 px-3 py-2">
-          <span className="font-bold text-slate-100">Rebirth</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="text-slate-100 hover:text-slate-300"
+    <HudModal title="Rebirth" onClose={onClose} isTouch={isTouch}>
+      <div
+            className={`flex items-center justify-center ${isTouch ? 'gap-2 text-2xl' : 'gap-6 text-[3.625rem]'}`}
           >
-            ✕
-          </button>
-        </div>
-        <div className="flex flex-col items-center gap-3 p-4 text-slate-100">
-          <div className="flex items-center justify-center gap-6 text-[3.625rem]">
-            <img src="/ui/action_popup.png" alt="" className="h-[5.5rem] w-[5.5rem]" draggable={false} />
+            <img
+              src="/ui/action_popup.png"
+              alt=""
+              className={isTouch ? 'h-9 w-9' : 'h-[5.5rem] w-[5.5rem]'}
+              draggable={false}
+            />
             <span className="font-bold text-amber-300">X{rebirth}</span>
             <span
-              className="inline-block text-white text-[5.5rem] font-black leading-none"
-              style={{ WebkitTextStroke: '20px white', paintOrder: 'stroke fill' }}
+              className={`inline-block font-black leading-none text-white ${isTouch ? 'text-2xl' : 'text-[4.5rem]'}`}
+              style={{ WebkitTextStroke: isTouch ? '2px #7dd3fc' : '3px #7dd3fc', paintOrder: 'stroke fill' }}
             >
-              →
+              ▶
             </span>
-            <img src="/ui/action_popup.png" alt="" className="h-[5.5rem] w-[5.5rem]" draggable={false} />
+            <img
+              src="/ui/action_popup.png"
+              alt=""
+              className={isTouch ? 'h-9 w-9' : 'h-[5.5rem] w-[5.5rem]'}
+              draggable={false}
+            />
             <span className="font-bold text-amber-300">X{rebirth + 1}</span>
           </div>
 
           <div
-            className="text-center text-[1.625rem] font-bold text-red-500"
-            style={{ WebkitTextStroke: '3px black', paintOrder: 'stroke fill' }}
+            className={`text-center font-bold text-red-500 ${isTouch ? 'text-sm' : 'text-[1.625rem]'}`}
+            style={{ WebkitTextStroke: isTouch ? '1.5px black' : '3px black', paintOrder: 'stroke fill' }}
           >
             Rebirth resets your Strength and Level!
           </div>
@@ -77,20 +128,124 @@ function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose }) {
              toward the next character level — see RebirthLevelBar.jsx.
              LevelBar itself stays untouched. */}
           <div className="w-full">
-            <RebirthLevelBar />
+            <RebirthLevelBar compact={isTouch} />
           </div>
 
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!canRebirth}
-            className="mt-2 w-full max-w-xs rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 font-semibold text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          <div
+            className={`flex w-full items-stretch justify-center ${isTouch ? 'mb-3 gap-2' : 'mb-5 mt-2 gap-3'}`}
           >
-            {canRebirth ? 'Confirm Rebirth' : `Reach level ${requirement} to rebirth`}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!canRebirth}
+              className={`flex-1 self-center rounded-lg border-2 border-black bg-gradient-to-b from-lime-400 to-green-600 font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-2 py-2 text-sm' : 'px-4 py-3 text-lg'}`}
+              style={{ WebkitTextStroke: isTouch ? '1px black' : '1.5px black', paintOrder: 'stroke fill' }}
+            >
+              {canRebirth ? 'Rebirth' : `Level ${requirement} needed`}
+            </button>
+
+            <span className={`self-center font-black text-slate-100 ${isTouch ? 'text-sm' : 'text-xl'}`}>
+              or
+            </span>
+
+            {/* relative wrapper keeps the caption out of flow so it can't
+               stretch this column taller than the Rebirth button and knock
+               the two buttons' top edges out of alignment. */}
+            <div className="relative flex-1 self-center">
+              <button
+                type="button"
+                onClick={onClose}
+                className={`w-full rounded-lg border-2 border-black font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)] transition hover:brightness-110 ${isTouch ? 'px-2 py-2 text-sm' : 'px-4 py-3 text-lg'}`}
+                style={{
+                  background:
+                    'linear-gradient(90deg, #ff3b3b, #ff9d00, #ffee00, #4dff4d, #33d1ff, #6f6fff, #c96fff)',
+                  WebkitTextStroke: isTouch ? '1px black' : '1.5px black',
+                  paintOrder: 'stroke fill',
+                }}
+              >
+                Skip Rebirth
+              </button>
+              <span
+                className={`absolute inset-x-0 top-full mt-1 text-center font-bold text-fuchsia-400 ${isTouch ? 'text-[10px]' : 'text-sm'}`}
+              >
+                Keep all Levels
+              </span>
+            </div>
+          </div>
+    </HudModal>
+  )
+}
+
+// One row of the Aura popup's tier list: icon on the left, name + strength
+// multiplier in the middle, the wins button on the right — mirrors the
+// reference mock the list was built from. Clicking the wins button spends
+// that many wins (store's buyAuraTier); it's disabled whenever the player's
+// current wins fall short of the tier's requirement.
+function AuraEntry({ tier, index, isTouch }) {
+  const wins = useGameStore((s) => s.wins)
+  const buyAuraTier = useGameStore((s) => s.buyAuraTier)
+  const canAfford = wins >= tier.winsRequired
+  const textOutline = { WebkitTextStroke: isTouch ? '1px black' : '1.5px black', paintOrder: 'stroke fill' }
+  return (
+    <div
+      className={`flex w-full shrink-0 items-center rounded-lg border-2 border-black bg-slate-800/80 ${isTouch ? 'gap-2 p-2' : 'gap-3 p-3'}`}
+    >
+      <div
+        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border-2 border-slate-500 bg-slate-950 ${isTouch ? 'h-11 w-11' : 'h-16 w-16'}`}
+      >
+        <img src={tier.iconUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+        <span className={`font-black text-white ${isTouch ? 'text-sm' : 'text-xl'}`} style={textOutline}>
+          {tier.name}
+        </span>
+        <span className={`font-black text-amber-400 ${isTouch ? 'text-xs' : 'text-lg'}`} style={textOutline}>
+          x{tier.strengthMult} Strength
+        </span>
+      </div>
+
+      <div className={`flex shrink-0 flex-col ${isTouch ? 'gap-0.5' : 'gap-1'}`}>
+        <button
+          type="button"
+          onClick={() => buyAuraTier(index)}
+          disabled={!canAfford}
+          className={`flex items-center justify-center gap-1 rounded-md border-2 border-black bg-gradient-to-b from-amber-300 to-amber-500 font-black text-white transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-1.5 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
+          style={textOutline}
+        >
+          <span>🏆</span>
+          <span>{formatCompact(tier.winsRequired)}</span>
+        </button>
+        {/* Gem-cost purchase path isn't live yet — hidden until it is
+           (data/aura.js still carries gemCost per tier for when it lands). */}
       </div>
     </div>
+  )
+}
+
+// Opened by the Shop button. Shares RebirthWindow's chrome via HudModal —
+// content is intentionally empty for now.
+function ShopWindow({ onClose, isTouch }) {
+  return <HudModal title="Shop" onClose={onClose} isTouch={isTouch} />
+}
+
+// Popup for the HUD's Aura button — shares RebirthWindow's chrome via
+// HudModal. Body is AURA_TIERS' 10 entries in a fixed-height list so it's
+// always mouse-wheel scrollable regardless of viewport height, rather than
+// growing the whole modal to fit every row.
+function AuraWindow({ onClose, isTouch }) {
+  return (
+    <HudModal title="Aura" onClose={onClose} isTouch={isTouch}>
+      <div
+        className={`w-full overflow-y-auto ${isTouch ? 'max-h-[38vh] pr-1' : 'max-h-[26rem] pr-2'}`}
+      >
+        <div className={`flex flex-col ${isTouch ? 'gap-1.5' : 'gap-2.5'}`}>
+          {AURA_TIERS.map((tier, index) => (
+            <AuraEntry key={tier.name} tier={tier} index={index} isTouch={isTouch} />
+          ))}
+        </div>
+      </div>
+    </HudModal>
   )
 }
 
@@ -105,7 +260,23 @@ function LeftCenterControls() {
   const canRebirth = useGameStore((s) => canAcceptRebirth(s.level, s.rebirth))
   const acceptRebirth = useGameStore((s) => s.acceptRebirth)
   const [showRebirthWindow, setShowRebirthWindow] = useState(false)
+  const [showAuraWindow, setShowAuraWindow] = useState(false)
+  const [showShopWindow, setShowShopWindow] = useState(false)
   const isTouch = useTouchMode()
+
+  // systems/merchant.js can't open a React panel itself (framework-free,
+  // Tech.md §5.1), so E near the shop just raises an edge flag there; this
+  // throttled poll is the one place that consumes it, same 100ms cadence
+  // Hud()'s own prompt polls below use for the same singleton's `near`.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (merchantState.openAuraRequested) {
+        merchantState.openAuraRequested = false
+        setShowAuraWindow(true)
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
 
   const rebirthWindow =
     showRebirthWindow &&
@@ -113,12 +284,27 @@ function LeftCenterControls() {
       <RebirthWindow
         rebirth={rebirth}
         canRebirth={canRebirth}
+        isTouch={isTouch}
         onConfirm={() => {
           acceptRebirth()
           setShowRebirthWindow(false)
         }}
         onClose={() => setShowRebirthWindow(false)}
       />,
+      document.body,
+    )
+
+  const auraWindow =
+    showAuraWindow &&
+    createPortal(
+      <AuraWindow isTouch={isTouch} onClose={() => setShowAuraWindow(false)} />,
+      document.body,
+    )
+
+  const shopWindow =
+    showShopWindow &&
+    createPortal(
+      <ShopWindow isTouch={isTouch} onClose={() => setShowShopWindow(false)} />,
       document.body,
     )
 
@@ -156,20 +342,18 @@ function LeftCenterControls() {
         </div>
         <button
           type="button"
-          onClick={acceptRebirth}
-          disabled
-          title="Coming soon"
-          className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          onClick={() => setShowAuraWindow(true)}
+          title="Open Aura"
+          className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
           <img src="/ui/aura.png" alt="" className="h-5 w-5" draggable={false} />
           <span className="text-[7px] font-semibold leading-none tracking-wide">Aura</span>
         </button>
         <button
           type="button"
-          onClick={acceptRebirth}
-          disabled
-          title="Coming soon"
-          className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+          onClick={() => setShowShopWindow(true)}
+          title="Open Shop"
+          className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
           <img src="/ui/shop.png" alt="" className="h-5 w-5" draggable={false} />
           <span className="text-[7px] font-semibold leading-none tracking-wide">Shop</span>
@@ -198,6 +382,8 @@ function LeftCenterControls() {
           <span className="text-[7px] font-semibold leading-none tracking-wide">Rebirth</span>
         </button>
         {rebirthWindow}
+        {auraWindow}
+        {shopWindow}
       </div>
     )
   }
@@ -230,20 +416,18 @@ function LeftCenterControls() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={acceptRebirth}
-            disabled
-            title="Coming soon"
-            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+            onClick={() => setShowAuraWindow(true)}
+            title="Open Aura"
+            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
           >
             <img src="/ui/aura.png" alt="" className="h-10 w-10" draggable={false} />
             <span className="text-xs font-semibold tracking-wide">Aura</span>
           </button>
           <button
             type="button"
-            onClick={acceptRebirth}
-            disabled
-            title="Coming soon"
-            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+            onClick={() => setShowShopWindow(true)}
+            title="Open Shop"
+            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
           >
             <img src="/ui/shop.png" alt="" className="h-10 w-10" draggable={false} />
             <span className="text-xs font-semibold tracking-wide">Shop</span>
@@ -276,6 +460,8 @@ function LeftCenterControls() {
         </div>
       </div>
       {rebirthWindow}
+      {auraWindow}
+      {shopWindow}
     </div>
   )
 }
@@ -288,6 +474,7 @@ export default function Hud() {
   useSettings()
   const afkPromptRef = useRef(null)
   const hexPadPromptRef = useRef(null)
+  const merchantPromptRef = useRef(null)
   const deathPromptRef = useRef(null)
 
   // Dead in the PVP zone (systems/playerHealth.js) — a countdown to the
@@ -363,6 +550,30 @@ export default function Hud() {
     return () => clearInterval(id)
   }, [])
 
+  // Same throttled-poll pattern as the prompts above. Hidden whenever the afk
+  // or hex-pad prompt would show — all three render at the same screen
+  // position, and while the shop sits in its own zone this keeps that
+  // shared-position assumption (see the hex-pad effect above) true for a
+  // third system too.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = merchantPromptRef.current
+      if (!el) return
+      if (
+        merchantState.near &&
+        !afkState.active &&
+        !afkState.nearTargetId &&
+        hexPowerPadState.nearIndex === null
+      ) {
+        el.textContent = 'Press E to Aura'
+        el.style.display = ''
+      } else {
+        el.style.display = 'none'
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [])
+
   // background_transparency (0.2–1.0, default 0.9) scales the panel backing
   // rather than replacing it, so the default lands on the 0.4 alpha the HUD was
   // designed with instead of a hard black slab.
@@ -385,6 +596,12 @@ export default function Hud() {
 
       <div
         ref={hexPadPromptRef}
+        className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
+        style={{ display: 'none' }}
+      />
+
+      <div
+        ref={merchantPromptRef}
         className="pointer-events-none absolute left-1/2 top-[70%] -translate-x-1/2 -translate-y-1/2 rounded bg-black/60 px-3 py-1.5 text-sm text-slate-100"
         style={{ display: 'none' }}
       />

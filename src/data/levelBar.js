@@ -56,3 +56,10 @@ export const LEVEL_BAR_CAPTION_BAND_PAD_Y = 4
 
 // Public-root path to the badge art — same convention as data/actionPopups.js.
 export const LEVEL_BAR_ICON_URL = '/ui/action_popup.png'
+
+// Extra shrink applied to RebirthLevelBar's height/border/icon/label (on top of
+// its own 0.5 width scale) when the Rebirth modal renders in touch/compact mode.
+// RotatePrompt.jsx forces landscape on touch, and landscape phone viewports can
+// be as short as ~320px there, so the modal's stack of rows needs every bit of
+// vertical room it can get. Desktop's LevelBar stays untouched.
+export const REBIRTH_LEVEL_BAR_TOUCH_SCALE = 0.6

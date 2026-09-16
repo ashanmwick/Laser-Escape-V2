@@ -7,6 +7,7 @@ import { step as stepAction } from '../systems/actionTracker.js'
 import { step as stepActionPopups } from '../systems/actionPopups.js'
 import { step as stepAfk } from '../systems/afk.js'
 import { step as stepHexPowerPad } from '../systems/hexPowerPad.js'
+import { step as stepMerchant } from '../systems/merchant.js'
 import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
@@ -41,11 +42,12 @@ export default function GameLoop() {
     stepActionPopups(dt, camera)
     stepAfk()
     stepHexPowerPad()
+    stepMerchant()
     stepGlowFloorPanel()
-    // Neither system above claimed a press outside its own zone (each only
-    // clears inputState.interact when the player is actually in range of
-    // what it handles) — reset it here so a press near nothing never lingers
-    // into a later frame and fires something the player didn't aim at.
+    // None of the systems above claimed a press outside its own zone (each
+    // only clears inputState.interact when the player is actually in range
+    // of what it handles) — reset it here so a press near nothing never
+    // lingers into a later frame and fires something the player didn't aim at.
     inputState.interact = false
     // Laser aim first, then PVP hit-testing (which may clip the beam onto a
     // player it found), then stepAction — which reads this frame's result to

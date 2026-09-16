@@ -28,6 +28,21 @@ export const SHOP_TRANSFORM = {
   scale: 1,
 }
 
+// Metres from the counter-front position (below) within which the "Press E
+// to Aura" prompt appears and E opens the Aura popup — same idea as
+// data/hexPowerPad.js's HEX_POWER_PAD_RANGE / data/afk.js's AFK_RANGE.
+export const MERCHANT_RANGE = 5
+
+// World position of the counter front — where a player stopping to browse
+// the wares actually stands — found by turning local +Z (COUNTER.z below,
+// the front the wares/merchant face) through SHOP_TRANSFORM.yaw and adding
+// SHOP_TRANSFORM's origin. Same rotate-then-translate step
+// buildMerchantShopAabbs() below uses, just for one point instead of a box.
+export function buildMerchantPromptPosition(t = SHOP_TRANSFORM) {
+  const lz = COUNTER.z * t.scale
+  return [t.x + lz * Math.sin(t.yaw), t.y, t.z + lz * Math.cos(t.yaw)]
+}
+
 // --- palette (sRGB hex; one MeshStandardMaterial each) ---------------------
 // Roughness/metalness per bucket lives in systems/merchantShopModel.js
 // (data/materials.js's MATERIAL_PBR table), keyed off isCrystal rather than
@@ -317,3 +332,5 @@ export function buildMerchantShopAabbs(t = SHOP_TRANSFORM) {
 }
 
 export const MERCHANT_SHOP_AABBS = buildMerchantShopAabbs()
+
+export const MERCHANT_PROMPT_POSITION = buildMerchantPromptPosition()
