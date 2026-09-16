@@ -23,9 +23,12 @@ export const inputState = {
 
 // Touch sessions have no keyboard and no cursor: the on-screen controls
 // (components/hud/TouchControls.jsx) drive `inputState` through the setters
-// below, and the laser aims at screen centre (a fixed crosshair) instead of a
-// mouse. `active` flips once — on the first real touch, or immediately when the
-// primary pointer is coarse — and never flips back for the session.
+// below. The laser aims at a crosshair that starts at screen centre and then
+// sticks wherever the player last tapped the look zone (setTouchAim() below)
+// — there is no cursor to track continuously, so aim is tap-to-set instead of
+// hover-to-follow. `active` flips once — on the first real touch, or
+// immediately when the primary pointer is coarse — and never flips back for
+// the session.
 export const touchState = {
   active: false,
 }
@@ -37,11 +40,40 @@ export function subscribeTouchMode(cb) {
   return () => touchModeSubs.delete(cb)
 }
 
+// Sticky tap-to-aim point, in viewport px. Purely so components/hud/
+// TouchControls.jsx's Crosshair can redraw itself where the player last
+// tapped — systems/laser.js only ever reads inputState.pointerNDC, which
+// setTouchAim() below keeps in sync with this.
+export const touchAimState = { x: 0, y: 0 }
+const touchAimSubs = new Set()
+
+export function subscribeTouchAim(cb) {
+  touchAimSubs.add(cb)
+  return () => touchAimSubs.delete(cb)
+}
+
+// Called by TouchControls.jsx's LookZone on a qualifying tap (pointerdown ->
+// pointerup with negligible movement in between, and not part of a pinch).
+// The aim point then holds here until the next such tap — independent of
+// firing, and unaffected by a drag that DOES move the camera (that path
+// never calls this).
+export function setTouchAim(clientX, clientY) {
+  touchAimState.x = clientX
+  touchAimState.y = clientY
+  inputState.pointerNDC.x = (clientX / window.innerWidth) * 2 - 1
+  inputState.pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1
+  touchAimSubs.forEach((cb) => cb(clientX, clientY))
+}
+
 function enableTouchMode() {
   if (touchState.active) return
   touchState.active = true
-  // Centre-aim: with no pointermove events feeding it (see the guards in the
-  // pointer handlers), pointerNDC would otherwise sit at its last mouse value.
+  // Centre-aim by default: with no pointermove events feeding it (see the
+  // guards in the pointer handlers), pointerNDC would otherwise sit at its
+  // last mouse value. A tap in the look zone moves it from here via
+  // setTouchAim().
+  touchAimState.x = window.innerWidth / 2
+  touchAimState.y = window.innerHeight / 2
   inputState.pointerNDC.x = 0
   inputState.pointerNDC.y = 0
   if (typeof document !== 'undefined') {

@@ -1,10 +1,13 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import {
   touchState,
+  touchAimState,
   subscribeTouchMode,
+  subscribeTouchAim,
   setTouchMove,
   addTouchLook,
   addTouchZoom,
+  setTouchAim,
   setTouchFiring,
   pressTouchJump,
   pressTouchInteract,
@@ -13,19 +16,24 @@ import {
 // On-screen controls for a touch session (Tech.md §5.1: input.js owns
 // "keyboard + pointer + touch joystick"). DOM siblings of the canvas like the
 // rest of the HUD (§5.4) — this never re-renders per frame: gestures write the
-// input singleton directly through the setters in systems/input.js, and the
-// only React state here is the transient joystick thumb position.
+// input singleton directly through the setters in systems/input.js. The only
+// React state here is the transient joystick thumb position and the
+// crosshair's own position (re-rendered on a tap, not per frame).
 //
 // Layout, matched to a phone held in two hands:
 //   left  ~45% / lower  ~55%  → floating movement stick
-//   right ~62%               → drag to orbit the camera, pinch to zoom
+//   right ~62%               → drag to orbit the camera, pinch to zoom,
+//                               or TAP to move the laser's aim point there
 //   bottom-right cluster     → Fire (hold), Jump, Interact (E)
-// The laser aims at screen centre (a fixed crosshair) since there is no cursor.
+// The laser aims at a crosshair that starts at screen centre and sticks
+// wherever the player last tapped the look zone (LookZone below) — there is
+// no cursor to hover, so aim is tap-to-set rather than continuous.
 
 const STICK_RADIUS = 54 // px; thumb travel that maps to full-speed movement
 const DEAD_ZONE = 0.16 // fraction of the radius ignored before the avatar moves
 const LOOK_SENS = 0.75 // touch drag px → same units cameraOrbit expects from a mouse
 const PINCH_ZOOM = 2.5 // pinch distance px → wheel-equivalent zoom units
+const TAP_MOVE_THRESHOLD = 12 // px of travel beyond which a press reads as a drag, not a tap
 
 function useTouchMode() {
   const [on, setOn] = useState(touchState.active)
@@ -33,11 +41,18 @@ function useTouchMode() {
   return on
 }
 
-// One-finger drag on this half orbits the camera; two fingers pinch-zoom. Both
-// are consumed and zeroed each frame by systems/cameraOrbit.js.
+// One-finger drag on this half orbits the camera; two fingers pinch-zoom. A
+// one-finger press that never travels past TAP_MOVE_THRESHOLD is instead read
+// as a tap and moves the laser's aim point there (setTouchAim(), sticky until
+// the next such tap) — the two gestures share this zone since a drag doesn't
+// have a meaningful "aim" reading until it's finished being a drag, and a tap
+// produces no orbit motion to conflict with.
 function LookZone() {
   const pointers = useRef(new Map())
   const lastPinch = useRef(0)
+  // The single finger still eligible to resolve as a tap on release, or null
+  // once it's moved too far, or a second finger turned this into a pinch.
+  const tapCandidate = useRef(null)
 
   const dist = () => {
     const [a, b] = [...pointers.current.values()]
@@ -47,6 +62,10 @@ function LookZone() {
   const onDown = (e) => {
     e.currentTarget.setPointerCapture(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    tapCandidate.current =
+      pointers.current.size === 1
+        ? { id: e.pointerId, downX: e.clientX, downY: e.clientY, moved: false }
+        : null // a second finger down means this is now a pinch, not a tap
     if (pointers.current.size === 2) lastPinch.current = dist()
   }
 
@@ -60,14 +79,24 @@ function LookZone() {
       const d = dist()
       if (lastPinch.current) addTouchZoom((lastPinch.current - d) * PINCH_ZOOM)
       lastPinch.current = d
+      tapCandidate.current = null
       return
     }
     addTouchLook((next.x - prev.x) * LOOK_SENS, (next.y - prev.y) * LOOK_SENS)
+
+    const tap = tapCandidate.current
+    if (tap && tap.id === e.pointerId) {
+      const traveled = Math.hypot(e.clientX - tap.downX, e.clientY - tap.downY)
+      if (traveled > TAP_MOVE_THRESHOLD) tap.moved = true
+    }
   }
 
   const onUp = (e) => {
     pointers.current.delete(e.pointerId)
     lastPinch.current = 0
+    const tap = tapCandidate.current
+    if (tap && tap.id === e.pointerId && !tap.moved) setTouchAim(e.clientX, e.clientY)
+    tapCandidate.current = null
   }
 
   return (
@@ -225,11 +254,16 @@ function ActionButton({ onPress, onRelease, size, label, sub, glow }) {
   )
 }
 
+// Drawn at the sticky tap-to-aim point (systems/input.js touchAimState),
+// starting at screen centre — not a per-frame follow, just a re-render on
+// each tap (subscribeTouchAim), since the point only ever changes on a tap.
 function Crosshair() {
+  const [pos, setPos] = useState({ x: touchAimState.x, y: touchAimState.y })
+  useEffect(() => subscribeTouchAim((x, y) => setPos({ x, y })), [])
   return (
     <div
-      className="pointer-events-none fixed left-1/2 top-1/2"
-      style={{ transform: 'translate(-50%, -50%)' }}
+      className="pointer-events-none fixed"
+      style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -50%)' }}
     >
       <div className="h-5 w-5 rounded-full border border-white/60" />
       <div

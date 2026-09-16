@@ -106,78 +106,79 @@ function LeftCenterControls() {
   const acceptRebirth = useGameStore((s) => s.acceptRebirth)
   const [showRebirthWindow, setShowRebirthWindow] = useState(false)
   return (
+    // Anchored top-left below IdentityChip (top-4), NOT vertically centred: a
+    // vertically-centred left column used to sit inside the touch layout's
+    // movement-stick capture zone (TouchControls.jsx's MoveStick, the bottom
+    // ~58% of the screen) — the game forces landscape on touch (RotatePrompt.jsx),
+    // so screen height is short there and the two regions collided. A single
+    // compact row fits in the strip above that zone on every supported
+    // landscape height instead.
     <div
       data-hud="left-center"
-      className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2"
+      className="pointer-events-none absolute left-4 top-24 flex items-center gap-2"
     >
-      <div className="flex items-center gap-2 rounded-lg border border-slate-400/30 bg-black/50 px-3 py-2 text-slate-100 shadow-lg">
-        <img src="/ui/xp_cup.png" alt="" className="h-8 w-8" draggable={false} />
+      <div className="flex items-center gap-1 rounded-lg border border-slate-400/30 bg-black/50 px-2 py-1.5 text-slate-100 shadow-lg">
+        <img src="/ui/xp_cup.png" alt="" className="h-5 w-5" draggable={false} />
         <span
           className="font-bold tabular-nums"
           style={{
             // Matches GlowFloorPanelLabel's Wins <Text>: #ffd21e fill, bold,
             // letterSpacing -0.02, black outline at ~10% of font size, drawn
             // behind the fill (SDF outlineWidth 0.09 / fontSize 0.9).
-            fontSize: '1.125rem',
+            fontSize: '0.85rem',
             lineHeight: 1,
             color: '#ffd21e',
             letterSpacing: '-0.02em',
-            WebkitTextStroke: '2px #000000',
+            WebkitTextStroke: '1.5px #000000',
             paintOrder: 'stroke fill',
           }}
         >
           {formatCompact(wins)}
         </span>
       </div>
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={acceptRebirth}
-            disabled
-            title="Coming soon"
-            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
-          >
-            <img src="/ui/aura.png" alt="" className="h-10 w-10" draggable={false} />
-            <span className="text-xs font-semibold tracking-wide">Aura</span>
-          </button>
-          <button
-            type="button"
-            onClick={acceptRebirth}
-            disabled
-            title="Coming soon"
-            className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
-          >
-            <img src="/ui/shop.png" alt="" className="h-10 w-10" draggable={false} />
-            <span className="text-xs font-semibold tracking-wide">Shop</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={acceptRebirth}
-          disabled
-          title="Coming soon"
-          className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
-        >
-          <img src="/ui/invite_friends.png" alt="" className="h-10 w-10" draggable={false} />
-          <span className="text-xs font-semibold leading-tight tracking-wide text-center">
-            Invite
-            <br />
-            Friends
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowRebirthWindow(true)}
-          title="Open Rebirth"
-          className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
-        >
-          <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
-          <span className="text-xs font-semibold tracking-wide">Rebirth</span>
-        </button>
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={acceptRebirth}
+        disabled
+        title="Coming soon"
+        className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+      >
+        <img src="/ui/aura.png" alt="" className="h-5 w-5" draggable={false} />
+        <span className="text-[7px] font-semibold leading-none tracking-wide">Aura</span>
+      </button>
+      <button
+        type="button"
+        onClick={acceptRebirth}
+        disabled
+        title="Coming soon"
+        className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+      >
+        <img src="/ui/shop.png" alt="" className="h-5 w-5" draggable={false} />
+        <span className="text-[7px] font-semibold leading-none tracking-wide">Shop</span>
+      </button>
+      <button
+        type="button"
+        onClick={acceptRebirth}
+        disabled
+        title="Coming soon"
+        className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
+      >
+        <img src="/ui/invite_friends.png" alt="" className="h-5 w-5" draggable={false} />
+        <span className="text-center text-[6px] font-semibold leading-[1.1] tracking-wide">
+          Invite
+          <br />
+          Friends
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setShowRebirthWindow(true)}
+        title="Open Rebirth"
+        className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
+      >
+        <img src="/ui/rebirth.png" alt="" className="h-5 w-5" draggable={false} />
+        <span className="text-[7px] font-semibold leading-none tracking-wide">Rebirth</span>
+      </button>
       {showRebirthWindow &&
         createPortal(
           <RebirthWindow
