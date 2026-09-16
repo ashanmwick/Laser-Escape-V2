@@ -11,6 +11,7 @@ import { player, resetPlayer } from './playerState.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { resetWalls as resetWallHealth } from './wallHealth.js'
 import { resetAabbs } from './collision.js'
+import { reset as resetRagdolls } from './ragdoll.js'
 import { SPAWN } from '../data/hub.js'
 import {
   GLOW_FLOOR_PANEL_POSITIONS,
@@ -58,6 +59,7 @@ export function step() {
     useGameStore.getState().resetWalls()
     resetWallHealth()
     resetAabbs()
+    resetRagdolls()
     resetPlayer(SPAWN)
 
     // The player is now at spawn, nowhere near this panel — clear the marker

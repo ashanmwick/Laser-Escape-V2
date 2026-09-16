@@ -51,6 +51,11 @@ export default function PvpWall() {
     })
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.set(0, PVP_WALL_CENTER_Y, 0)
+    // No movement collider (this panel is walk-through today — see the
+    // header note above), so no laser collider either: shooting through the
+    // zone entrance shouldn't silently die on glass a player can just walk
+    // through.
+    mesh.userData.laserIgnore = true
     // No castShadow: a depthWrite:false transparent panel casting a hard
     // shadow would read as an opaque silhouette from something meant to be
     // see-through. receiveShadow stays on so the player's own shadow can

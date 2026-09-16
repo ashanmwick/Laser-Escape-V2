@@ -16,6 +16,7 @@ import { authState, subscribeAuth } from './bloxity.js'
 import { avatarState, subscribe as subscribeAvatar } from './avatarState.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { subscribeHealthNet, applyRemoteHealth } from './playerHealth.js'
+import { spawnRagdoll } from './ragdoll.js'
 import { PROPORTIONS, clamp } from '../data/bloxity.js'
 import { PLAYER_MAX_HP } from '../data/playerHealth.js'
 import {
@@ -605,7 +606,13 @@ function ingestRemote(id, s, now) {
   e.beam.z = s.beamToZ
   e.hp = typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP
   e.maxHp = typeof s.maxHp === 'number' ? s.maxHp : PLAYER_MAX_HP
+  const wasDead = e.dead
   e.dead = !!s.dead
+  // Ragdoll the instant we witness a remote's dead flag flip true — skip a
+  // remote we first see already dead (e.g. joining mid-fight), since we never
+  // saw that death happen. Mirrors systems/playerHealth.js's own edge-detect
+  // for our own death.
+  if (e.dead && !wasDead) spawnRagdoll(e.x, e.y, e.z, e.yaw)
   const power = s.power || 0
   const rebirth = s.rebirth || 0
   const wins = s.wins || 0

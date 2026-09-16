@@ -149,7 +149,11 @@ function RingShell({ outerRadius, innerRadius, height, color, position }) {
   useEffect(() => () => sideTexture.dispose(), [sideTexture])
 
   return (
-    <mesh geometry={geometry} position={position} castShadow receiveShadow>
+    // laserIgnore: this shell has no movement collider either (walk-through
+    // by design, header comment above) — a laser must pass through it the
+    // same way a player's body does, or it silently blocks PVP shots fired
+    // across the King of the Hill summit it rings.
+    <mesh geometry={geometry} position={position} castShadow receiveShadow userData={{ laserIgnore: true }}>
       <meshStandardMaterial attach="material-0" map={topTexture} {...MATERIAL_PBR.GROUND} />
       <meshStandardMaterial attach="material-1" map={sideTexture} {...MATERIAL_PBR.GROUND} />
     </mesh>
@@ -168,7 +172,11 @@ function RingShell({ outerRadius, innerRadius, height, color, position }) {
 // reads as an opaque silhouette.
 function GlassDisc({ radius, height, color, position, sides, opacity }) {
   return (
-    <mesh position={position} receiveShadow>
+    // laserIgnore: no movement collider either (walk-through by design, see
+    // this component's own header comment) — same reasoning as RingShell
+    // above. Without this, this 20m-tall glass tube silently swallowed any
+    // PVP shot fired across the summit it surrounds.
+    <mesh position={position} receiveShadow userData={{ laserIgnore: true }}>
       <cylinderGeometry args={[radius, radius, height, sides]} />
       <meshStandardMaterial
         color={color}

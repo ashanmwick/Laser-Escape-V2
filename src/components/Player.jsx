@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { player } from '../systems/playerState.js'
+import { health as playerHealthState } from '../systems/playerHealth.js'
 import PlayerAvatar from './PlayerAvatar.jsx'
 import { MATERIAL_PBR } from '../data/materials.js'
 
@@ -19,6 +20,11 @@ export default function Player() {
     if (!g) return
     g.position.set(player.position.x, player.position.y, player.position.z)
     g.rotation.y = player.facing
+    // Hide the standing body the instant we're dead — systems/ragdoll.js has
+    // already burst its own boxes at this same position/facing (systems/
+    // playerHealth.js's applyRemoteHealth), so a frozen standee underneath
+    // them would read as a rendering glitch, not a death.
+    g.visible = !playerHealthState.dead
   })
 
   // The capsule is the fallback, not dead code: it is what renders while the

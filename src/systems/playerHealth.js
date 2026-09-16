@@ -7,7 +7,8 @@
 // timer once dead. Same trust model as systems/wallHealth.js.
 import { PLAYER_MAX_HP, PVP_RESPAWN_DELAY_MS } from '../data/playerHealth.js'
 import { SPAWN } from '../data/hub.js'
-import { resetPlayer } from './playerState.js'
+import { player, resetPlayer } from './playerState.js'
+import { spawnRagdoll } from './ragdoll.js'
 
 export const health = { hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, dead: false, respawnAt: 0 }
 
@@ -50,6 +51,7 @@ export function applyRemoteHealth(hp, dead) {
     health.hp = 0
     health.dead = true
     health.respawnAt = performance.now() + PVP_RESPAWN_DELAY_MS
+    spawnRagdoll(player.position.x, player.position.y, player.position.z, player.facing)
     return
   }
   if (!health.dead) {

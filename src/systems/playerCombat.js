@@ -12,7 +12,7 @@ import { remotePlayers, sendPlayerDamage } from './net.js'
 import { strikeWall } from './wallHealth.js'
 import { isInPvpZone } from '../data/pvpZone.js'
 import { REMOTE_BODY } from '../data/net.js'
-import { PVP_DAMAGE_PER_HIT, PVP_HIT_RADIUS } from '../data/playerHealth.js'
+import { PVP_DAMAGE_PER_HIT, PVP_HIT_RADIUS, PVP_AIM_ASSIST_TAN } from '../data/playerHealth.js'
 
 const R = REMOTE_BODY.RADIUS
 const H = REMOTE_BODY.HEIGHT
@@ -86,7 +86,12 @@ export function step() {
       e.rx, e.ry + H - R, e.rz,
       envDist,
     )
-    if (res.tRay > 0.01 && res.distSq <= PVP_HIT_RADIUS * PVP_HIT_RADIUS && res.tRay < bestT) {
+    // Effective hit radius widens with range (data/playerHealth.js
+    // PVP_AIM_ASSIST_TAN) rather than staying fixed: the same small aim
+    // slip is centimetres up close and metres at range, so a flat radius
+    // either feels too tight far away or too generous close up.
+    const effRadius = Math.max(PVP_HIT_RADIUS, res.tRay * PVP_AIM_ASSIST_TAN)
+    if (res.tRay > 0.01 && res.distSq <= effRadius * effRadius && res.tRay < bestT) {
       bestT = res.tRay
       bestId = id
     }

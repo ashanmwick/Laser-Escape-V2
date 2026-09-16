@@ -126,7 +126,10 @@ function RemoteBody({ id, name, avatarRev }) {
     body.position.set(e.rx, e.ry, e.rz)
     body.rotation.y = e.ryaw
     const a = e.alpha
-    body.visible = a > 0.01
+    // Hidden while dead — systems/net.js already burst their ragdoll boxes at
+    // this same position the frame `dead` flipped true, so leaving the
+    // standing body visible underneath would read as a glitch, not a death.
+    body.visible = a > 0.01 && !e.dead
     // The capsule fallback fades; the rig (many materials) just hard-toggles
     // with the group above.
     const transparent = a < 0.999

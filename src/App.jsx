@@ -30,6 +30,7 @@ import GlowFloorPanels from './components/GlowFloorPanels.jsx'
 import WallProps from './components/WallProps.jsx'
 import WallDebris from './components/WallDebris.jsx'
 import WallHealthBars from './components/WallHealthBars.jsx'
+import Ragdoll from './components/Ragdoll.jsx'
 import Player from './components/Player.jsx'
 import RemotePlayers from './components/RemotePlayers.jsx'
 import Laser from './components/Laser.jsx'
@@ -166,6 +167,7 @@ export default function App() {
         <WallProps />
         <WallDebris />
         <WallHealthBars />
+        <Ragdoll />
         <Player />
         <RemotePlayers />
         <Laser />

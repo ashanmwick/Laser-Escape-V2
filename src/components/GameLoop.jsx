@@ -14,6 +14,7 @@ import { step as stepWallHealth } from '../systems/wallHealth.js'
 import { step as stepPlayerHealth, health as playerHealthState } from '../systems/playerHealth.js'
 import { step as stepPlayerCombat } from '../systems/playerCombat.js'
 import { step as stepWallDebris } from '../systems/wallDebris.js'
+import { step as stepRagdoll } from '../systems/ragdoll.js'
 import { step as stepNet, reportLocal } from '../systems/net.js'
 import { getAabbs, getPolys, getRings } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
@@ -57,6 +58,7 @@ export default function GameLoop() {
     // After stepAction/stepWallHealth so a wall broken this frame has already
     // queued its burst (systems/wallHealth.js strikeWall -> wallDebris.spawnBurst).
     stepWallDebris(dt)
+    stepRagdoll(dt)
     stepLaserParticles(dt)
     // Multiplayer presence: advance remote-body interpolation, then relay our
     // own transform + beam (throttled inside net.js). A no-op while offline —
