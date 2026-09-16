@@ -48,7 +48,7 @@ export const HEX_POWER_PAD_RANGE = 2.5
 // Laser tier unlocked by each pad, in hex_power_pad.001-015 order (index 0 =
 // .001). `powerPerAction` becomes the player's powerPerAction on equip
 // (store/useGameStore.js equipHexPad); `winsRequired` gates buyHexPad — the
-// player's cumulative wins must have reached it, nothing is spent.
+// player's wins must have reached it, and that amount is spent on purchase.
 // `beamColor` tints that pad's label laser strip (HexPowerPadLabel.jsx) —
 // a cool-to-hot progression so the strip reads as escalating power at a
 // glance across the 15 tiers, same idea as a laser's `beamColor` in

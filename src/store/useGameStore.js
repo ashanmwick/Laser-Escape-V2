@@ -83,8 +83,8 @@ export const useGameStore = create((set, get) => ({
 
   // Called only from systems/glowFloorPanel.js, the frame the player first
   // steps onto a given win panel (that system re-arms per panel on exit, so a
-  // held stand never re-triggers). Wins are a threshold currency here, not
-  // spent — same as buyHexPad's gate — so this just grows the running total.
+  // held stand never re-triggers). Just grows the running total — spending
+  // (buyHexPad, buyAuraTier) happens separately.
   awardWins(amount) {
     if (!(amount > 0)) return
     set((s) => ({ wins: s.wins + amount }))
@@ -100,15 +100,16 @@ export const useGameStore = create((set, get) => ({
   },
 
   // Called only from systems/hexPowerPad.js, which already checked
-  // nearness/interact — re-checks ownership and the wins gate itself so a
+  // nearness/interact — re-checks ownership and affordability itself so a
   // duplicate/stale caller (or a wins value that has since dropped) can never
-  // double-apply or bypass a buy. Wins are a threshold here, not spent.
+  // double-charge, double-apply, or drive wins negative. Wins are spent here,
+  // same as buyAuraTier below.
   buyHexPad(index) {
     const state = get()
     if (state.ownedHexPads.has(index)) return
     const tier = HEX_POWER_PAD_TIERS[index]
     if (!tier || state.wins < tier.winsRequired) return
-    set((s) => ({ ownedHexPads: new Set(s.ownedHexPads).add(index) }))
+    set((s) => ({ wins: s.wins - tier.winsRequired, ownedHexPads: new Set(s.ownedHexPads).add(index) }))
   },
 
   // Re-checks ownership itself, same reasoning as buyHexPad above.
