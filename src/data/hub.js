@@ -29,11 +29,12 @@ export const HUB_AABBS = [
   ...GRASS_BLOCK_CUBE_AABBS,
   ...PVP_DIRT_AABBS,
   ...PVP_CUBE_AABBS,
-  // pvp_wall is intentionally left out of the collider scan (Tech.md §5.2):
-  // it's the "UNLOCKABLE ON REBIRTH 1" sign wall (data/pvpWall.js), and for
-  // now the PVP zone stays walk-through so players can enter before that
-  // gate is wired up. The glass panel + sign still render (PvpWall.jsx);
-  // only the kinematic collider ignores it.
+  // pvp_wall is intentionally left out of this static list (Tech.md §5.2):
+  // it's the "UNLOCKABLE ON REBIRTH 1" gate wall (data/pvpWall.js), solid
+  // unless the player's rebirth count is exactly 1. Whether it blocks
+  // movement depends on live store state, not the static layout, so
+  // systems/collision.js splices it in/out of the scan itself rather than
+  // this file deciding once at boot.
   ...PODIUM_STAGE_TARGET_AABBS,
   ...PODIUM_STAGE_HUB_AABBS,
   ...MERCHANT_SHOP_AABBS,

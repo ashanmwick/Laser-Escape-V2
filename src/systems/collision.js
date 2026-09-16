@@ -4,11 +4,29 @@
 // on the rare event a wall is destroyed, so getAabbs() stays a cached array
 // reference the rest of the time — no per-frame allocation on the hot path.
 import { HUB_AABBS, HUB_POLYGONS, HUB_RINGS } from '../data/hub.js'
+import { PVP_WALL_AABB } from '../data/pvpWall.js'
+import { useGameStore } from '../store/useGameStore.js'
+
+// pvp_wall (data/pvpWall.js's "UNLOCKABLE ON REBIRTH 1" sign) is deliberately
+// left out of HUB_AABBS itself (data/hub.js) — whether it blocks movement
+// depends on live store state, not the static layout. Kept as a second
+// cached variant of liveAabbs (with the gate box appended) so getAabbs() can
+// pick one or the other with a plain reference read, same "no per-frame
+// allocation" contract as liveAabbs above; only rebuilt when liveAabbs itself
+// changes (removeAabb/resetAabbs), not every frame.
+const PVP_GATE_AABB = { id: 'pvp_wall', ...PVP_WALL_AABB }
 
 let liveAabbs = HUB_AABBS.slice()
+let liveAabbsGateClosed = [...liveAabbs, PVP_GATE_AABB]
 
+function rebuildGateVariant() {
+  liveAabbsGateClosed = [...liveAabbs, PVP_GATE_AABB]
+}
+
+// The zone only opens at exactly rebirth 1 (data/pvpWall.js's sign text) —
+// not "1 or more" — per the design call this gate implements.
 export function getAabbs() {
-  return liveAabbs
+  return useGameStore.getState().rebirth === 1 ? liveAabbs : liveAabbsGateClosed
 }
 
 // The convex-polygon collider list (data/hub.js's HUB_POLYGONS — currently
@@ -27,6 +45,7 @@ export function getRings() {
 
 export function removeAabb(id) {
   liveAabbs = liveAabbs.filter((a) => a.id !== id)
+  rebuildGateVariant()
 }
 
 // Bring every collider back — used by the win-panel respawn
@@ -34,4 +53,5 @@ export function removeAabb(id) {
 // made. Cheap: one slice, same as boot.
 export function resetAabbs() {
   liveAabbs = HUB_AABBS.slice()
+  rebuildGateVariant()
 }
