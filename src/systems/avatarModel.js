@@ -1,9 +1,11 @@
 // Builds a three.js avatar from the player's equipped Bloxity cosmetics.
 //
 // Framework-free (Tech.md rule 2); PlayerAvatar.jsx only mounts what this
-// returns. Every asset is remote and optional: any slot that 404s or fails to
-// parse falls back to the base rig's own default_* mesh, and a total failure
-// leaves the caller on the capsule.
+// returns. Every cosmetic slot is remote and optional: any part/item/skin
+// that 404s or fails to parse falls back to the base rig's own default_*
+// mesh. The base rig itself is not optional in the same way — it retries
+// with backoff (see loadBaseRig below) rather than giving up, so a blocked
+// CDN only ever leaves the caller on the capsule temporarily.
 //
 // Budget note (Tech.md §6/§7): the base rig is 6 meshes (104 tris) sharing ONE
 // material, so a bare avatar costs 6 draw calls and 1 material. Each equipped
@@ -25,6 +27,7 @@ import {
 } from '../data/bloxity.js'
 import { PLAYER_HEIGHT, PLAYER_RADIUS } from './playerState.js'
 import { MATERIAL_PBR } from '../data/materials.js'
+import { registerRetryWait, setAvatarAttempt } from './gameReadiness.js'
 
 // The base rig is refetched on every rebuild; let three serve it from cache.
 THREE.Cache.enabled = true
@@ -32,6 +35,48 @@ THREE.Cache.enabled = true
 const gltfLoader = new GLTFLoader()
 const objLoader = new OBJLoader()
 const textureLoader = new THREE.TextureLoader()
+
+// A blip on the base-rig fetch must not permanently strand the player: retry
+// with growing backoff instead of giving up after one failure (the same
+// stance systems/net.js takes on the multiplayer socket). components/
+// LoadingScreen.jsx blocks play for as long as this hasn't landed — there is
+// no "play on the capsule" escape hatch, so this loop is the only thing
+// standing between a CDN blip and the player getting back in.
+const BASE_RIG_RETRY_BACKOFF_MS = [2_000, 5_000, 10_000, 20_000, 30_000]
+
+// Registers with gameReadiness.js so a manual "Retry Now" click
+// (LoadingScreen.jsx) can resolve this early instead of sitting out the
+// remaining backoff delay.
+function wait(ms) {
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer)
+      unregister()
+      resolve()
+    }
+    const timer = setTimeout(finish, ms)
+    const unregister = registerRetryWait(finish)
+  })
+}
+
+// `token.cancelled` flips true when a newer rebuild supersedes this one or
+// the component unmounts (PlayerAvatar.jsx) — checked between attempts so an
+// abandoned retry loop can't outlive its caller.
+async function loadBaseRig(token) {
+  let attempt = 0
+  for (;;) {
+    if (token?.cancelled) return null
+    try {
+      return await gltfLoader.loadAsync(BASE_MODEL_URL)
+    } catch (err) {
+      const delay = BASE_RIG_RETRY_BACKOFF_MS[Math.min(attempt, BASE_RIG_RETRY_BACKOFF_MS.length - 1)]
+      attempt += 1
+      setAvatarAttempt(attempt)
+      console.warn(`[bloxity] base rig load failed (attempt ${attempt}), retrying in ${delay}ms`, err)
+      await wait(delay)
+    }
+  }
+}
 
 // Remote glTFs arrive as MeshStandardMaterial. Every loaded material is
 // rebuilt fresh (so it can be owned/disposed independently of the loader's
@@ -200,15 +245,13 @@ async function applyItem(built, slot, id) {
   built.slotObjects.push(object)
 }
 
-// Returns null when the base rig itself cannot be loaded — the caller then
-// stays on the capsule.
-export async function buildAvatar(equipped) {
-  let gltf
-  try {
-    gltf = await gltfLoader.loadAsync(BASE_MODEL_URL)
-  } catch {
-    return null
-  }
+// Returns null only when `token` was cancelled mid-retry (a newer rebuild
+// superseded this one, or the component unmounted) — the base rig itself
+// never gives up on its own, so the caller only ever stays on the capsule
+// temporarily, not permanently.
+export async function buildAvatar(equipped, token) {
+  const gltf = await loadBaseRig(token)
+  if (!gltf) return null
 
   const root = gltf.scene
   // `converted` maps a source material to the Standard material that replaced it, so

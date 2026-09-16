@@ -1,8 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import {
-  touchState,
   touchAimState,
-  subscribeTouchMode,
   subscribeTouchAim,
   setTouchMove,
   addTouchLook,
@@ -12,6 +10,7 @@ import {
   pressTouchJump,
   pressTouchInteract,
 } from '../../systems/input.js'
+import { useTouchMode } from './hooks.js'
 
 // On-screen controls for a touch session (Tech.md §5.1: input.js owns
 // "keyboard + pointer + touch joystick"). DOM siblings of the canvas like the
@@ -34,12 +33,6 @@ const DEAD_ZONE = 0.16 // fraction of the radius ignored before the avatar moves
 const LOOK_SENS = 0.75 // touch drag px → same units cameraOrbit expects from a mouse
 const PINCH_ZOOM = 2.5 // pinch distance px → wheel-equivalent zoom units
 const TAP_MOVE_THRESHOLD = 12 // px of travel beyond which a press reads as a drag, not a tap
-
-function useTouchMode() {
-  const [on, setOn] = useState(touchState.active)
-  useEffect(() => subscribeTouchMode(setOn), [])
-  return on
-}
 
 // One-finger drag on this half orbits the camera; two fingers pinch-zoom. A
 // one-finger press that never travels past TAP_MOVE_THRESHOLD is instead read
