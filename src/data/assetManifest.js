@@ -3,10 +3,12 @@
 // screen (components/LoadingScreen.jsx) so the whole world is in memory before
 // the screen drops away.
 //
-// Remote avatar assets (data/bloxity.js) are deliberately left out: the game
-// is playable on the capsule fallback and Player.jsx swaps the real avatar in
-// whenever it arrives, so gating the loading screen on a CDN round-trip would
-// only make boot slower and flakier.
+// Remote avatar assets (data/bloxity.js) are loaded on a separate path —
+// avatarModel.js / PlayerAvatar.jsx, not preload.js — since they key off
+// avatarState rather than a fixed URL list. The loading screen still waits
+// on them: it gates on systems/gameReadiness.js's avatarSettledPromise()
+// rather than adding them to this manifest, so a slow/blocked CDN resolves
+// to the capsule fallback (a confirmed final state) instead of hanging.
 import { TARGET_PROPS } from './targets.js'
 import { WALL_PROPS } from './wallProps.js'
 import { HEX_POWER_PAD_MODEL_URL } from './hexPowerPad.js'

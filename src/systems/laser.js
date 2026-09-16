@@ -18,6 +18,14 @@ export const laser = {
   normal: { x: 0, y: 1, z: 0 }, // world-space surface normal at end, valid only when hit
   hitObject: null, // THREE.Object3D struck this frame, valid only when hit
   hitInstanceId: -1, // instance index when hitObject is an InstancedMesh, else -1
+  // The ACTUAL aim ray this frame (mouse branch: from the camera, not from
+  // `start` — third-person parallax means those are two different lines).
+  // `end` always lies on this ray. systems/playerCombat.js hit-tests PVP
+  // targets against this ray rather than reconstructing one from
+  // start/end, so "what's under the crosshair" agrees with what the
+  // environment raycast below already used it to find.
+  rayOrigin: { x: 0, y: 0, z: 0 },
+  rayDir: { x: 0, y: 0, z: 1 },
 }
 
 // Scratch, hoisted to module scope — zero allocation per frame (Tech.md §7).
@@ -82,6 +90,13 @@ export function step(camera, scene) {
     ndc.set(inputState.pointerNDC.x, inputState.pointerNDC.y)
     raycaster.setFromCamera(ndc, camera)
   }
+
+  laser.rayOrigin.x = raycaster.ray.origin.x
+  laser.rayOrigin.y = raycaster.ray.origin.y
+  laser.rayOrigin.z = raycaster.ray.origin.z
+  laser.rayDir.x = raycaster.ray.direction.x
+  laser.rayDir.y = raycaster.ray.direction.y
+  laser.rayDir.z = raycaster.ray.direction.z
 
   const hits = raycaster.intersectObjects(scene.children, true)
   let target = null

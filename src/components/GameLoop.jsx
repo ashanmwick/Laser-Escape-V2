@@ -17,6 +17,7 @@ import { step as stepWallDebris } from '../systems/wallDebris.js'
 import { step as stepNet, reportLocal } from '../systems/net.js'
 import { getAabbs, getPolys, getRings } from '../systems/collision.js'
 import { notifyFirstFrame } from '../systems/bloxity.js'
+import { tickFrame } from '../systems/gameReadiness.js'
 import { inputState } from '../systems/input.js'
 
 // The single simulation tick. Rendered before the view components so its
@@ -66,6 +67,9 @@ export default function GameLoop() {
     // a signed-in avatar; dismiss the portal loading screen here. No-ops after
     // the first call.
     notifyFirstFrame()
+    // Counts real rendered frames toward LoadingScreen.jsx's post-load
+    // warm-up gate; a no-op until that screen arms it (systems/gameReadiness.js).
+    tickFrame()
   })
 
   return null

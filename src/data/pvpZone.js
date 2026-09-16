@@ -19,10 +19,3 @@ export const PVP_ZONE_BOUNDS = { minX, maxX, minZ, maxZ }
 export function isInPvpZone(x, z) {
   return x >= minX && x <= maxX && z >= minZ && z <= maxZ
 }
-
-// Where a player lands on death-respawn (systems/playerHealth.js): inside the
-// zone, near its hub-facing entrance (data/pvpWall.js's glass sign sits around
-// x -28.7, just outside this rectangle), and far enough from the King of the
-// Hill pentagon stack (data/pvpCenterPentagon.js, base radius 15 centred at
-// x:-80, z:-5) that a respawn never lands inside its collider.
-export const PVP_RESPAWN_POINT = { x: -50, y: 0, z: -5 }

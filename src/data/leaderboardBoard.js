@@ -78,6 +78,8 @@ export const LEADERBOARD_COLORS = {
   panel: '#5c3a1c', // dark inset the text sits on
   panelStripeA: '#67421f', // faint alternating row banding
   panelStripeB: '#5c3a1c',
+  panelStripeSelf: '#3d6b3f', // your own row's stripe, swapped in over the alternating pattern
+  selfNameColor: '#8dffb0', // your own row's name text — a small "that's you" cue
   titleColor: '#ffe600',
   timerChip: '#1c1108',
   timerGlow: '#ffffff',

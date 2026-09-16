@@ -137,7 +137,10 @@ function Trim() {
 // image's own scroll shading) — drawn for all FIXED_ROW_SLOTS regardless of
 // how many are actually filled, so an empty slot still reads as "a row",
 // just blank, rather than the banding jumping around as players join/leave.
-function Panel() {
+// `selfSlot` (0-based, or -1 if we're not in the visible rows — e.g. more
+// than FIXED_ROW_SLOTS players outrank us) swaps that one slot's stripe for
+// panelStripeSelf, a small "that's you" cue behind whichever rank we hold.
+function Panel({ selfSlot }) {
   return (
     <>
       <mesh position={[0, PANEL_CENTER_Y, PANEL_FRONT_Z]}>
@@ -148,7 +151,13 @@ function Panel() {
         <mesh key={i} position={[0, y, PANEL_FRONT_Z + PANEL_THICKNESS / 2 + 0.002]}>
           <planeGeometry args={[PANEL_WIDTH - 0.1, ROW_HEIGHT * 0.92]} />
           <meshStandardMaterial
-            color={i % 2 === 0 ? LEADERBOARD_COLORS.panelStripeA : LEADERBOARD_COLORS.panelStripeB}
+            color={
+              i === selfSlot
+                ? LEADERBOARD_COLORS.panelStripeSelf
+                : i % 2 === 0
+                  ? LEADERBOARD_COLORS.panelStripeA
+                  : LEADERBOARD_COLORS.panelStripeB
+            }
             {...MATERIAL_PBR.WOOD}
           />
         </mesh>
@@ -165,12 +174,14 @@ function Panel() {
 // leaderboardBoard.js LEADERBOARD_TRANSFORM), same static-signage convention
 // as data/podiumStage.js's own board.
 //
-// `rank`/`name`/`score` are live (systems/net.js's getLeaderboard(), fed by
-// the room's shared player state), read by this file's default export below
-// and passed down already formatted/ranked — this component just lays them
-// out, same "component just mounts what data/ computed" split as the rest of
-// the file.
-function Row({ rank, name, score }) {
+// `rank`/`name`/`score`/`isSelf` are live (systems/net.js's getLeaderboard(),
+// fed by the room's shared player state), read by this file's default
+// export below and passed down already formatted/ranked — this component
+// just lays them out, same "component just mounts what data/ computed"
+// split as the rest of the file. `isSelf` tints the name a distinct color
+// (data/leaderboardBoard.js's selfNameColor) — the small "that's you" cue,
+// alongside Panel's own matching stripe for the same row.
+function Row({ rank, name, score, isSelf }) {
   const { y, nameFontSize } = getRowLayout(rank, name, score)
   return (
     <group position={[0, y, TEXT_Z]}>
@@ -190,7 +201,7 @@ function Row({ rank, name, score }) {
         position={[NAME_TEXT_X, 0, 0]}
         fontSize={nameFontSize}
         fontWeight="bold"
-        color={ENTRY_NAME_COLOR}
+        color={isSelf ? LEADERBOARD_COLORS.selfNameColor : ENTRY_NAME_COLOR}
         outlineWidth={0.02}
         outlineColor="#000000"
         anchorX="left"
@@ -298,13 +309,14 @@ export default function LeaderboardBoard({
   useNetRoster()
   useGameStore((s) => s[stat])
   const rows = getLeaderboard(stat, FIXED_ROW_SLOTS)
+  const selfSlot = rows.findIndex((row) => row.isSelf)
 
   return (
     <group position={[transform.x, transform.y, transform.z]} rotation={[0, transform.yaw, 0]}>
       <FrameBoard />
       <Legs />
       <Trim />
-      <Panel />
+      <Panel selfSlot={selfSlot} />
       <Text
         position={[0, TITLE_Y, TEXT_Z]}
         fontSize={TITLE_FONT_SIZE}
@@ -321,7 +333,7 @@ export default function LeaderboardBoard({
         {title}
       </Text>
       {rows.map((row, i) => (
-        <Row key={row.id} rank={i + 1} name={row.name} score={formatShort(row.value)} />
+        <Row key={row.id} rank={i + 1} name={row.name} score={formatShort(row.value)} isSelf={row.isSelf} />
       ))}
       <TimerChip />
     </group>

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { preloadAll } from '../systems/preload.js'
 import { PRELOAD_TOTAL } from '../data/assetManifest.js'
+import {
+  avatarSettledPromise,
+  armFrameWarmup,
+  frameWarmupPromise,
+} from '../systems/gameReadiness.js'
 
 // Full-screen DOM overlay (never drei <Html> — Tech.md §5.4), a sibling of the
 // <Canvas> in App.jsx. It sits over the canvas while systems/preload.js pulls
@@ -8,18 +13,28 @@ import { PRELOAD_TOTAL } from '../data/assetManifest.js'
 // so each prop component loads from propModel.js's now-warm cache and the
 // frame behind this screen is already complete by the time the bar fills.
 //
-// Self-dismissing: once every asset has settled it waits two animation frames
+// Three gates, all real readiness signals rather than a fixed timer:
+//   1. every hub prop/wall model (systems/preload.js)
+//   2. the Bloxity avatar's first build attempt settling, real or capsule
+//      fallback (systems/gameReadiness.js, fed by PlayerAvatar.jsx)
+//   3. a few real rendered frames of that fully-populated scene, so shader
+//      compilation/GPU upload happens behind the overlay instead of as the
+//      first jank the player sees once it's gone
+// Self-dismissing: once all three settle it waits two more animation frames
 // (so the final GPU upload lands) then fades out and unmounts. A hard safety
 // timeout hides it even if a request never settles, so a dead CDN can never
 // trap the player on the loading screen.
 const FADE_MS = 450
-const SAFETY_MS = 12000
+const SAFETY_MS = 15000
+// +1 for the avatar settling, +1 for the post-load frame warm-up.
+const TOTAL_STEPS = PRELOAD_TOTAL + 2
 
 export default function LoadingScreen() {
   const [loaded, setLoaded] = useState(0)
   const [done, setDone] = useState(false)
   const [gone, setGone] = useState(false)
   const startedRef = useRef(false)
+  const safetyRef = useRef(null)
 
   useEffect(() => {
     // React 18 StrictMode invokes effects twice in dev; the preload must run
@@ -27,12 +42,28 @@ export default function LoadingScreen() {
     if (startedRef.current) return
     startedRef.current = true
 
-    const safety = setTimeout(() => setDone(true), SAFETY_MS)
-    preloadAll((n) => setLoaded(n)).finally(() => {
-      clearTimeout(safety)
-      requestAnimationFrame(() => requestAnimationFrame(() => setDone(true)))
-    })
-    return () => clearTimeout(safety)
+    // Kept in a ref, not a local var a cleanup closes over: StrictMode's
+    // dev-only mount -> cleanup -> remount would otherwise clear this on the
+    // phantom cleanup (the guard above then skips creating a replacement,
+    // since startedRef is already true), silently disarming the one timer
+    // that guarantees a dead CDN can't trap the player. A genuine unmount
+    // before this fires just lets it tick down harmlessly against an
+    // unmounted component.
+    safetyRef.current = setTimeout(() => setDone(true), SAFETY_MS)
+
+    Promise.all([
+      preloadAll((n) => setLoaded(n)),
+      avatarSettledPromise().then(() => setLoaded((n) => n + 1)),
+    ])
+      .then(() => {
+        armFrameWarmup()
+        return frameWarmupPromise()
+      })
+      .then(() => setLoaded((n) => n + 1))
+      .finally(() => {
+        clearTimeout(safetyRef.current)
+        requestAnimationFrame(() => requestAnimationFrame(() => setDone(true)))
+      })
   }, [])
 
   useEffect(() => {
@@ -43,7 +74,7 @@ export default function LoadingScreen() {
 
   if (gone) return null
 
-  const pct = done ? 100 : Math.round((loaded / PRELOAD_TOTAL) * 100)
+  const pct = done ? 100 : Math.round((Math.min(loaded, TOTAL_STEPS) / TOTAL_STEPS) * 100)
 
   return (
     <div

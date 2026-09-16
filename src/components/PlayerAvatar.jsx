@@ -5,6 +5,7 @@ import { applyProportions, buildAvatar, disposeAvatar } from '../systems/avatarM
 import { makeGait, updateGait, disposeGait } from '../systems/avatarAnim.js'
 import { player, setDims, resetDims } from '../systems/playerState.js'
 import { SPEED } from '../systems/playerMovement.js'
+import { markAvatarSettled } from '../systems/gameReadiness.js'
 
 // Mounts the Bloxity avatar under Player's transform group. Presentation only
 // (Tech.md rule 3): all loading, rig maths and the run cycle live in
@@ -40,7 +41,13 @@ export default function PlayerAvatar({ onReady }) {
     const rebuild = async (equipped, proportions) => {
       const mine = ++generation
       clear()
-      if (!equipped) return
+      if (!equipped) {
+        // Deliberately no avatar (equipped === null): the capsule fallback
+        // is the final state, not a pending load — settle immediately so
+        // the loading screen doesn't wait on a build that will never start.
+        markAvatarSettled()
+        return
+      }
       const next = await buildAvatar(equipped)
       // A newer rebuild (or unmount) landed while we were loading.
       if (disposed || mine !== generation) {
@@ -48,7 +55,10 @@ export default function PlayerAvatar({ onReady }) {
         return
       }
       if (!next || !groupRef.current) {
+        // Build failed (bad CDN, 404 base rig): the capsule stays up as the
+        // final state, same as the explicit no-avatar case above.
         disposeAvatar(next)
+        markAvatarSettled()
         return
       }
       built = next
@@ -57,6 +67,7 @@ export default function PlayerAvatar({ onReady }) {
       groupRef.current.add(built.root)
       gaitRef.current = makeGait(built)
       onReady(true)
+      markAvatarSettled()
     }
 
     const off = subscribe((state, reason) => {

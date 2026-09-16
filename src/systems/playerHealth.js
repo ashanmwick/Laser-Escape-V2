@@ -6,7 +6,7 @@
 // (applyRemoteHealth, called from systems/net.js) and running the respawn
 // timer once dead. Same trust model as systems/wallHealth.js.
 import { PLAYER_MAX_HP, PVP_RESPAWN_DELAY_MS } from '../data/playerHealth.js'
-import { PVP_RESPAWN_POINT } from '../data/pvpZone.js'
+import { SPAWN } from '../data/hub.js'
 import { resetPlayer } from './playerState.js'
 
 export const health = { hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, dead: false, respawnAt: 0 }
@@ -63,7 +63,10 @@ function respawn() {
   health.dead = false
   health.respawnAt = 0
   respawnGuardUntil = performance.now() + RESPAWN_GUARD_MS
-  resetPlayer(PVP_RESPAWN_POINT)
+  // The game's one canonical respawn point (data/hub.js) — same spot the
+  // player starts at (main.jsx) and comes back to off a win panel
+  // (systems/glowFloorPanel.js), not a PVP-specific location.
+  resetPlayer(SPAWN)
   emitHealthNet({ type: 'respawn' })
 }
 
