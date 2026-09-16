@@ -183,7 +183,91 @@ function resolvePolysY(polys) {
   }
 }
 
-export function step(dt, aabbs = [], polys = []) {
+// Ring colliders (data/hub.js's HUB_RINGS, currently just data/
+// pvpCenterPentagon.js's cylinder shell) — a shape none of the above fit:
+// solid in an annulus (between an outer and an inner apothem sharing one
+// set of face normals), open in the middle. `nearestFace` above already
+// takes any {center, apothem, normals}, so it's reused twice per ring — once
+// against the outer boundary, once against the inner — rather than writing
+// a second geometry test from scratch.
+function zoneOf(p, ring) {
+  const outer = nearestFace(p, { center: ring.center, apothem: ring.outerApothem, normals: ring.normals })
+  const inner = nearestFace(p, { center: ring.center, apothem: ring.innerApothem, normals: ring.normals })
+  return { outer, inner }
+}
+
+// Gate for whether this ring is even worth resolving this frame: the
+// player's circle must reach the wall band from one side or the other.
+// Anything fully outside the outer wall, or fully inside the hollow middle
+// with room to spare, skips the ring entirely — the hollow middle already
+// has its own floor (the tier below, in HUB_POLYGONS), so falling through
+// there is exactly the intended behaviour, not a gap in this collider.
+function overlapsRingBand(p, ring) {
+  if (p.y + player.dims.height <= ring.minY || p.y >= ring.maxY) return false
+  const { outer, inner } = zoneOf(p, ring)
+  return outer.d < player.dims.radius && inner.d > -player.dims.radius
+}
+
+// Push the player back out of the wall, from whichever side they entered
+// it. Approaching from outside (outer.d >= 0, same test resolvePolys uses)
+// pushes outward exactly like a solid disc, including the same step-up
+// assist. Approaching from inside the hollow middle (inner.d < 0, i.e. still
+// short of the inner wall) pushes back toward the centre instead, along the
+// same inner face's normal, reversed — the two pushes can never both apply
+// (a 1m-thick wall is far wider than the player's radius), so this is an
+// if/else, not two independent resolutions.
+function resolveRingXZ(ring) {
+  const p = player.position
+  if (!overlapsRingBand(p, ring)) return
+  const { outer, inner } = zoneOf(p, ring)
+  if (outer.d >= 0 || inner.d >= 0) {
+    // Outside the wall pushing in, or (rare) already embedded in it —
+    // either way, treat the outer face like any other solid boundary.
+    if (tryStepUpPoly(p, ring)) return
+    const push = player.dims.radius - outer.d
+    p.x += outer.normal.x * push
+    p.z += outer.normal.z * push
+    const vDotN = player.velocity.x * outer.normal.x + player.velocity.z * outer.normal.z
+    if (vDotN < 0) {
+      player.velocity.x -= vDotN * outer.normal.x
+      player.velocity.z -= vDotN * outer.normal.z
+    }
+    return
+  }
+  // Inside the hollow middle, nudging into the inner wall — push back
+  // toward the centre along -inner.normal instead of out through the wall.
+  const push = inner.d + player.dims.radius
+  if (push <= 0) return
+  p.x -= inner.normal.x * push
+  p.z -= inner.normal.z * push
+  const vDotN = player.velocity.x * inner.normal.x + player.velocity.z * inner.normal.z
+  if (vDotN > 0) {
+    player.velocity.x -= vDotN * inner.normal.x
+    player.velocity.z -= vDotN * inner.normal.z
+  }
+}
+
+// Ring equivalent of resolvePolysY: only reachable once resolveRingXZ above
+// has already kept the player's XZ position within the wall band (or just
+// outside it, approaching), so — unlike the tiers' own resolvePolysY — this
+// never needs to distinguish "on the wall" from "over the hollow middle";
+// overlapsRingBand's gate already excludes the latter.
+function resolveRingY(ring) {
+  const p = player.position
+  if (!overlapsRingBand(p, ring)) return
+  const upOut = ring.maxY - p.y
+  const downOut = p.y + player.dims.height - ring.minY
+  if (upOut <= downOut) {
+    p.y = ring.maxY
+    if (player.velocity.y < 0) player.velocity.y = 0
+    player.grounded = true
+  } else {
+    p.y = ring.minY - player.dims.height
+    if (player.velocity.y > 0) player.velocity.y = 0
+  }
+}
+
+export function step(dt, aabbs = [], polys = [], rings = []) {
   if (dt <= 0) return
 
   // Camera-relative ground basis (Tech.md §5.2: input is camera-relative).
@@ -216,9 +300,11 @@ export function step(dt, aabbs = [], polys = []) {
   p.z += player.velocity.z * dt
   resolveZ(aabbs)
   resolvePolys(polys)
+  for (let i = 0; i < rings.length; i++) resolveRingXZ(rings[i])
   p.y += player.velocity.y * dt
   resolveY(aabbs)
   resolvePolysY(polys)
+  for (let i = 0; i < rings.length; i++) resolveRingY(rings[i])
 
   // Flat ground plane.
   if (p.y <= GROUND_Y) {

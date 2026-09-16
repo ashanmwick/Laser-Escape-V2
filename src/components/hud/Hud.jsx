@@ -133,21 +133,21 @@ function LeftCenterControls() {
           <button
             type="button"
             onClick={acceptRebirth}
-            disabled={!canRebirth}
-            title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+            disabled
+            title="Coming soon"
             className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
           >
-            <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+            <img src="/ui/aura.png" alt="" className="h-10 w-10" draggable={false} />
             <span className="text-xs font-semibold tracking-wide">Rebirth</span>
           </button>
           <button
             type="button"
             onClick={acceptRebirth}
-            disabled={!canRebirth}
-            title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+            disabled
+            title="Coming soon"
             className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
           >
-            <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+            <img src="/ui/shop.png" alt="" className="h-10 w-10" draggable={false} />
             <span className="text-xs font-semibold tracking-wide">Rebirth</span>
           </button>
         </div>
@@ -155,11 +155,11 @@ function LeftCenterControls() {
         <button
           type="button"
           onClick={acceptRebirth}
-          disabled={!canRebirth}
-          title={canRebirth ? 'Accept rebirth' : 'Rebirth not available yet'}
+          disabled
+          title="Coming soon"
           className="pointer-events-auto flex flex-col items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
         >
-          <img src="/ui/rebirth.png" alt="" className="h-10 w-10" draggable={false} />
+          <img src="/ui/invite_friends.png" alt="" className="h-10 w-10" draggable={false} />
           <span className="text-xs font-semibold tracking-wide">Rebirth</span>
         </button>
         <button

@@ -3,7 +3,7 @@
 // data/hub.js's static HUB_AABBS; systems/wallHealth.js calls removeAabb()
 // on the rare event a wall is destroyed, so getAabbs() stays a cached array
 // reference the rest of the time — no per-frame allocation on the hot path.
-import { HUB_AABBS, HUB_POLYGONS } from '../data/hub.js'
+import { HUB_AABBS, HUB_POLYGONS, HUB_RINGS } from '../data/hub.js'
 
 let liveAabbs = HUB_AABBS.slice()
 
@@ -17,6 +17,12 @@ export function getAabbs() {
 // remove/reset machinery to match.
 export function getPolys() {
   return HUB_POLYGONS
+}
+
+// Same story as getPolys(): data/hub.js's HUB_RINGS (currently just
+// data/pvpCenterPentagon.js's cylinder shell) is static forever.
+export function getRings() {
+  return HUB_RINGS
 }
 
 export function removeAabb(id) {

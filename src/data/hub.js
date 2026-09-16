@@ -49,3 +49,11 @@ export const HUB_AABBS = [
 // step() scans it the same way as HUB_AABBS, just against convex-polygon
 // faces instead of box faces.
 export const HUB_POLYGONS = [...PVP_CENTER_PENTAGON_POLYGONS]
+
+// A third collider list, for shells rather than solids (systems/
+// playerMovement.js's resolveRingXZ/resolveRingY, via systems/collision.js's
+// getRings()) — empty for now. data/pvpCenterPentagon.js's cylinder cap
+// (PVP_CENTER_CYLINDER_RING) is intentionally left out, same precedent as
+// pvp_wall above: it renders (PvpCenterPentagon.jsx's RingShell) but stays
+// walk-through, not solid.
+export const HUB_RINGS = []

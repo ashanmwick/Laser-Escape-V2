@@ -24,6 +24,7 @@ import PvpWall from './components/PvpWall.jsx'
 import PvpCenterPentagon from './components/PvpCenterPentagon.jsx'
 import HexPowerPads from './components/HexPowerPads.jsx'
 import Targets from './components/Targets.jsx'
+import LeaderboardBoard from './components/LeaderboardBoard.jsx'
 import GlowFloorPanels from './components/GlowFloorPanels.jsx'
 import WallProps from './components/WallProps.jsx'
 import WallDebris from './components/WallDebris.jsx'
@@ -157,6 +158,7 @@ export default function App() {
         ))}
         <HexPowerPads />
         <Targets />
+        <LeaderboardBoard />
         <GlowFloorPanels />
         <WallProps />
         <WallDebris />

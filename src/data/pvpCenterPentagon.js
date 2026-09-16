@@ -70,12 +70,21 @@ export const PVP_CENTER_PENTAGON_TIERS = Array.from({ length: COUPLES * 2 }, (_,
 // adds directly to every vertex's angle, per data/pvpBlocks.js's rotateYaw
 // precedent), so face i's outward normal points along the angular midpoint
 // of its two vertices: rotationY + (i + 0.5) * (2*pi/N). Same rotation for
-// every tier, so these 5 normals are shared across the whole stack.
+// every tier, so these 5 normals are shared across the whole stack. Reused
+// below at N=24 for the cylinder cap: a true circle has no faces to test
+// against, so it's approximated as a many-sided regular polygon instead —
+// tight enough (apothem within 1% of radius at 24 sides) that the join
+// between "circle" mesh and "polygon" collider is imperceptible, and it's
+// one code path shared with the pentagon tiers rather than a second kind of
+// collider.
 const SIDES = 5
-const PENTAGON_FACE_NORMALS = Array.from({ length: SIDES }, (_, i) => {
-  const angle = PVP_CENTER_PENTAGON_ROTATION_Y + (i + 0.5) * ((Math.PI * 2) / SIDES)
-  return { x: Math.sin(angle), z: Math.cos(angle) }
-})
+function regularPolygonNormals(sides, rotationY) {
+  return Array.from({ length: sides }, (_, i) => {
+    const angle = rotationY + (i + 0.5) * ((Math.PI * 2) / sides)
+    return { x: Math.sin(angle), z: Math.cos(angle) }
+  })
+}
+const PENTAGON_FACE_NORMALS = regularPolygonNormals(SIDES, PVP_CENTER_PENTAGON_ROTATION_Y)
 
 // Registered into data/hub.js's HUB_POLYGONS (a second, parallel collider
 // list next to HUB_AABBS — systems/collision.js's getPolys(), threaded into
@@ -92,3 +101,75 @@ export const PVP_CENTER_PENTAGON_POLYGONS = PVP_CENTER_PENTAGON_TIERS.map((tier)
   apothem: tier.radius * Math.cos(Math.PI / SIDES),
   normals: PENTAGON_FACE_NORMALS,
 }))
+
+// A hollow cylinder shell on the very top of the stack, same X/Z centre as
+// every tier below it, resting flush on the topmost tier's own top face —
+// the summit of the ziggurat: an outer wall (radius 9) with a narrower
+// wall (radius 8) cut out of its middle, "a shell inside a shell", 1m thick.
+// The topmost tier's own top face still shows through the hollow centre —
+// the shell reads as a raised rim/parapet around the platform, not a lid
+// sealing it, and (per the ring collider below) a player standing in that
+// open middle is genuinely standing on the tier below, not floating on an
+// invisible solid fill.
+export const PVP_CENTER_CYLINDER_RADIUS = 9 // outer wall
+export const PVP_CENTER_CYLINDER_INNER_RADIUS = 8 // inner wall — the hollow bore
+export const PVP_CENTER_CYLINDER_HEIGHT = 0.5
+export const PVP_CENTER_CYLINDER_COLOR = YELLOW
+export const PVP_CENTER_CYLINDER_POSITION = [
+  PENTAGON_X,
+  centerY + PVP_CENTER_CYLINDER_HEIGHT / 2, // centerY is the last tier's own top y, left over from the stacking walk above
+  PENTAGON_Z,
+]
+
+export const PVP_CENTER_CYLINDER_SIDES = 24 // a true circle has no faces; see regularPolygonNormals's header note
+
+// The ring's collider (systems/playerMovement.js's resolveRingXZ/
+// resolveRingY): same regular-polygon approximation as every other round
+// collider in this file, but with two apothems sharing one set of face
+// normals — `outerApothem` blocks the player out of the wall from outside
+// (exactly like PVP_CENTER_PENTAGON_POLYGONS' solid discs), `innerApothem`
+// blocks them back out of the wall from inside the hollow bore, and neither
+// applies once they're clear of the wall on either side (fully outside, or
+// deep in the hollow middle — where the topmost tier's own collider is
+// already the floor).
+export const PVP_CENTER_CYLINDER_RING = {
+  center: { x: PVP_CENTER_CYLINDER_POSITION[0], z: PVP_CENTER_CYLINDER_POSITION[2] },
+  minY: PVP_CENTER_CYLINDER_POSITION[1] - PVP_CENTER_CYLINDER_HEIGHT / 2,
+  maxY: PVP_CENTER_CYLINDER_POSITION[1] + PVP_CENTER_CYLINDER_HEIGHT / 2,
+  outerApothem: PVP_CENTER_CYLINDER_RADIUS * Math.cos(Math.PI / PVP_CENTER_CYLINDER_SIDES),
+  innerApothem: PVP_CENTER_CYLINDER_INNER_RADIUS * Math.cos(Math.PI / PVP_CENTER_CYLINDER_SIDES),
+  normals: regularPolygonNormals(PVP_CENTER_CYLINDER_SIDES, PVP_CENTER_PENTAGON_ROTATION_Y),
+}
+
+// A second, solid cylinder at the exact same spot (X/Z centre and Y level)
+// as the shell above — no collider registered anywhere (not HUB_AABBS,
+// HUB_POLYGONS, or HUB_RINGS), so it renders but stays walk-through, same
+// as the shell itself.
+export const PVP_CENTER_SUMMIT_DISC_RADIUS = 9.5
+export const PVP_CENTER_SUMMIT_DISC_HEIGHT = 20
+export const PVP_CENTER_SUMMIT_DISC_COLOR = '#bfe9ff' // same pale-blue "honest glass" tint as data/pvpWall.js's PVP_WALL_MATERIAL, not the stack's purple/yellow
+export const PVP_CENTER_SUMMIT_DISC_POSITION = PVP_CENTER_CYLINDER_POSITION
+// Glass look (same recipe as data/pvpWall.js's PVP_WALL_MATERIAL — alpha-
+// blended, low-roughness MeshStandardMaterial via MATERIAL_PBR.GLASS, still
+// no transmission/refraction): a plain solid stud-textured disc doesn't read
+// as glass no matter how low its opacity, so PvpCenterPentagon.jsx gives
+// this one a dedicated untextured material instead of PentagonSlab's.
+export const PVP_CENTER_SUMMIT_DISC_OPACITY = 0.35
+
+// In-world signage floating inside the glass disc/shell (Tech.md §1: drei's
+// <Text> + <Billboard> — always turned to face the player, same idea as
+// GlowFloorPanelLabel.jsx's "+N Wins"/"Return" pair). Two lines, no
+// gradient: a big yellow title, a smaller white caption underneath.
+export const PVP_CENTER_SIGN = {
+  title: 'King of the Hill!',
+  titleSize: 1.4,
+  titleColor: '#ffd21e',
+  subtitle: '350% Strength!',
+  subtitleSize: 0.8,
+  subtitleColor: '#ffffff',
+  subtitleGap: 1.4, // vertical drop from the title's own anchor to the subtitle's
+}
+// Same X/Z as the shell/disc, but a fixed 10m above the ground plane
+// (GROUND_Y — Ground.jsx's flat y = 0) rather than tied to the shell's own
+// (much lower) centre.
+export const PVP_CENTER_SIGN_POSITION = [PVP_CENTER_CYLINDER_POSITION[0], GROUND_Y + 10, PVP_CENTER_CYLINDER_POSITION[2]]
