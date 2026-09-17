@@ -3,7 +3,17 @@
 // no store import — so both the store and the HUD can depend on this without
 // depending on each other.
 
-export const POWER_INITIAL = 1
+// Vite only exposes VITE_-prefixed vars, and always as strings, so an
+// override needs explicit numeric parsing with a fallback to the hardcoded
+// default when the var is unset, blank, or not a number (same override
+// pattern as SERVER_URL in data/net.js).
+function envInt(name, fallback) {
+  const raw = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]
+  const parsed = raw != null ? Number(raw) : NaN
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+export const POWER_INITIAL = envInt('VITE_POWER_INITIAL', 1)
 export const POWER_MIN = 1
 export const POWER_MAX = 10_000
 
@@ -12,12 +22,12 @@ export const LEVEL_MIN = 1
 export const LEVEL_MAX = 1010
 export const POWER_PER_LEVEL = 50 // level = floor(power / POWER_PER_LEVEL) + 1
 
-export const REBIRTH_INITIAL = 0
+export const REBIRTH_INITIAL = envInt('VITE_REBIRTH_INITIAL', 0)
 export const REBIRTH_MIN = 0
 export const REBIRTH_MAX = 100
 export const REBIRTH_LEVEL_STEP = 10 // requirement(rebirth) = (rebirth + 1) * REBIRTH_LEVEL_STEP
 
-export const WINS_INITIAL = 0
+export const WINS_INITIAL = envInt('VITE_WINS_INITIAL', 0)
 export const WINS_MIN = 0
 export const WINS_MAX = 100_000_000
 
