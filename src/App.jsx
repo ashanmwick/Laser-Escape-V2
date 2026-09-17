@@ -35,6 +35,7 @@ import Player from './components/Player.jsx'
 import RemotePlayers from './components/RemotePlayers.jsx'
 import Laser from './components/Laser.jsx'
 import LaserParticles from './components/LaserParticles.jsx'
+import AuraParticles from './components/AuraParticles.jsx'
 import Hud from './components/hud/Hud.jsx'
 import LoadingScreen from './components/LoadingScreen.jsx'
 import { QUALITY_DPR, QUALITY_SHADOWS } from './data/bloxity.js'
@@ -169,6 +170,7 @@ export default function App() {
         <WallHealthBars />
         <Ragdoll />
         <Player />
+        <AuraParticles />
         <RemotePlayers />
         <Laser />
         <LaserParticles />

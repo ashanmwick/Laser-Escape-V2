@@ -11,6 +11,7 @@ import { step as stepMerchant } from '../systems/merchant.js'
 import { step as stepGlowFloorPanel } from '../systems/glowFloorPanel.js'
 import { step as stepLaser } from '../systems/laser.js'
 import { step as stepLaserParticles } from '../systems/laserParticles.js'
+import { step as stepAuraParticles } from '../systems/auraParticles.js'
 import { step as stepWallHealth } from '../systems/wallHealth.js'
 import { step as stepPlayerHealth, health as playerHealthState } from '../systems/playerHealth.js'
 import { step as stepPlayerCombat } from '../systems/playerCombat.js'
@@ -62,6 +63,7 @@ export default function GameLoop() {
     stepWallDebris(dt)
     stepRagdoll(dt)
     stepLaserParticles(dt)
+    stepAuraParticles(dt)
     // Multiplayer presence: advance remote-body interpolation, then relay our
     // own transform + beam (throttled inside net.js). A no-op while offline —
     // the game never waits on the socket (systems/net.js).

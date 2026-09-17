@@ -42,6 +42,16 @@ export function getYaw() {
   return state.yaw
 }
 
+// Snaps the orbit to sit directly behind the player, e.g. right after a
+// spawn/respawn — otherwise the camera keeps whatever angle it last had
+// (default 0) while the player model faces player.facing, so the two visibly
+// disagree the moment the player spawns in. Player forward is
+// (sin(facing), cos(facing)) (see systems/laser.js's laser.start), and this
+// camera sits opposite that, at +PI.
+export function syncYawToPlayer() {
+  state.yaw = player.facing + Math.PI
+}
+
 export function update(camera, dt) {
   // Consume drag + wheel accumulated by input.js.
   state.yaw -= inputState.look.dx * ORBIT_SENS * sensitivity

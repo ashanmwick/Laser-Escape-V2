@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { install as installInput } from './systems/input.js'
 import { resetPlayer } from './systems/playerState.js'
+import { syncYawToPlayer as syncCameraYaw } from './systems/cameraOrbit.js'
 import { SPAWN } from './data/hub.js'
 import { init as initBloxity, teardown as teardownBloxity } from './systems/bloxity.js'
 import { init as initNet, teardown as teardownNet } from './systems/net.js'
@@ -17,6 +18,7 @@ import { useGameStore } from './store/useGameStore.js'
 // auth state and settings applied. It is a no-op if the SDK failed to load.
 initBloxity()
 resetPlayer(SPAWN)
+syncCameraYaw()
 installInput()
 
 // Multiplayer presence. Starts after Bloxity so a signed-in player joins the

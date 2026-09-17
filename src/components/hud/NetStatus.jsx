@@ -33,7 +33,7 @@ function describe(s) {
           retry: true,
         }
       : {
-          text: 'Multiplayer server is asleep (free tier) — playing solo. Retrying…',
+          text: 'Multiplayer server is warming up — playing solo. Retrying…',
           tone: 'warn',
           retry: true,
         }

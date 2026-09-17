@@ -8,6 +8,7 @@
 // inputState.interact, so its order relative to GameLoop's interact reset
 // does not matter.
 import { player, resetPlayer } from './playerState.js'
+import { syncYawToPlayer as syncCameraYaw } from './cameraOrbit.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { resetWalls as resetWallHealth } from './wallHealth.js'
 import { resetAabbs } from './collision.js'
@@ -61,6 +62,7 @@ export function step() {
     resetAabbs()
     resetRagdolls()
     resetPlayer(SPAWN)
+    syncCameraYaw()
 
     // The player is now at spawn, nowhere near this panel — clear the marker
     // so the next panel they reach counts as a fresh entry, and skip the

@@ -37,5 +37,5 @@ export function resetPlayer(spawn = { x: 0, y: 0, z: 0 }) {
   player.velocity.y = 0
   player.velocity.z = 0
   player.grounded = true
-  player.facing = Math.PI
+  player.facing = Math.PI/2
 }
