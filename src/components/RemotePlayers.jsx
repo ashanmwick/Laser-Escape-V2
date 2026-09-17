@@ -12,8 +12,9 @@ import {
   REMOTE_BEAM_EYE_RATIO,
   REMOTE_BEAM_FORWARD_RATIO,
 } from '../data/net.js'
-import { REMOTE_HEALTH_BAR } from '../data/playerHealth.js'
+import { REMOTE_HEALTH_BAR, HIT_FLASH_COLOR } from '../data/playerHealth.js'
 import { MATERIAL_PBR } from '../data/materials.js'
+import { hitFlashFraction } from '../systems/hitFlash.js'
 
 // Other players in the same arena room (systems/net.js). Presentation only
 // (Tech.md rule 3): the socket, interpolation, roster and avatar payloads all
@@ -42,6 +43,9 @@ const CYL = H - R * 2
 function RemoteAvatar({ id, rev, onReady }) {
   const groupRef = useRef(null)
   const gaitRef = useRef(null)
+  // Mirrors the effect's own `built` so useFrame can reach its material list
+  // (built.owned.materials) for the hit-flash pulse below.
+  const builtRef = useRef(null)
 
   useEffect(() => {
     let built = null
@@ -56,6 +60,7 @@ function RemoteAvatar({ id, rev, onReady }) {
       if (built) {
         disposeAvatar(built)
         built = null
+        builtRef.current = null
       }
       onReady(false)
     }
@@ -77,6 +82,7 @@ function RemoteAvatar({ id, rev, onReady }) {
         return
       }
       built = next
+      builtRef.current = next
       applyProportions(built, e.proportions)
       groupRef.current.add(built.root)
       gaitRef.current = makeGait(built)
@@ -91,12 +97,23 @@ function RemoteAvatar({ id, rev, onReady }) {
   }, [id, rev, onReady])
 
   useFrame((_, delta) => {
-    const gait = gaitRef.current
-    if (!gait) return
     const e = remotePlayers.get(id)
-    // e.rspeed is the eased 0..1 gait factor the remote sent (their
-    // hypot(velocity.xz) / SPEED) — drive the run cycle straight off it.
-    updateGait(gait, Math.min(delta, 0.1), e ? e.rspeed : 0)
+    const gait = gaitRef.current
+    if (gait) {
+      // e.rspeed is the eased 0..1 gait factor the remote sent (their
+      // hypot(velocity.xz) / SPEED) — drive the run cycle straight off it.
+      updateGait(gait, Math.min(delta, 0.1), e ? e.rspeed : 0)
+    }
+
+    // "Just got hit" pulse — RemoteBody's own useFrame drives the matching
+    // pulse on the fallback capsule for the window before the rig loads.
+    const built = builtRef.current
+    if (built && e) {
+      const f = hitFlashFraction(e.hitFlashAt, performance.now())
+      for (const m of built.owned.materials) {
+        m.emissive.setRGB(HIT_FLASH_COLOR[0] * f, HIT_FLASH_COLOR[1] * f, HIT_FLASH_COLOR[2] * f)
+      }
+    }
   })
 
   return <group ref={groupRef} />
@@ -140,6 +157,24 @@ function RemoteBody({ id, name, avatarRev }) {
     if (nubMatRef.current) {
       nubMatRef.current.transparent = transparent
       nubMatRef.current.opacity = a
+    }
+
+    // "Just got hit" pulse on the fallback capsule — RemoteAvatar's own
+    // useFrame drives the matching pulse on the real rig once it's loaded.
+    const flash = hitFlashFraction(e.hitFlashAt, performance.now())
+    if (bodyMatRef.current) {
+      bodyMatRef.current.emissive.setRGB(
+        HIT_FLASH_COLOR[0] * flash,
+        HIT_FLASH_COLOR[1] * flash,
+        HIT_FLASH_COLOR[2] * flash,
+      )
+    }
+    if (nubMatRef.current) {
+      nubMatRef.current.emissive.setRGB(
+        HIT_FLASH_COLOR[0] * flash,
+        HIT_FLASH_COLOR[1] * flash,
+        HIT_FLASH_COLOR[2] * flash,
+      )
     }
 
     // --- Health bar: shown only while WE are in the PVP zone (data/

@@ -2,14 +2,17 @@ import { useCallback, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { player } from '../systems/playerState.js'
 import { health as playerHealthState } from '../systems/playerHealth.js'
+import { hitFlashFraction } from '../systems/hitFlash.js'
 import PlayerAvatar from './PlayerAvatar.jsx'
 import { MATERIAL_PBR } from '../data/materials.js'
+import { HIT_FLASH_COLOR } from '../data/playerHealth.js'
 
 // Presentation only: read the player singleton, draw the character. The group
 // origin sits at the capsule base (feet), matching playerState's convention —
 // the Bloxity rig uses the same origin, so both mount unchanged.
 export default function Player() {
   const ref = useRef()
+  const capsuleMatRef = useRef()
   const [hasAvatar, setHasAvatar] = useState(false)
 
   // Stable identity: PlayerAvatar's effect depends on this.
@@ -25,6 +28,17 @@ export default function Player() {
     // playerHealth.js's applyRemoteHealth), so a frozen standee underneath
     // them would read as a rendering glitch, not a death.
     g.visible = !playerHealthState.dead
+
+    // Fallback-capsule half of the "just got hit" pulse — PlayerAvatar.jsx
+    // drives the same pulse on the real rig once it's loaded.
+    if (capsuleMatRef.current) {
+      const f = hitFlashFraction(playerHealthState.hitFlashAt, performance.now())
+      capsuleMatRef.current.emissive.setRGB(
+        HIT_FLASH_COLOR[0] * f,
+        HIT_FLASH_COLOR[1] * f,
+        HIT_FLASH_COLOR[2] * f,
+      )
+    }
   })
 
   // The capsule is the fallback, not dead code: it is what renders while the
@@ -37,7 +51,7 @@ export default function Player() {
       <group visible={!hasAvatar}>
         <mesh position-y={height / 2} castShadow>
           <capsuleGeometry args={[radius, cylinder, 4, 12]} />
-          <meshStandardMaterial color="#d9564b" {...MATERIAL_PBR.FLAT_PLACEHOLDER} />
+          <meshStandardMaterial ref={capsuleMatRef} color="#d9564b" {...MATERIAL_PBR.FLAT_PLACEHOLDER} />
         </mesh>
         {/* nub marking the facing direction */}
         <mesh position={[0, height * 0.62, radius]} castShadow>

@@ -46,14 +46,16 @@ export const useGameStore = create((set, get) => ({
   // tier (systems/afk.js afkState.multiplier) while AFK-locked, else 1 — the
   // spec's override: powerPerAction * (rebirth + 1) * multiplier * aura
   // strength (auraStrengthMultiplier(equippedAura), 1x while nothing's
-  // equipped). Returns the Power actually added after the POWER_MAX clamp (0
-  // once maxed), which systems/actionTracker.js turns into a "+N" popup.
+  // equipped), floored to a whole number (aura/AFK multipliers are the only
+  // non-integer factors). Returns the Power actually added after the
+  // POWER_MAX clamp (0 once maxed), which systems/actionTracker.js turns
+  // into a "+N" popup.
   gainPower(multiplier = 1) {
     let applied = 0
     set((state) => {
       const mult = multiplier > 0 ? multiplier : 1
       const auraMult = auraStrengthMultiplier(state.equippedAura)
-      const gain = state.powerPerAction * (state.rebirth + 1) * mult * auraMult
+      const gain = Math.floor(state.powerPerAction * (state.rebirth + 1) * mult * auraMult)
       const power = clamp(state.power + gain, POWER_MIN, POWER_MAX)
       applied = power - state.power
       return derive({ ...state, power })

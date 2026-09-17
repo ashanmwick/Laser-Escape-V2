@@ -6,6 +6,9 @@ import { makeGait, updateGait, disposeGait } from '../systems/avatarAnim.js'
 import { player, setDims, resetDims } from '../systems/playerState.js'
 import { SPEED } from '../systems/playerMovement.js'
 import { setAvatarReady } from '../systems/gameReadiness.js'
+import { health as playerHealthState } from '../systems/playerHealth.js'
+import { hitFlashFraction } from '../systems/hitFlash.js'
+import { HIT_FLASH_COLOR } from '../data/playerHealth.js'
 
 // Mounts the Bloxity avatar under Player's transform group. Presentation only
 // (Tech.md rule 3): all loading, rig maths and the run cycle live in
@@ -19,6 +22,9 @@ export default function PlayerAvatar({ onReady }) {
   const groupRef = useRef(null)
   // Read from the frame loop; written by the rebuild effect below.
   const gaitRef = useRef(null)
+  // Mirrors the effect's own `built` so useFrame can reach its material list
+  // (built.owned.materials) for the hit-flash pulse below.
+  const builtRef = useRef(null)
 
   useEffect(() => {
     let built = null
@@ -38,6 +44,7 @@ export default function PlayerAvatar({ onReady }) {
       if (built) {
         disposeAvatar(built)
         built = null
+        builtRef.current = null
       }
       resetDims()
       onReady(false)
@@ -73,6 +80,7 @@ export default function PlayerAvatar({ onReady }) {
         return
       }
       built = next
+      builtRef.current = next
       const dims = applyProportions(built, proportions)
       setDims(dims.radius, dims.height)
       groupRef.current.add(built.root)
@@ -104,9 +112,20 @@ export default function PlayerAvatar({ onReady }) {
   // player.velocity is already this frame's when we read it here.
   useFrame((_, delta) => {
     const gait = gaitRef.current
-    if (!gait) return
-    const speed = Math.hypot(player.velocity.x, player.velocity.z) / SPEED
-    updateGait(gait, Math.min(delta, 0.1), speed)
+    if (gait) {
+      const speed = Math.hypot(player.velocity.x, player.velocity.z) / SPEED
+      updateGait(gait, Math.min(delta, 0.1), speed)
+    }
+
+    // "Just got hit" pulse — Player.jsx drives the same pulse on the
+    // fallback capsule for the window before the rig has loaded.
+    const built = builtRef.current
+    if (built) {
+      const f = hitFlashFraction(playerHealthState.hitFlashAt, performance.now())
+      for (const m of built.owned.materials) {
+        m.emissive.setRGB(HIT_FLASH_COLOR[0] * f, HIT_FLASH_COLOR[1] * f, HIT_FLASH_COLOR[2] * f)
+      }
+    }
   })
 
   return <group ref={groupRef} />

@@ -200,7 +200,14 @@ function AuraEntry({ tier, index, isTouch }) {
       <div
         className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border-2 border-slate-500 bg-slate-950 ${isTouch ? 'h-11 w-11' : 'h-16 w-16'}`}
       >
-        <img src={tier.iconUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+        <img
+          src={tier.iconUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+        />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">

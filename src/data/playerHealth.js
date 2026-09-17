@@ -40,6 +40,15 @@ export const REMOTE_HEALTH_BAR = {
   FILL_COLOR: '#3ddc55',
 }
 
+// "Just got hit" pulse (components/Player.jsx for the local avatar,
+// components/RemotePlayers.jsx for remotes): every material on the avatar
+// gets a brief red emissive tint that decays back to black over this window,
+// timed off a single hitFlashAt timestamp (systems/hitFlash.js) — visible
+// confirmation a shot landed even when the health bar itself is off-screen
+// or (for a remote target) hidden because the viewer isn't in the PVP zone.
+export const HIT_FLASH_DURATION_MS = 250
+export const HIT_FLASH_COLOR = [1, 0.12, 0.12]
+
 // HUD health bar, just above the "N Power" caption (components/hud/
 // LevelBar.jsx). Deliberately tiny — a thin sliver, not a second progression
 // bar — and shown only while the local player is in the PVP zone.

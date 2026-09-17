@@ -590,6 +590,10 @@ function ingestRemote(id, s, now) {
       hp: typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP,
       maxHp: typeof s.maxHp === 'number' ? s.maxHp : PLAYER_MAX_HP,
       dead: !!s.dead,
+      // performance.now() of their last hp decrease, or 0 — components/
+      // RemotePlayers.jsx (via systems/hitFlash.js) reads this for the same
+      // red emissive pulse systems/playerHealth.js drives on our own avatar.
+      hitFlashAt: 0,
       alpha: 0, present: true, lastAt: now,
     }
     remotePlayers.set(id, e)
@@ -604,7 +608,9 @@ function ingestRemote(id, s, now) {
   e.beam.x = s.beamToX
   e.beam.y = s.beamToY
   e.beam.z = s.beamToZ
-  e.hp = typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP
+  const nextHp = typeof s.hp === 'number' ? s.hp : PLAYER_MAX_HP
+  if (nextHp < e.hp) e.hitFlashAt = now
+  e.hp = nextHp
   e.maxHp = typeof s.maxHp === 'number' ? s.maxHp : PLAYER_MAX_HP
   const wasDead = e.dead
   e.dead = !!s.dead

@@ -3,8 +3,20 @@
 // that fence it (data/pvpBlocks.js PVP_CUBE_AABBS) rather than hand-typed, so
 // it can never drift from the walls that actually bound it — same rectangle
 // data/pvpCenterPentagon.js's header comment already worked out by hand
-// (x: [-155.12, -45.63], z: [-59.34, 50.98]).
+// (x: [-155.12, -45.63], z: [-59.34, 50.98]) BEFORE the entrance-side widening
+// below.
+//
+// Those 6 cube segments only fence the north, south and west sides — the
+// east/entrance side (where the player actually walks in) has no wall block
+// at all, just open ground leading up to pvp_wall, the walk-through glass
+// gate/sign (data/pvpWall.js). Left alone, that made the cubes' incidental
+// east edge (x = -45.63) the zone boundary — ~17m short of the gate itself,
+// so combat and health bars armed while the player was still reading the
+// sign, well before they'd actually passed through it. maxX is widened to
+// the gate's own zone-facing face (PVP_WALL_AABB) so "in the zone" always
+// means "past the glass", matching the sign's promise.
 import { PVP_CUBE_AABBS } from './pvpBlocks.js'
+import { PVP_WALL_AABB } from './pvpWall.js'
 
 let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity
 for (const { min, max } of PVP_CUBE_AABBS) {
@@ -13,6 +25,10 @@ for (const { min, max } of PVP_CUBE_AABBS) {
   if (min.z < minZ) minZ = min.z
   if (max.z > maxZ) maxZ = max.z
 }
+// The gate's near (zone-facing) face is its AABB's own min.x, since the zone
+// sits at lower x than the entrance — passing fully through the glass means
+// crossing past that face, not just touching its hub-facing side.
+if (PVP_WALL_AABB.min.x > maxX) maxX = PVP_WALL_AABB.min.x
 
 export const PVP_ZONE_BOUNDS = { minX, maxX, minZ, maxZ }
 

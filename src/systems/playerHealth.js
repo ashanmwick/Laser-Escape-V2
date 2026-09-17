@@ -14,7 +14,10 @@ import { useGameStore } from '../store/useGameStore.js'
 import { resetWalls as resetWallHealth } from './wallHealth.js'
 import { resetAabbs } from './collision.js'
 
-export const health = { hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, dead: false, respawnAt: 0 }
+// hitFlashAt: performance.now() of our last hp decrease, or 0 — read by
+// components/Player.jsx (via systems/hitFlash.js) to drive the brief red
+// emissive pulse on our own avatar.
+export const health = { hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP, dead: false, respawnAt: 0, hitFlashAt: 0 }
 
 export function healthFraction() {
   return Math.max(0, health.hp) / health.maxHp
@@ -60,7 +63,10 @@ export function applyRemoteHealth(hp, dead) {
   }
   if (!health.dead) {
     const clamped = Math.max(0, Math.min(Number(hp) || 0, health.maxHp))
-    if (clamped < health.hp) health.hp = clamped
+    if (clamped < health.hp) {
+      health.hp = clamped
+      health.hitFlashAt = performance.now()
+    }
   }
 }
 
@@ -68,6 +74,7 @@ function respawn() {
   health.hp = health.maxHp
   health.dead = false
   health.respawnAt = 0
+  health.hitFlashAt = 0
   respawnGuardUntil = performance.now() + RESPAWN_GUARD_MS
   // The game's one canonical respawn point (data/hub.js) — same spot the
   // player starts at (main.jsx) and comes back to off a win panel
