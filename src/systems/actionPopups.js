@@ -1,10 +1,12 @@
 // Power-gain popups (Tech.md §5.1 style: framework-free, mutable singleton
 // pool, stepped once per frame from GameLoop). systems/actionTracker.js calls
-// spawnActionPopup(amount) with each Action's Power gain; step() projects the
-// player's anchor point to the screen and ages the live popups.
+// spawnActionPopup(amount) with each Action's Power gain, which also fires the
+// synced "pop" sound (systems/sfx.js); step() projects the player's anchor
+// point to the screen and ages the live popups.
 // components/hud/ActionPopups.jsx reads the pool each frame and draws it.
 import * as THREE from 'three'
 import { player } from './playerState.js'
+import { playPowerGainPop } from './sfx.js'
 import {
   ACTION_POPUP_POOL_SIZE,
   ACTION_POPUP_LIFETIME,
@@ -49,6 +51,7 @@ const anchor = new THREE.Vector3()
 // POWER_MAX) shows nothing.
 export function spawnActionPopup(amount) {
   if (!(amount > 0)) return
+  playPowerGainPop()
   const slot = actionPopupPool[nextSlot]
   nextSlot = (nextSlot + 1) % ACTION_POPUP_POOL_SIZE
   spawnSeq += 1

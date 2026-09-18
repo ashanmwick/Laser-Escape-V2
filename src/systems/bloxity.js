@@ -19,6 +19,7 @@ import { setAvatar, setProportions, resetAvatar } from './avatarState.js'
 import * as session from './session.js'
 import * as chat from './chat.js'
 import * as audio from './audio.js'
+import * as sfx from './sfx.js'
 
 export function sdk() {
   return (typeof window !== 'undefined' && window.Legion && window.Legion.SDK) || null
@@ -220,6 +221,7 @@ export function init() {
   initialised = true
 
   audio.install()
+  sfx.preload()
   session.install()
 
   const SDK = sdk()

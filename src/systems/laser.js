@@ -9,6 +9,7 @@ import { afkState } from './afk.js'
 import { health as playerHealth } from './playerHealth.js'
 import { LASER_EYE_HEIGHT_RATIO, LASER_FORWARD_RATIO, LASER_MAX_RANGE } from '../data/laser.js'
 import { TARGET_AIM_POINT } from '../data/targets.js'
+import { startLaserBeam, stopLaserBeam } from './sfx.js'
 
 export const laser = {
   active: false, // true while the beam should be drawn (mouse held)
@@ -51,7 +52,21 @@ function isIgnored(object) {
   return false
 }
 
+// Edge-triggers the continuous beam loop (systems/sfx.js) off laser.active
+// rather than off inputState.firing directly — the AFK-lock branch below
+// counts as "the beam continues" too, and the dead-player early return must
+// cut it immediately, so laser.active is the one signal that already
+// accounts for all of that.
+let wasActive = false
+
 export function step(camera, scene) {
+  stepBeam(camera, scene)
+  if (laser.active && !wasActive) startLaserBeam()
+  else if (!laser.active && wasActive) stopLaserBeam()
+  wasActive = laser.active
+}
+
+function stepBeam(camera, scene) {
   // Dead (systems/playerHealth.js, PVP only) — frozen, can't aim or fire.
   if (playerHealth.dead) {
     laser.active = false

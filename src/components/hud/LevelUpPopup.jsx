@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../../store/useGameStore.js'
+import { playLevelUp } from '../../systems/sfx.js'
 import {
   LEVEL_UP_POPUP_TITLE,
   LEVEL_UP_POPUP_SUBLABEL,
@@ -86,7 +87,10 @@ export default function LevelUpPopup() {
     }
 
     const unsub = useGameStore.subscribe((state) => {
-      if (state.level > lastLevel) play(state.level)
+      if (state.level > lastLevel) {
+        play(state.level)
+        playLevelUp()
+      }
       lastLevel = state.level
     })
 

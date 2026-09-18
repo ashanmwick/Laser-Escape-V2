@@ -19,6 +19,7 @@ import { strikeTarget } from './playerCombat.js'
 import { health as playerHealth } from './playerHealth.js'
 import { useGameStore } from '../store/useGameStore.js'
 import { ACTION_HOLD_INTERVAL } from '../data/progression.js'
+import { playLaserPulse } from './sfx.js'
 
 let firingPrev = false
 let pressElapsed = 0 // seconds since the current press started
@@ -81,7 +82,10 @@ export function step(dt) {
     // later, on the release frame, by when systems/laser.js has cleared the
     // aim). A press that turns into a hold keeps taking one strike per
     // ACTION_HOLD_INTERVAL below, so a held wall drains at t=0, 2, 4, ...
-    if (!firingPrev) strikeTarget()
+    if (!firingPrev) {
+      strikeTarget()
+      playLaserPulse()
+    }
     pressElapsed += dt
     sinceLastAction += dt
     // While AFK-locked, each Action's Power is scaled by the target's "xN"

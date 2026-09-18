@@ -5,6 +5,7 @@ import { hexPowerPadState } from '../../systems/hexPowerPad.js'
 import { merchantState } from '../../systems/merchant.js'
 import { settings } from '../../systems/settingsState.js'
 import { health as playerHealth } from '../../systems/playerHealth.js'
+import { playButtonClick } from '../../systems/sfx.js'
 import { useGameStore } from '../../store/useGameStore.js'
 import { canAcceptRebirth, rebirthRequirement } from '../../data/progression.js'
 import { HEX_POWER_PAD_TIERS } from '../../data/hexPowerPad.js'
@@ -66,7 +67,10 @@ function HudModal({ title, onClose, isTouch, children }) {
         </span>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            playButtonClick()
+            onClose()
+          }}
           aria-label="Close"
           className="absolute -top-4 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-md border-2 border-black bg-red-600 font-black text-white shadow-[0_3px_0_rgba(0,0,0,0.4)] transition hover:bg-red-500"
         >
@@ -136,7 +140,10 @@ function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose, isTouch }) {
           >
             <button
               type="button"
-              onClick={onConfirm}
+              onClick={() => {
+                playButtonClick()
+                onConfirm()
+              }}
               disabled={!canRebirth}
               className={`flex-1 self-center rounded-lg border-2 border-black bg-gradient-to-b from-lime-400 to-green-600 font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-2 py-2 text-sm' : 'px-4 py-3 text-lg'}`}
               style={{ WebkitTextStroke: isTouch ? '1px black' : '1.5px black', paintOrder: 'stroke fill' }}
@@ -154,7 +161,10 @@ function RebirthWindow({ rebirth, canRebirth, onConfirm, onClose, isTouch }) {
             <div className="relative flex-1 self-center">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  playButtonClick()
+                  onClose()
+                }}
                 className={`w-full rounded-lg border-2 border-black font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.4)] transition hover:brightness-110 ${isTouch ? 'px-2 py-2 text-sm' : 'px-4 py-3 text-lg'}`}
                 style={{
                   background:
@@ -223,7 +233,10 @@ function AuraEntry({ tier, index, isTouch }) {
         {!owned && (
           <button
             type="button"
-            onClick={() => buyAuraTier(index)}
+            onClick={() => {
+              playButtonClick()
+              buyAuraTier(index)
+            }}
             disabled={!canAfford}
             className={`flex items-center justify-center gap-1 rounded-md border-2 border-black bg-gradient-to-b from-amber-300 to-amber-500 font-black text-white transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${isTouch ? 'px-1.5 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
             style={textOutline}
@@ -235,7 +248,10 @@ function AuraEntry({ tier, index, isTouch }) {
         {owned && !equipped && (
           <button
             type="button"
-            onClick={() => equipAuraTier(index)}
+            onClick={() => {
+              playButtonClick()
+              equipAuraTier(index)
+            }}
             className={`flex items-center justify-center rounded-md border-2 border-black bg-gradient-to-b from-lime-400 to-green-600 font-black text-white transition hover:brightness-110 active:brightness-95 ${isTouch ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-base'}`}
             style={textOutline}
           >
@@ -379,7 +395,10 @@ function LeftCenterControls() {
         </div>
         <button
           type="button"
-          onClick={() => setShowAuraWindow(true)}
+          onClick={() => {
+            playButtonClick()
+            setShowAuraWindow(true)
+          }}
           title="Open Aura"
           className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
@@ -388,7 +407,10 @@ function LeftCenterControls() {
         </button>
         <button
           type="button"
-          onClick={() => setShowShopWindow(true)}
+          onClick={() => {
+            playButtonClick()
+            setShowShopWindow(true)
+          }}
           title="Open Shop"
           className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
@@ -397,7 +419,10 @@ function LeftCenterControls() {
         </button>
         <button
           type="button"
-          onClick={acceptRebirth}
+          onClick={() => {
+            playButtonClick()
+            acceptRebirth()
+          }}
           disabled
           title="Coming soon"
           className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
@@ -411,7 +436,10 @@ function LeftCenterControls() {
         </button>
         <button
           type="button"
-          onClick={() => setShowRebirthWindow(true)}
+          onClick={() => {
+            playButtonClick()
+            setShowRebirthWindow(true)
+          }}
           title="Open Rebirth"
           className="pointer-events-auto flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-400/40 bg-amber-600/80 text-slate-100 shadow-lg transition hover:bg-amber-500"
         >
@@ -453,7 +481,10 @@ function LeftCenterControls() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowAuraWindow(true)}
+            onClick={() => {
+              playButtonClick()
+              setShowAuraWindow(true)
+            }}
             title="Open Aura"
             className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
           >
@@ -462,7 +493,10 @@ function LeftCenterControls() {
           </button>
           <button
             type="button"
-            onClick={() => setShowShopWindow(true)}
+            onClick={() => {
+              playButtonClick()
+              setShowShopWindow(true)
+            }}
             title="Open Shop"
             className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
           >
@@ -473,7 +507,10 @@ function LeftCenterControls() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={acceptRebirth}
+            onClick={() => {
+              playButtonClick()
+              acceptRebirth()
+            }}
             disabled
             title="Coming soon"
             className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-600/80"
@@ -487,7 +524,10 @@ function LeftCenterControls() {
           </button>
           <button
             type="button"
-            onClick={() => setShowRebirthWindow(true)}
+            onClick={() => {
+              playButtonClick()
+              setShowRebirthWindow(true)
+            }}
             title="Open Rebirth"
             className="pointer-events-auto flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-amber-400/40 bg-amber-600/80 px-3 py-2 text-slate-100 shadow-lg transition hover:bg-amber-500"
           >
