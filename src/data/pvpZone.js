@@ -40,18 +40,16 @@ export function isInPvpZone(x, z) {
 // Respawn point for a death inside the zone (systems/playerHealth.js): the
 // hub's SPAWN (data/hub.js) would drop a PVP death right back at the main
 // hub, walking distance from the fight that killed them, so a death whose
-// (x, z) satisfies isInPvpZone() above instead comes back in here — just past
-// the gate (maxX is the gate's own zone-facing face, see the header comment),
-// centered on the gate's z-span, matching the z of PVP_WALL_POSITION
-// (data/pvpWall.js) — and clear of both the perimeter fence
-// (PVP_CUBE_AABBS) and every terrain mound (PVP_DIRT_AABBS), which only
-// occupy the interior beyond x < -45.
+// (x, z) satisfies isInPvpZone() above instead comes back in here.
 //
-// x/z are overridable via VITE_PVP_SPAWN_X / VITE_PVP_SPAWN_Z (same envInt
-// override pattern as data/progression.js), for repositioning without a code
-// change; y stays hardcoded at ground level (data/hub.js SPAWN is flat too).
+// Hardcoded to the tuned initial position (0, 4.06) rather than derived from
+// the gate geometry — x/z are still overridable via VITE_PVP_SPAWN_X /
+// VITE_PVP_SPAWN_Z (same envInt override pattern as data/progression.js) for
+// repositioning without a code change, but when neither is set this literal
+// is the fallback; y stays hardcoded at ground level (data/hub.js SPAWN is
+// flat too).
 export const PVP_SPAWN = {
-  x: envInt('VITE_PVP_SPAWN_X', maxX - 3),
+  x: envInt('VITE_PVP_SPAWN_X', 0),
   y: 0,
-  z: envInt('VITE_PVP_SPAWN_Z', (PVP_WALL_AABB.min.z + PVP_WALL_AABB.max.z) / 2),
+  z: envInt('VITE_PVP_SPAWN_Z', 4.06),
 }
