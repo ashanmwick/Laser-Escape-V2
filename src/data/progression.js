@@ -7,7 +7,7 @@
 // override needs explicit numeric parsing with a fallback to the hardcoded
 // default when the var is unset, blank, or not a number (same override
 // pattern as SERVER_URL in data/net.js).
-function envInt(name, fallback) {
+export function envInt(name, fallback) {
   const raw = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]
   const parsed = raw != null ? Number(raw) : NaN
   return Number.isFinite(parsed) ? parsed : fallback
@@ -36,7 +36,7 @@ export const POWER_PER_ACTION_MIN = 1
 export const POWER_PER_ACTION_MAX = 3500
 
 // A continuous hold re-fires an Action every this-many seconds.
-export const ACTION_HOLD_INTERVAL = 2
+export const ACTION_HOLD_INTERVAL = 1
 
 export function clamp(n, min, max) {
   return n < min ? min : n > max ? max : n

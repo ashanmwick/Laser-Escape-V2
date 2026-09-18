@@ -13,7 +13,7 @@ export const PVP_DAMAGE_PER_HIT = PLAYER_MAX_HP / 10
 // past the remote's own visual capsule radius (data/net.js REMOTE_BODY.RADIUS,
 // 0.4m) — forgiveness for a genuine near-miss (mouse aim a bit off, the
 // remote's own position-interpolation lag).
-export const PVP_HIT_RADIUS = 1.5
+export const PVP_HIT_RADIUS = 0.01
 
 // Beyond PVP_HIT_RADIUS, the effective hit radius widens with range instead
 // of staying fixed (systems/playerCombat.js: effective = max(PVP_HIT_RADIUS,

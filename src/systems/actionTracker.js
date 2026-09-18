@@ -26,12 +26,29 @@ let sinceLastAction = 0 // seconds since the last action fired in this press
 let holdFiredDuringPress = false
 let lastProcessedPressSeq = 0
 
+// Global Power-gain cooldown, independent of pressElapsed/sinceLastAction
+// (which reset on every new press). Without this, rapidly clicking — release
+// before ACTION_HOLD_INTERVAL, then press again — would grant Power on every
+// click, far faster than the same-cadence hold. Starts "ready" so the very
+// first Action isn't held back.
+let sinceLastGain = ACTION_HOLD_INTERVAL
+
+// Only actually grants Power once ACTION_HOLD_INTERVAL has passed since the
+// last grant, click or hold alike — one shared cadence no matter how fast the
+// player clicks. Callers still land the wall/PVP strike unconditionally.
+function gainPowerThrottled(multiplier) {
+  if (sinceLastGain < ACTION_HOLD_INTERVAL) return 0
+  sinceLastGain = 0
+  return useGameStore.getState().gainPower(multiplier)
+}
+
 export function step(dt) {
   // Dead (systems/playerHealth.js, PVP only) — no Actions land while frozen.
   if (playerHealth.dead) {
     firingPrev = false
     return
   }
+  sinceLastGain += dt
 
   // inputState.firePressSeq is bumped synchronously in the real pointerdown
   // handler, so a press-and-release that both happen between two polls of
@@ -48,7 +65,7 @@ export function step(dt) {
       // live — grant exactly the one action it's worth, same as a click. No
       // wall strike: the beam never rendered this press, so there is no aim to
       // resolve a wall from.
-      spawnActionPopup(useGameStore.getState().gainPower())
+      spawnActionPopup(gainPowerThrottled(1))
       firingPrev = false
       return
     }
@@ -72,13 +89,13 @@ export function step(dt) {
     const mult = afkState.active ? afkState.multiplier : 1
     while (sinceLastAction >= ACTION_HOLD_INTERVAL) {
       strikeTarget()
-      spawnActionPopup(useGameStore.getState().gainPower(mult))
+      spawnActionPopup(gainPowerThrottled(mult))
       sinceLastAction -= ACTION_HOLD_INTERVAL
       holdFiredDuringPress = true
     }
   } else if (firingPrev) {
     if (!holdFiredDuringPress && pressElapsed < ACTION_HOLD_INTERVAL) {
-      spawnActionPopup(useGameStore.getState().gainPower())
+      spawnActionPopup(gainPowerThrottled(1))
     }
     pressElapsed = 0
     sinceLastAction = 0

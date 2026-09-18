@@ -15,10 +15,10 @@
 import { WALL_STAGES } from './wallProps.js'
 
 export const STAGE_STRENGTH = {
-  1: 10,
-  2: 50,
-  3: 250,
-  4: 1_000,
+  1: 2,
+  2: 10,
+  3: 150,
+  4: 500,
   5: 5_000,
   6: 15_000,
   7: 50_000,

@@ -7,6 +7,7 @@
 // timer once dead. Same trust model as systems/wallHealth.js.
 import { PLAYER_MAX_HP, PVP_RESPAWN_DELAY_MS } from '../data/playerHealth.js'
 import { SPAWN } from '../data/hub.js'
+import { isInPvpZone, PVP_SPAWN } from '../data/pvpZone.js'
 import { player, resetPlayer } from './playerState.js'
 import { syncYawToPlayer as syncCameraYaw } from './cameraOrbit.js'
 import { spawnRagdoll } from './ragdoll.js'
@@ -76,10 +77,13 @@ function respawn() {
   health.respawnAt = 0
   health.hitFlashAt = 0
   respawnGuardUntil = performance.now() + RESPAWN_GUARD_MS
-  // The game's one canonical respawn point (data/hub.js) — same spot the
-  // player starts at (main.jsx) and comes back to off a win panel
-  // (systems/glowFloorPanel.js), not a PVP-specific location.
-  resetPlayer(SPAWN)
+  // Same spot the player starts at (main.jsx) and comes back to off a win
+  // panel (systems/glowFloorPanel.js) by default — except a death that
+  // happened inside the PVP zone (position is frozen at the death spot while
+  // dead, components/GameLoop.jsx), which instead comes back just past the
+  // gate (data/pvpZone.js PVP_SPAWN) rather than walking distance away at the
+  // hub.
+  resetPlayer(isInPvpZone(player.position.x, player.position.z) ? PVP_SPAWN : SPAWN)
   syncCameraYaw()
   // Coming back from death is a fresh run at the walls too, same reset
   // triple as the win-panel path (systems/glowFloorPanel.js): destroyed set

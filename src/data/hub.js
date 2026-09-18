@@ -3,15 +3,27 @@ import { GRASS_BLOCK_AABBS } from './grassBlocks.js'
 import { GRASS_BLOCK_CUBE_AABBS } from './grassBlockCubes.js'
 import { PVP_DIRT_AABBS, PVP_CUBE_AABBS } from './pvpBlocks.js'
 import { PVP_CENTER_PENTAGON_POLYGONS } from './pvpCenterPentagon.js'
+import { PVP_SPAWN } from './pvpZone.js'
 import { MERCHANT_SHOP_AABBS } from './merchantShop.js'
 import { PODIUM_STAGE_HUB_AABBS, PODIUM_STAGE_TARGET_AABBS } from './podiumStage.js'
 import { WOOD_CRATE_AABBS } from './woodCrate.js'
 import { WALL_AABBS } from './wallProps.js'
+import { envInt } from './progression.js'
 
 // Hub geometry (Tech.md §4). Level layout is data, not a Blender file — Blender
 // authors props only. This file owns the spawn point and the static AABB list
 // the kinematic collider reads (Tech.md §5.2).
-export const SPAWN = { x: 0, y: 0, z: 3 }
+//
+// x/z default to the PVP gate's own respawn point (data/pvpZone.js
+// PVP_SPAWN, just inside the zone past pvp_wall) rather than the old hub
+// corner, and are separately overridable via VITE_SPAWN_X / VITE_SPAWN_Z
+// (same envInt pattern as data/progression.js) so game-start placement can
+// move without a code change.
+export const SPAWN = {
+  x: envInt('VITE_SPAWN_X', PVP_SPAWN.x),
+  y: 0,
+  z: envInt('VITE_SPAWN_Z', PVP_SPAWN.z),
+}
 
 // Placeholder walls, drawn as plain boxes by Obstacles.jsx. Each entry is a
 // world-space { min, max } box that is both the drawn shape and the collider's.

@@ -20,44 +20,72 @@ const H = REMOTE_BODY.HEIGHT
 // The remote player id the beam is on this frame, or null.
 let targetId = null
 
-// Closest approach of the ray (origin o, unit direction d, param s clamped to
-// [0, maxT]) to the segment a->b — a remote's capsule core, feet+R to
-// head-R — parametrized by t clamped to [0, 1]. Minimizing |O+sD - A-tE|^2
-// over s,t gives the 2x2 linear system
-//   s - b*t = -c
-//   b*s - e*t = -f
-// (with D unit length so D.D=1); solved directly, then re-clamped/resolved
-// per axis if the unclamped solution falls outside either range (the
-// standard segment-vs-segment closest-point approach — Ericson, "Real-Time
-// Collision Detection" §5.1.9 — adapted here for one side being ray-bounded
-// instead of segment-bounded).
-function closestRayToSegment(ox, oy, oz, dx, dy, dz, ax, ay, az, bx, by, bz, maxT) {
-  const ex = bx - ax, ey = by - ay, ez = bz - az
-  const rx = ox - ax, ry = oy - ay, rz = oz - az
-  const e = ex * ex + ey * ey + ez * ez
-  const f = ex * rx + ey * ry + ez * rz
-  const b = dx * ex + dy * ey + dz * ez
-  const c = dx * rx + dy * ry + dz * rz
-  const denom = e - b * b // a*e - b*b, a=1
+// Ray (origin o, unit direction d) vs a sphere at c, radius r. Returns the
+// entry distance along the ray, clamped to maxT, or Infinity if the ray
+// never enters the sphere within that range (D is unit length, so the
+// quadratic's `a` term is 1). If the origin is already inside the sphere —
+// not expected in practice, the beam starts at the camera/gun, never inside
+// another player — that counts as touching immediately (t = 0) rather than
+// reporting no hit.
+function raySphereEntry(ox, oy, oz, dx, dy, dz, cx, cy, cz, r, maxT) {
+  const fx = ox - cx, fy = oy - cy, fz = oz - cz
+  const b = fx * dx + fy * dy + fz * dz
+  const c = fx * fx + fy * fy + fz * fz - r * r
+  const disc = b * b - c
+  if (disc < 0) return Infinity
+  const sq = Math.sqrt(disc)
+  const t1 = -b - sq
+  if (t1 >= 0) return t1 <= maxT ? t1 : Infinity
+  const t2 = -b + sq
+  return t2 >= 0 ? 0 : Infinity
+}
 
-  let s = denom > 1e-10 ? (b * f - c * e) / denom : 0
-  s = s < 0 ? 0 : s > maxT ? maxT : s
+// Ray vs the infinite cylinder of radius r wrapped around the axis through
+// a, with unit direction (adx,ady,adz) and length axisLen — the straight
+// "barrel" part of a capsule, the two rounded ends are raySphereEntry above
+// at a and b. Solves for the ray parameter s where the ray's distance to the
+// axis LINE equals r: projecting out the along-axis component turns that
+// into a quadratic in s, same derivation as the old closest-approach solve
+// (Ericson, "Real-Time Collision Detection" §5.1.9) but stopping at the
+// surface instead of the nearest point. A valid wall hit must also land
+// between the caps (axisT in [0, axisLen]) — outside that range belongs to
+// one of the end spheres instead.
+function rayCylinderEntry(ox, oy, oz, dx, dy, dz, ax, ay, az, adx, ady, adz, axisLen, r, maxT) {
+  const px = ox - ax, py = oy - ay, pz = oz - az
+  const u = dx * adx + dy * ady + dz * adz
+  const A = 1 - u * u
+  if (A < 1e-8) return Infinity // ray runs parallel to the axis: no wall to cross
+  const p = px * adx + py * ady + pz * adz
+  const pd = px * dx + py * dy + pz * dz
+  const pp = px * px + py * py + pz * pz
+  const B = 2 * (pd - p * u)
+  const C = pp - p * p - r * r
+  const disc = B * B - 4 * A * C
+  if (disc < 0) return Infinity
+  const t = (-B - Math.sqrt(disc)) / (2 * A)
+  if (t < 0 || t > maxT) return Infinity
+  const axisT = p + t * u
+  return axisT >= 0 && axisT <= axisLen ? t : Infinity
+}
 
-  let t = e > 1e-10 ? (b * s + f) / e : 0
-  if (t < 0) {
-    t = 0
-    s = -c
-    s = s < 0 ? 0 : s > maxT ? maxT : s
-  } else if (t > 1) {
-    t = 1
-    s = b - c
-    s = s < 0 ? 0 : s > maxT ? maxT : s
-  }
-
-  const px = ox + dx * s, py = oy + dy * s, pz = oz + dz * s
-  const qx = ax + ex * t, qy = ay + ey * t, qz = az + ez * t
-  const ddx = px - qx, ddy = py - qy, ddz = pz - qz
-  return { tRay: s, distSq: ddx * ddx + ddy * ddy + ddz * ddz }
+// True ray-vs-capsule surface intersection — the capsule matches the
+// remote's own rendered hitbox (a->b = feet+R to head-R, radius r, same as
+// data/net.js REMOTE_BODY) rather than a "close enough to the core line"
+// distance check. Entry distance along the ray, or Infinity if it never
+// touches the capsule within [0, maxT]. Because maxT is bounded by the
+// laser's actual environment hit distance (systems/laser.js), a shot the
+// ground or a wall stops first can geometrically never reach here — no
+// separate "was it occluded" check needed, unlike the old closest-approach
+// version.
+function rayCapsuleEntry(ox, oy, oz, dx, dy, dz, ax, ay, az, bx, by, bz, r, maxT) {
+  const axisX = bx - ax, axisY = by - ay, axisZ = bz - az
+  const axisLen = Math.hypot(axisX, axisY, axisZ)
+  if (axisLen < 1e-6) return raySphereEntry(ox, oy, oz, dx, dy, dz, ax, ay, az, r, maxT)
+  const adx = axisX / axisLen, ady = axisY / axisLen, adz = axisZ / axisLen
+  const wall = rayCylinderEntry(ox, oy, oz, dx, dy, dz, ax, ay, az, adx, ady, adz, axisLen, r, maxT)
+  const capA = raySphereEntry(ox, oy, oz, dx, dy, dz, ax, ay, az, r, maxT)
+  const capB = raySphereEntry(ox, oy, oz, dx, dy, dz, bx, by, bz, r, maxT)
+  return Math.min(wall, capA, capB)
 }
 
 export function step() {
@@ -80,19 +108,27 @@ export function step() {
   for (const [id, e] of remotePlayers) {
     if (!e.present || e.alpha < 0.5 || e.dead || e.hp <= 0) continue
     if (!isInPvpZone(e.rx, e.rz)) continue
-    const res = closestRayToSegment(
+
+    // Hit radius widens with range (data/playerHealth.js PVP_AIM_ASSIST_TAN)
+    // rather than staying fixed: the same small aim slip is centimetres up
+    // close and metres at range. Sized off the straight-line distance to the
+    // player's own position (not the eventual intersection point — that
+    // would be circular) purely to pick a radius; it never affects whether
+    // the shot is actually blocked, that's rayCapsuleEntry's job below.
+    const dist = Math.hypot(e.rx - ox, e.ry + H / 2 - oy, e.rz - oz)
+    const effRadius = Math.max(PVP_HIT_RADIUS, dist * PVP_AIM_ASSIST_TAN)
+
+    // bestT (not envDist) as maxT: a closer player found earlier this loop
+    // shrinks the search range for every player checked after them, same
+    // early-out envDist itself already gave over "unbounded ray".
+    const t = rayCapsuleEntry(
       ox, oy, oz, dx, dy, dz,
       e.rx, e.ry + R, e.rz,
       e.rx, e.ry + H - R, e.rz,
-      envDist,
+      effRadius, bestT,
     )
-    // Effective hit radius widens with range (data/playerHealth.js
-    // PVP_AIM_ASSIST_TAN) rather than staying fixed: the same small aim
-    // slip is centimetres up close and metres at range, so a flat radius
-    // either feels too tight far away or too generous close up.
-    const effRadius = Math.max(PVP_HIT_RADIUS, res.tRay * PVP_AIM_ASSIST_TAN)
-    if (res.tRay > 0.01 && res.distSq <= effRadius * effRadius && res.tRay < bestT) {
-      bestT = res.tRay
+    if (t > 0.01 && t < bestT) {
+      bestT = t
       bestId = id
     }
   }
